@@ -1,20 +1,23 @@
 .model small
 .stack 100h
 
-.data
-    msg db 'Hello, World!$'  ; String to print (terminated with `$` for DOS)
+data SEGMENT
+    msg DB 'Hello, World!$' ; String to print (terminated with `$` for DOS)                 
+data ENDS
 
-.code
-main:               
+code SEGMENT     
+main:        
     MOV AX, data
     MOV DS, AX       
 
     ; Print "Hello, World!"
     MOV DX, OFFSET msg  ; Load the address of the string
     MOV AH, 09h    		; DOS print string function
-    int 21h             ; Call DOS interrupt
+    INT 21h             ; Call DOS interrupt
+
 
     ; Exit program
-    mov ah, 4Ch
+    MOV AH, 4Ch        
     INT 21h         
-END main
+code ENDS
+END main     
