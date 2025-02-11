@@ -2,21 +2,19 @@
 .stack 100h
 
 .data
-    num1 dw 5       ; First number
-    num2 dw 10      ; Second number
-    result dw 0     ; Variable to store the result
-
+    msg db 'Hello, World!$'  ; String to print (terminated with `$` for DOS)
 
 .code
-main:    
-    mov ax, @data
-    mov ds, ax
-    
-    mov ax, num1
-    mov bx, num2
-    add ax, bx    
-    mov result, ax
+main:               
+    MOV AX, data
+    MOV DS, AX       
 
+    ; Print "Hello, World!"
+    MOV DX, OFFSET msg  ; Load the address of the string
+    MOV AH, 09h    		; DOS print string function
+    int 21h             ; Call DOS interrupt
+
+    ; Exit program
     mov ah, 4Ch
-    int 21h
-end main
+    INT 21h         
+END main
