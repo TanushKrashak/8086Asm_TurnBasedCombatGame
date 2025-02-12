@@ -7,11 +7,18 @@ data SEGMENT
     YouSelected DB 'You Selected Class ', '$'
 data ENDS
 
-code SEGMENT
-Print:
+code SEGMENT     
+; Function For Printing A Line
+PrintLine:
 	MOV AH, 09h        ; DOS print string function
     INT 21h            ; Print Msg
- 	RET    
+ 	RET        
+ 
+; Function For Printing A Character
+PrintChar:
+	MOV AH, 02h        ; DOS function to print a character
+    INT 21h            ; Print Carriage Return     
+    RET
  	
 main:
     MOV AX, data
@@ -19,19 +26,17 @@ main:
                
     ; Print P1 MSG           
     MOV DX, OFFSET P1  
-	CALL Print
+	CALL PrintLine
     
     ; Insert line break after MSG
     MOV DL, 0Dh        ; Carriage Return (CR)
-    MOV AH, 02h        ; DOS function to print a character
-    INT 21h            ; Print Carriage Return
+    CALL PrintChar
     MOV DL, 0Ah        ; Line Feed (LF)
-    MOV AH, 02h        ; DOS function to print a character
-    INT 21h            ; Print Line Feed
+	CALL PrintChar
           
     ; Print P1ClassSelection MSG
     MOV DX, OFFSET P1ClassSelection  
-	CALL Print
+	CALL PrintLine
     
     ; Get User Input (Single Character)
     MOV AH, 01h        ; DOS function to read a character 
@@ -40,20 +45,17 @@ main:
         
     ; Insert a line break after printing input
     MOV DL, 0Dh        ; Carriage Return (CR)
-    MOV AH, 02h        ; DOS function to print a character
-    INT 21h            ; Print Carriage Return
+	CALL PrintChar
     MOV DL, 0Ah        ; Line Feed (LF)
-    MOV AH, 02h        ; DOS function to print a character
-    INT 21h            ; Print Line Feed
+	CALL PrintChar
     
     ; Print the input          
     MOV DX, OFFSET YouSelected
-	CALL Print
+	CALL PrintLine
     
     ; Print the input character from BX
     MOV DL, BL         ; Move the input character to DL for printing
-    MOV AH, 02h        ; DOS function to print a character
-    INT 21h            ; Print the input character
+	CALL PrintChar
 
     ; Exit Program
     MOV AH, 4Ch        ; DOS function to terminate program
