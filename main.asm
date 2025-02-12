@@ -6,26 +6,49 @@ data SEGMENT
 ; PROPERTIES & VARIABLES
 ;==================================================================================    
 	; Player 1 Stats
-	P1Health DB 100      
+	P1Health DB 100  
+	P1MaxHealth DB 100    
 	P1LightAttackDamage DB 25
 	P1HeavyAttackDamage DB 50     
 	P1Defense DB 30      
 	P1CriticalChance DB 50
 	
 	; Player 2 Stats
-	P2Health DB 100      
+	P2Health DB 100   
+	P2MaxHealth DB 100  
 	P2LightAttackDamage DB 25
 	P2HeavyAttackDamage DB 50     
 	P2Defense DB 30      
 	P2CriticalChance DB 50         
-	         
-	; Strings
+
+	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC)
+	KnightStats    DB 100, 100,  20,  50,  40,  10  ; Balanced, high defense
+	AssassinStats  DB  60,  60,  30,  20,  20,  50  ; Lower health, high crit chance
+	DuelistStats   DB  90,  90,  35,  15,  25,  20  ; Good health, High LDmg and medium crit
+		         
+;==================================================================================
+; STRINGS
+;==================================================================================  
+	; Player Names
     P1 DB 'Player 1:', '$'        
+    
+    ; Class Names
     Knight DB 'Knight', '$'     
     Assassin DB 'Assassin', '$'
     Duelist DB 'Duelist', '$'    
+    
+    ; Game Option Texts    
     P1ClassSelection DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
-    YouCheckIf DB 'You Selected Class ', '$'
+    YouCheckIf DB 'You Selected Class ', '$' 
+    Player1Stats DB 'Player 1 Stats:', 0DH, 0AH, '$'  
+    
+    ; Stat Printing Texts
+    HealthText DB 0DH, 0AH, 'Health: ', '$' 
+    MaxHealthText DB 0DH, 0AH, 'MaxHealth: ', '$'
+    LightAttackDamageText DB 0DH, 0AH, 'Light Attack Damage: ', '$'
+    HeavyAttackDamageText DB 0DH, 0AH, 'Heavy Attack Damage: ', '$'
+    DefenseText DB 0DH, 0AH, 'Defense: ', '$'
+    CriticalChanceText DB 0DH, 0AH, 'Critical Chance: ', '$'
 data ENDS
       
       
@@ -51,7 +74,13 @@ code SEGMENT
 	    INT 21h            ; Input from user
 	    RET         
  	 
- 	      	      
+ 	PrintP1Stats:
+ 		MOV DX, OFFSET Player1Stats
+ 		CALL PrintLine
+ 		MOV DX, OFFSET HealthText
+ 		CALL PrintLine	 
+ 		RET
+ 		     	      
 main:
 ;==================================================================================
 ; MAIN FUNCTION
