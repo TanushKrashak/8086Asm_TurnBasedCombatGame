@@ -1,7 +1,22 @@
 .model small
 .stack 100h
 
-data SEGMENT
+data SEGMENT       
+	; Player 1 Stats
+	P1Health DB 100      
+	P1LightAttackDamage DB 25
+	P1HeavyAttackDamage DB 50     
+	P1Defense DB 30      
+	P1CriticalChance DB 50
+	
+	; Player 2 Stats
+	P2Health DB 100      
+	P2LightAttackDamage DB 25
+	P2HeavyAttackDamage DB 50     
+	P2Defense DB 30      
+	P2CriticalChance DB 50         
+	         
+	; Strings
     P1 DB 'Player 1:', '$'
     P1ClassSelection DB 'Choose Your Class! (Press 1, 2, or 3): ', '$'  
     YouSelected DB 'You Selected Class ', '$'
