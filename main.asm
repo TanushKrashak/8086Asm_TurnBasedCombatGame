@@ -8,14 +8,18 @@ data SEGMENT
 data ENDS
 
 code SEGMENT
+Print:
+	MOV AH, 09h        ; DOS print string function
+    INT 21h            ; Print Msg
+ 	RET    
+ 	
 main:
     MOV AX, data
     MOV DS, AX         ; Initialize Data Segment
                
     ; Print P1 MSG           
     MOV DX, OFFSET P1  
-    MOV AH, 09h        ; DOS print string function
-    INT 21h            ; Print Player 1 message
+	CALL Print
     
     ; Insert line break after MSG
     MOV DL, 0Dh        ; Carriage Return (CR)
@@ -27,8 +31,7 @@ main:
           
     ; Print P1ClassSelection MSG
     MOV DX, OFFSET P1ClassSelection  
-    MOV AH, 09h        ; DOS print string function
-    INT 21h            ; Print class selection prompt
+	CALL Print
     
     ; Get User Input (Single Character)
     MOV AH, 01h        ; DOS function to read a character 
@@ -45,8 +48,7 @@ main:
     
     ; Print the input          
     MOV DX, OFFSET YouSelected
-    MOV AH, 09h        ; DOS print string function
-    INT 21h            ; Print "You Selected Class"
+	CALL Print
     
     ; Print the input character from BX
     MOV DL, BL         ; Move the input character to DL for printing
@@ -56,6 +58,5 @@ main:
     ; Exit Program
     MOV AH, 4Ch        ; DOS function to terminate program
     INT 21h            ; Exit program
-
 code ENDS
 END main
