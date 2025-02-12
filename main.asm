@@ -67,7 +67,14 @@ code SEGMENT
 		MOV AH, 02h        ; DOS function to print a character
 	    INT 21h            ; Print Carriage Return     
 	    RET                                      
-	 	
+	 	          
+	; Function to print newline, equivalent to '\n'. Requires PrintChar 	          
+	PrintNewline:
+        MOV DL, 0Dh
+        CALL PrintChar
+        MOV DL, 0Ah
+        CALL PrintChar    
+        RET
 	; Function To take Input From User, Stored in AL
 	TakeCharInput:
 		MOV AH, 01h        ; DOS function to read a character 
