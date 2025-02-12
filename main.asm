@@ -17,8 +17,11 @@ data SEGMENT
 	P2CriticalChance DB 50         
 	         
 	; Strings
-    P1 DB 'Player 1:', '$'
-    P1ClassSelection DB 'Choose Your Class! (Press 1, 2, or 3): ', '$'  
+    P1 DB 'Player 1:', '$'        
+    Knight DB 'Knight', '$'     
+    Assassin DB 'Assassin', '$'
+    Duelist DB 'Duelist', '$'    
+    P1ClassSelection DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
     YouSelected DB 'You Selected Class ', '$'
 data ENDS
 
@@ -33,14 +36,14 @@ PrintLine:
 PrintChar:
 	MOV AH, 02h        ; DOS function to print a character
     INT 21h            ; Print Carriage Return     
-    RET
+    RET                                      
  	
-; Function To take Input From User
+; Function To take Input From User, Stored in AL
 TakeCharInput:
 	MOV AH, 01h        ; DOS function to read a character 
     INT 21h            ; Input from user
-    RET
- 	
+    RET         
+ 	      	      
 main:
     MOV AX, data
     MOV DS, AX         ; Initialize Data Segment
@@ -59,7 +62,7 @@ main:
     MOV DX, OFFSET P1ClassSelection  
 	CALL PrintLine
     
-    ; Get User Input (Single Character)   
+    ; Get User Input
     CALL TakeCharInput
     MOV BL, AL         ; Store input in BX
         
@@ -69,14 +72,32 @@ main:
     MOV DL, 0Ah        ; Line Feed (LF)
 	CALL PrintChar
     
-    ; Print the input          
-    MOV DX, OFFSET YouSelected
-	CALL PrintLine
-    
-    ; Print the input character from BX
-    MOV DL, BL         ; Move the input character to DL for printing
-	CALL PrintChar
-
+  	; Print Selected Class Name
+    MOV DX, OFFSET YouSelected     
+    CALL PrintLine       
+    ; Knight 
+    CMP BL,'1'      
+    JNE SelectedAssassin        
+	MOV DX, OFFSET Knight
+	CALL PrintLine 
+	CALL EndClassSelection    
+	; Assassin  
+	SelectedAssassin:  	
+	    CMP BL,'2'       
+	    JNE SelectedDuelist:    
+    	MOV DX, OFFSET Assassin
+    	CALL PrintLine 
+    	CALL EndClassSelection 	
+	; Duelist
+	SelectedDuelist:    	
+		CMP BL,'3'       
+		JNE EndClassSelection:		 
+    	MOV DX, OFFSET Duelist
+    	CALL PrintLine 
+    	CALL EndClassSelection 	
+    EndClassSelection:    
+               
+               
     ; Exit Program
     MOV AH, 4Ch        ; DOS function to terminate program
     INT 21h            ; Exit program
