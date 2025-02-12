@@ -7,7 +7,7 @@ data SEGMENT
     placeholder db 'Alive! ', '$'
 data ENDS
 
-code SEGMENT    
+code SEGMENT     
     print_newline:
         MOV DL, 0Dh
         CALL print_char
@@ -26,13 +26,15 @@ code SEGMENT
         INT 21h
         RET
 
-main:      
+main:   
+    MOV AX, data
+    MOV DS, AX   
     MOV AL, [test_health]
     CMP AL, 0
     JE end
 
     DEC AL
-    MOV offset test_health, AL
+    MOV [test_health], AL
 
     MOV DX, offset placeholder
     CALL print_line
