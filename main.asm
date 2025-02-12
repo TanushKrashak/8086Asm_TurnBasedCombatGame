@@ -6,7 +6,7 @@ data SEGMENT
 ; PROPERTIES & VARIABLES
 ;==================================================================================    
 	; Player 1 Stats
-	P1Health DB 100  
+	P1Health DB 3  
 	P1MaxHealth DB 100    
 	P1LightAttackDamage DB 25
 	P1HeavyAttackDamage DB 50     
@@ -40,7 +40,7 @@ data SEGMENT
     ; Game Option Texts    
     P1ClassSelection DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
     YouCheckIf DB 'You Selected Class ', '$' 
-    Player1Stats DB 'Player 1 Stats:', 0DH, 0AH, '$'  
+    Player1Stats DB 0DH, 0AH, 'Player 1 Stats:', '$'  
     
     ; Stat Printing Texts
     HealthText DB 0DH, 0AH, 'Health: ', '$' 
@@ -73,12 +73,58 @@ code SEGMENT
 		MOV AH, 01h        ; DOS function to read a character 
 	    INT 21h            ; Input from user
 	    RET         
+ 	
+ 	; This function converts an Integer to a String and then prints it
+ 	; Each digit in the int has to be scanned individually and then 
+ 	; you have to add '0' to convert it to a Character 
+ 	; This assumes your number has been loaded into AX register
+	PrintInt:	    
+	    MOV BX, 10         ; Divisor = 10 To get Remain	   		    	 
+		ExtractDigitsFromInt:
+		    MOV DX, 0h          ; Clear DX 
+		    DIV BX              ; AX / 10 -> Quotient in AX, Remainder in DX
+		    ADD DL, '0'         ; Convert remainder to ASCII  	    
+		    CALL PrintChar
+		    CMP AX, 0000h         ; Check if all digits extracted
+		    JNZ ExtractDigitsFromInt ; If not, continue loop
+   		RET
+
  	 
  	PrintP1Stats:
  		MOV DX, OFFSET Player1Stats
- 		CALL PrintLine
+ 		CALL PrintLine    
+ 		MOV DX,0000h ; Reset DX 		
+ 		; Print Health	
  		MOV DX, OFFSET HealthText
- 		CALL PrintLine	 
+ 		CALL PrintLine	  
+ 		MOV AH, 00h		 	
+ 		MOV AL, P1Health       
+ 		CALL PrintInt 	
+ 		; Print Max Health	
+ 		MOV DX, OFFSET MaxHealthText
+ 		CALL PrintLine	  		 	
+ 		MOV DL, P1MaxHealth       
+ 		CALL PrintLine 	 
+ 		; Print Light Atk Damage	
+ 		MOV DX, OFFSET LightAttackDamageText
+ 		CALL PrintLine	  		 	
+ 		MOV DL, P1LightAttackDamage       
+ 		CALL PrintLine 		              
+ 		; Print Heavy Atk Damage
+ 		MOV DX, OFFSET HeavyAttackDamageText
+ 		CALL PrintLine	  		 	
+ 		MOV DL, P1HeavyAttackDamage       
+ 		CALL PrintLine 
+ 		; Print Defense	
+ 		MOV DX, OFFSET DefenseText
+ 		CALL PrintLine	  		 	
+ 		MOV DL, P1Defense
+ 		CALL PrintLine 
+ 		 ; Print Critical Chance	
+ 		MOV DX, OFFSET CriticalChanceText     
+ 		CALL PrintLine	  		 	
+ 		MOV DL, P1CriticalChance       
+ 		CALL PrintLine 
  		RET
  		     	      
 main:
@@ -137,7 +183,10 @@ main:
     	CALL PrintLine 
     	CALL EndClassSelection 	
     EndClassSelection:    
-               
+        
+    ; Print Player Stats
+    CALL PrintP1Stats       
+    
                
     ; Exit Program
     MOV AH, 4Ch        ; DOS function to terminate program
