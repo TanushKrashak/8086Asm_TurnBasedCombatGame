@@ -20,6 +20,12 @@ PrintChar:
     INT 21h            ; Print Carriage Return     
     RET
  	
+; Function To take Input From User
+TakeCharInput:
+	MOV AH, 01h        ; DOS function to read a character 
+    INT 21h            ; Input from user
+    RET
+ 	
 main:
     MOV AX, data
     MOV DS, AX         ; Initialize Data Segment
@@ -38,10 +44,9 @@ main:
     MOV DX, OFFSET P1ClassSelection  
 	CALL PrintLine
     
-    ; Get User Input (Single Character)
-    MOV AH, 01h        ; DOS function to read a character 
-    INT 21h            ; Input from user
-    MOV BX, AX         ; Store input in BX
+    ; Get User Input (Single Character)   
+    CALL TakeCharInput
+    MOV BL, AL         ; Store input in BX
         
     ; Insert a line break after printing input
     MOV DL, 0Dh        ; Carriage Return (CR)
