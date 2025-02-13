@@ -27,9 +27,10 @@ data SEGMENT
     Duelist DB 'Duelist', '$'    
     
     ; Game Option Texts    
-    P1ClassSelectionText DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
+    P1PrintPlayerStats DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
     YouCheckIfText DB 'You Selected Class ', '$' 
     Player1StatsText DB 0DH, 0AH, 'Player 1 Stats:', '$'  
+    Player2StatsText DB 0DH, 0AH, 'Player 2 Stats:', '$'
     
     ; Stat Printing Texts
     HealthText DB 0DH, 0AH, 'Health: ', '$' 
@@ -177,16 +178,24 @@ main:
     ; Print P1 MSG           
     MOV DX, OFFSET P1  
 	CALL PrintLine       
-	CALL PrintNewLine	          
-
-	; Print P1ClassSelection MSG
-    MOV DX, OFFSET P1ClassSelectionText  
+	CALL PrintNewLine	          	
+    MOV DX, OFFSET P1PrintPlayerStats  
 	CALL PrintLine  
-	CALL SelectPlayerClass
-	 
+	CALL SelectPlayerClass	
     ; Print Player Stats  
     LEA SI, Player1Stats
-    CALL PrintPlayerStats       
+    CALL PrintPlayerStats  
+    
+    ; Print P2 MSG           
+    MOV DX, OFFSET P2  
+	CALL PrintLine       
+	CALL PrintNewLine	          	
+    MOV DX, OFFSET P2PrintPlayerStats  
+	CALL PrintLine  
+	CALL SelectPlayerClass   
+	; Print Player Stats  
+    LEA SI, Player2Stats
+    CALL PrintPlayerStats  
     
                    
     MOV AH, 4Ch        ; DOS function to terminate program
