@@ -6,7 +6,7 @@ data SEGMENT
 ; PROPERTIES & VARIABLES
 ;==================================================================================    
 	; Player 1 Stats
-	P1Health DB 3  
+	P1Health DB 23  
 	P1MaxHealth DB 100    
 	P1LightAttackDamage DB 25
 	P1HeavyAttackDamage DB 50     
@@ -75,6 +75,7 @@ code SEGMENT
         MOV DL, 0Ah
         CALL PrintChar    
         RET
+        
 	; Function To take Input From User, Stored in AL
 	TakeCharInput:
 		MOV AH, 01h        ; DOS function to read a character 
@@ -84,16 +85,27 @@ code SEGMENT
  	; This function converts an Integer to a String and then prints it
  	; Each digit in the int has to be scanned individually and then 
  	; you have to add '0' to convert it to a Character 
- 	; This assumes your number has been loaded into AX register
-	PrintInt:	    
-	    MOV BX, 10         ; Divisor = 10 To get Remain	   		    	 
+ 	; This assumes your number has been loaded into AL register
+	PrintInt:	 
+		MOV AH, 00h	   
+	    MOV BX, 10         ; Divisor
+	    MOV CX, 0	   		
+	    ; Basically just pushes remainder to stack
+	    ; and then once all of the digits are done being pushed, it 
+	    ; starts popping from the stack and prints them 1 at a time    	 
 		ExtractDigitsFromInt:
 		    MOV DX, 0h          ; Clear DX 
 		    DIV BX              ; AX / 10 -> Quotient in AX, Remainder in DX
-		    ADD DL, '0'         ; Convert remainder to ASCII  	    
-		    CALL PrintChar
+		    ADD DL, '0'         ; Convert remainder to ASCII  	
+		    INC CX              ; keep track of digits count
+		    PUSH DX		    
 		    CMP AX, 0000h         ; Check if all digits extracted
-		    JNZ ExtractDigitsFromInt ; If not, continue loop
+		    JNZ ExtractDigitsFromInt ; If not, continue loop  		            
+		PopFromStack:
+			POP DX
+			CALL PrintChar 
+			MOV AH, 0h
+			LOOP PopFromStack     ; keep going till CX becomes 0
    		RET
 
  	 
@@ -103,35 +115,34 @@ code SEGMENT
  		MOV DX,0000h ; Reset DX 		
  		; Print Health	
  		MOV DX, OFFSET HealthText
- 		CALL PrintLine	  
- 		MOV AH, 00h		 	
+ 		CALL PrintLine	   			 
  		MOV AL, P1Health       
  		CALL PrintInt 	
  		; Print Max Health	
  		MOV DX, OFFSET MaxHealthText
  		CALL PrintLine	  		 	
- 		MOV DL, P1MaxHealth       
- 		CALL PrintLine 	 
+ 		MOV AL, P1MaxHealth       
+ 		CALL PrintInt 	 
  		; Print Light Atk Damage	
  		MOV DX, OFFSET LightAttackDamageText
  		CALL PrintLine	  		 	
- 		MOV DL, P1LightAttackDamage       
- 		CALL PrintLine 		              
+ 		MOV AL, P1LightAttackDamage       
+ 		CALL PrintInt 		              
  		; Print Heavy Atk Damage
  		MOV DX, OFFSET HeavyAttackDamageText
  		CALL PrintLine	  		 	
- 		MOV DL, P1HeavyAttackDamage       
- 		CALL PrintLine 
+ 		MOV AL, P1HeavyAttackDamage       
+ 		CALL PrintInt 
  		; Print Defense	
  		MOV DX, OFFSET DefenseText
  		CALL PrintLine	  		 	
- 		MOV DL, P1Defense
- 		CALL PrintLine 
+ 		MOV AL, P1Defense
+ 		CALL PrintInt 
  		 ; Print Critical Chance	
  		MOV DX, OFFSET CriticalChanceText     
  		CALL PrintLine	  		 	
- 		MOV DL, P1CriticalChance       
- 		CALL PrintLine 
+ 		MOV AL, P1CriticalChance       
+ 		CALL PrintInt 
  		RET
  		     	      
 main:
