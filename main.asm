@@ -6,7 +6,7 @@ data SEGMENT
 ; PROPERTIES & VARIABLES
 ;==================================================================================    	
 	; Player Stats
-	Player1Stats  DB 0,0,0,0,0,0  	
+	Player1Stats  DB 0,0,0,0,0,10  	
 	Player2Stats  DB 0,0,0,0,0,0      
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC)
@@ -104,32 +104,32 @@ code SEGMENT
  		; Print Health	
  		MOV DX, OFFSET HealthText
  		CALL PrintLine	   			 
- 		MOV AL, P1Health       
+ 		MOV AL, [SI]       
  		CALL PrintInt 	
  		; Print Max Health	
  		MOV DX, OFFSET MaxHealthText
  		CALL PrintLine	  		 	
- 		MOV AL, P1MaxHealth       
+ 		MOV AL, [SI+1]       
  		CALL PrintInt 	 
  		; Print Light Atk Damage	
  		MOV DX, OFFSET LightAttackDamageText
  		CALL PrintLine	  		 	
- 		MOV AL, P1LightAttackDamage       
+ 		MOV AL, [SI+2]       
  		CALL PrintInt 		              
  		; Print Heavy Atk Damage
  		MOV DX, OFFSET HeavyAttackDamageText
  		CALL PrintLine	  		 	
- 		MOV AL, P1HeavyAttackDamage       
+ 		MOV AL, [SI+3]       
  		CALL PrintInt 
  		; Print Defense	
  		MOV DX, OFFSET DefenseText
  		CALL PrintLine	  		 	
- 		MOV AL, P1Defense
+ 		MOV AL, [SI+4]
  		CALL PrintInt 
  		 ; Print Critical Chance	
  		MOV DX, OFFSET CriticalChanceText     
  		CALL PrintLine	  		 	
- 		MOV AL, P1CriticalChance       
+ 		MOV AL, [SI+5]       
  		CALL PrintInt 
  		RET
      
@@ -184,7 +184,8 @@ main:
 	CALL PrintLine  
 	CALL SelectPlayerClass
 	 
-    ; Print Player Stats
+    ; Print Player Stats  
+    LEA SI, Player1Stats
     CALL PrintPlayerStats       
     
                    
