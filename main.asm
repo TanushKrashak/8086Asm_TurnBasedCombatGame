@@ -27,7 +27,7 @@ data SEGMENT
     Duelist DB 'Duelist', '$'    
     
     ; Game Option Texts    
-    P1PrintPlayerStats DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
+    PrintPlayerStatsText DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
     YouCheckIfText DB 'You Selected Class ', '$' 
     Player1StatsText DB 0DH, 0AH, 'Player 1 Stats:', '$'  
     Player2StatsText DB 0DH, 0AH, 'Player 2 Stats:', '$'
@@ -139,6 +139,7 @@ code SEGMENT
 	SelectPlayerClass:    
 	    ; Get User Input
 	    CALL TakeCharInput
+	    MOV BH, 0
 	    MOV BL, AL         ; Store input in BX           
 		CALL PrintNewLine   
 	  	; Print CheckIf Class Name
@@ -147,27 +148,40 @@ code SEGMENT
 	    ; Knight  
 	    CheckIfKnight:
 		    CMP BL,'1'      
-		    JNE CheckIfAssassin        
-			MOV DX, OFFSET Knight		 
+		    JNE CheckIfAssassin  
+		    MOV DI, OFFSET KnightStats      
+			MOV DX, OFFSET Knight				
 			JMP EndClassSelection    
 		; Assassin  
 		CheckIfAssassin:  	
-		    CMP BL,'2'       
-		    JNE CheckIfDuelist:    
+		    CMP BL,'2'          		    
+		    JNE CheckIfDuelist:  
+		    MOV DI, OFFSET AssassinStats   
 	    	MOV DX, OFFSET Assassin
 	    	JMP EndClassSelection 	
 		; Duelist
 		CheckIfDuelist:    	
-			CMP BL,'3'       
-			JNE EndClassSelection:		 
+			CMP BL,'3'    			 
+			JNE EndClassSelection:	
+			MOV DI, OFFSET DuelistStats 	 
 	    	MOV DX, OFFSET Duelist 
 	    	JMP EndClassSelection     	
-	    EndClassSelection:   
+	    EndClassSelection:	      
 	    CALL PrintLine 
-		CALL PrintNewLine	
+		CALL PrintNewLine			
 		RET
-
-		     	     
+	 
+	; Loads Player Stats based on the DI Value
+	; Player Has To Be Loaded inside SI	
+    LoadPlayerStats:           
+        MOV CX, 6                    ; Loop counter (6 elements)        
+	    LoadPlayerStatsLoop:
+	        MOV AL, [DI]    
+	        MOV [SI], AL    
+	        INC SI          
+	        INC DI          
+	        LOOP LoadPlayerStatsLoop  ; Repeat until CX = 0
+	    RET     
 main:
 ;==================================================================================
 ; MAIN FUNCTION
@@ -179,21 +193,30 @@ main:
     MOV DX, OFFSET P1  
 	CALL PrintLine       
 	CALL PrintNewLine	          	
-    MOV DX, OFFSET P1PrintPlayerStats  
+    MOV DX, OFFSET PrintPlayerStatsText  
 	CALL PrintLine  
-	CALL SelectPlayerClass	
-    ; Print Player Stats  
-    LEA SI, Player1Stats
-    CALL PrintPlayerStats  
+	CALL SelectPlayerClass
+    ; Load P1 Stats
+    MOV SI, OFFSET Player1Stats
+   	CALL LoadPlayerStats    
+   	; Print P1 Stats
+   	MOV SI, OFFSET Player1Stats
+    CALL PrintPlayerStats      
+    CALL PrintNewLine 
+    CALL PrintNewLine    
     
     ; Print P2 MSG           
     MOV DX, OFFSET P2  
 	CALL PrintLine       
 	CALL PrintNewLine	          	
-    MOV DX, OFFSET P2PrintPlayerStats  
+    MOV DX, OFFSET PrintPlayerStatsText
 	CALL PrintLine  
-	CALL SelectPlayerClass   
+	CALL SelectPlayerClass
+	; Load P1 Stats
+    MOV SI, OFFSET Player2Stats
+   	CALL LoadPlayerStats    
 	; Print Player Stats  
+	MOV SI, OFFSET Player2Stats
     LEA SI, Player2Stats
     CALL PrintPlayerStats  
     
