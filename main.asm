@@ -30,7 +30,8 @@ data SEGMENT
 ; STRINGS
 ;==================================================================================  
 	; Player Names
-    P1 DB 'Player 1:', '$'        
+    P1 DB 'Player 1:', '$'  
+    P2 DB 'Player 2:', '$'      
     
     ; Class Names
     Knight DB 'Knight', '$'     
@@ -85,7 +86,6 @@ code SEGMENT
  	; This function converts an Integer to a String and then prints it
  	; Each digit in the int has to be scanned individually and then 
  	; you have to add '0' to convert it to a Character 
- 	; This assumes your number has been loaded into AL register
 	PrintInt:	 
 		MOV AH, 00h	   
 	    MOV BX, 10         ; Divisor
@@ -154,27 +154,16 @@ main:
                
     ; Print P1 MSG           
     MOV DX, OFFSET P1  
-	CALL PrintLine
-    
-    ; Insert line break after MSG
-    MOV DL, 0Dh        ; Carriage Return (CR)
-    CALL PrintChar
-    MOV DL, 0Ah        ; Line Feed (LF)
-	CALL PrintChar
-          
+	CALL PrintLine       
+	CALL PrintNewLine	          
     ; Print P1ClassSelection MSG
     MOV DX, OFFSET P1ClassSelection  
 	CALL PrintLine
     
     ; Get User Input
     CALL TakeCharInput
-    MOV BL, AL         ; Store input in BX
-        
-    ; Insert a line break after printing input
-    MOV DL, 0Dh        ; Carriage Return (CR)
-	CALL PrintChar
-    MOV DL, 0Ah        ; Line Feed (LF)
-	CALL PrintChar
+    MOV BL, AL         ; Store input in BX           
+	CALL PrintNewLine
     
   	; Print CheckIf Class Name
     MOV DX, OFFSET YouCheckIf     
@@ -201,7 +190,8 @@ main:
     	CALL PrintLine 
     	CALL EndClassSelection 	
     EndClassSelection:    
-        
+	CALL PrintNewLine
+	       
     ; Print Player Stats
     CALL PrintP1Stats       
     
