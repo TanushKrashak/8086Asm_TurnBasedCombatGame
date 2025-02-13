@@ -4,22 +4,10 @@
 data SEGMENT     
 ;==================================================================================
 ; PROPERTIES & VARIABLES
-;==================================================================================    
-	; Player 1 Stats
-	P1Health DB 23  
-	P1MaxHealth DB 100    
-	P1LightAttackDamage DB 25
-	P1HeavyAttackDamage DB 50     
-	P1Defense DB 30      
-	P1CriticalChance DB 50
-	
-	; Player 2 Stats
-	P2Health DB 100   
-	P2MaxHealth DB 100  
-	P2LightAttackDamage DB 25
-	P2HeavyAttackDamage DB 50     
-	P2Defense DB 30      
-	P2CriticalChance DB 50         
+;==================================================================================    	
+	; Player Stats
+	Player1Stats  DB 0,0,0,0,0,0  	
+	Player2Stats  DB 0,0,0,0,0,0      
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC)
 	KnightStats    DB 100, 100,  20,  50,  40,  10  ; Balanced, high defense
@@ -39,9 +27,9 @@ data SEGMENT
     Duelist DB 'Duelist', '$'    
     
     ; Game Option Texts    
-    P1ClassSelection DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
-    YouCheckIf DB 'You Selected Class ', '$' 
-    Player1Stats DB 0DH, 0AH, 'Player 1 Stats:', '$'  
+    P1ClassSelectionText DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
+    YouCheckIfText DB 'You Selected Class ', '$' 
+    Player1StatsText DB 0DH, 0AH, 'Player 1 Stats:', '$'  
     
     ; Stat Printing Texts
     HealthText DB 0DH, 0AH, 'Health: ', '$' 
@@ -109,8 +97,8 @@ code SEGMENT
    		RET
 
  	 
- 	PrintP1Stats:
- 		MOV DX, OFFSET Player1Stats
+ 	PrintPlayerStats:
+ 		MOV DX, OFFSET Player1StatsText
  		CALL PrintLine    
  		MOV DX,0000h ; Reset DX 		
  		; Print Health	
@@ -144,7 +132,41 @@ code SEGMENT
  		MOV AL, P1CriticalChance       
  		CALL PrintInt 
  		RET
- 		     	      
+     
+	; Function to get the player's class, stores result
+	; in the BL Register     
+	SelectPlayerClass:    
+	    ; Get User Input
+	    CALL TakeCharInput
+	    MOV BL, AL         ; Store input in BX           
+		CALL PrintNewLine   
+	  	; Print CheckIf Class Name
+	    MOV DX, OFFSET YouCheckIfText     
+	    CALL PrintLine       
+	    ; Knight  
+	    CheckIfKnight:
+		    CMP BL,'1'      
+		    JNE CheckIfAssassin        
+			MOV DX, OFFSET Knight		 
+			JMP EndClassSelection    
+		; Assassin  
+		CheckIfAssassin:  	
+		    CMP BL,'2'       
+		    JNE CheckIfDuelist:    
+	    	MOV DX, OFFSET Assassin
+	    	JMP EndClassSelection 	
+		; Duelist
+		CheckIfDuelist:    	
+			CMP BL,'3'       
+			JNE EndClassSelection:		 
+	    	MOV DX, OFFSET Duelist 
+	    	JMP EndClassSelection     	
+	    EndClassSelection:   
+	    CALL PrintLine 
+		CALL PrintNewLine	
+		RET
+
+		     	     
 main:
 ;==================================================================================
 ; MAIN FUNCTION
@@ -156,47 +178,16 @@ main:
     MOV DX, OFFSET P1  
 	CALL PrintLine       
 	CALL PrintNewLine	          
-    ; Print P1ClassSelection MSG
-    MOV DX, OFFSET P1ClassSelection  
-	CALL PrintLine
-    
-    ; Get User Input
-    CALL TakeCharInput
-    MOV BL, AL         ; Store input in BX           
-	CALL PrintNewLine
-    
-  	; Print CheckIf Class Name
-    MOV DX, OFFSET YouCheckIf     
-    CALL PrintLine       
-    ; Knight  
-    CheckIfKnight:
-	    CMP BL,'1'      
-	    JNE CheckIfAssassin        
-		MOV DX, OFFSET Knight
-		CALL PrintLine 
-		CALL EndClassSelection    
-	; Assassin  
-	CheckIfAssassin:  	
-	    CMP BL,'2'       
-	    JNE CheckIfDuelist:    
-    	MOV DX, OFFSET Assassin
-    	CALL PrintLine 
-    	CALL EndClassSelection 	
-	; Duelist
-	CheckIfDuelist:    	
-		CMP BL,'3'       
-		JNE EndClassSelection:		 
-    	MOV DX, OFFSET Duelist
-    	CALL PrintLine 
-    	CALL EndClassSelection 	
-    EndClassSelection:    
-	CALL PrintNewLine
-	       
+
+	; Print P1ClassSelection MSG
+    MOV DX, OFFSET P1ClassSelectionText  
+	CALL PrintLine  
+	CALL SelectPlayerClass
+	 
     ; Print Player Stats
-    CALL PrintP1Stats       
+    CALL PrintPlayerStats       
     
-               
-    ; Exit Program
+                   
     MOV AH, 4Ch        ; DOS function to terminate program
     INT 21h            ; Exit program
 code ENDS
