@@ -47,69 +47,63 @@ code SEGMENT
         MOV BH, 0   ;Ensure BX is same as BL in terms of actual value
         MOV AL, [P1Stats + BX]  ;Load crit chance stat into AL
         CMP AL, DL      ; DL has hundredth of a second 
-        
         ; Determine current player
-        MOV AH, [CurrentTurn] 
-        MOV AL, [CurrentTurnStats]  ; Load current turn'stats for updation
-        JNC GoodLuck ;If current 1/100 of second is less than crit chance, we have critical hit >:)
-               
+        MOV AH, CurrentTurn 
+        MOV AL, CurrentTurnStats  ; Load current turn'stats for updation
+        JNC GoodLuck ;If current 1/100 of second is less than crit chance, we have critical hit >:)    
         ; Logic for normal hit
-        MOV DX, offset Hit_Message 
-        CALL PrintLine
-        CMP AH, 0   ; P1?
-        JE P1_ResetCritical
-        P1_ResetCritical:
+            MOV DX, OFFSET Hit_Message 
+            CALL PrintLine
+            CMP AH, 0   ; P1?
+            JNE P1_ResetCritical
             AND AL, 11101111b ;Reset P1_Crit
             JMP bGetChance_Final
-        
-        CMP AH, 1
-        JE P2_ResetCritical
-        P2_ResetCritical:
+        P1_ResetCritical:
+            CMP AH, 1
+            JNE P2_ResetCritical
             AND AL, 11011111b;Reset P2_Crit
             JMP bGetChance_Final
-        
-        CMP AH, 2
-        JE P3_ResetCritical
-        P3_ResetCritical:
+        P2_ResetCritical:
+            CMP AH, 2
+            JNE P3_ResetCritical
             AND AL, 10111111b ;Reset P3_Crit
             JMP bGetChance_Final
-            
-        AND AH, 01111111b    ;  Reset P4_Crit
-        JMP bGetChance_Final    
-        
+        P3_ResetCritical:
+            AND AH, 01111111b    ;  Reset P4_Crit
+            JMP bGetChance_Final    
+        ;Critical Hit
         GoodLuck:
             MOV DX, offset Crit_Message
             CALL PrintLine
+            MOV AH, CurrentTurn 
+            MOV AL, CurrentTurnStats
             CMP AH, 0
-            JE P1_SetCritical  
+            JNE P1_SetCritical
+            OR AL, 00010000b ;Set P1_Crit 
+            JMP bGetChance_Final
             P1_SetCritical:
-                OR AL, 00010000b ;Set P1_Crit 
-                JMP bGetChance_Final
                 
-            CMP AH, 1     
-            JE P2_SetCritical
-            P2_SetCritical:
+                CMP AH, 1     
+                JNE P2_SetCritical
                 OR AL, 00100000b ;Set P2_Crit
                 JMP bGetChance_Final 
-            
-            CMP AH, 2  
-            JE P3_SetCritical
-            P3_SetCritical:
+            P2_SetCritical:
+                CMP AH, 2  
+                JNE P3_SetCritical
                 OR AL, 01000000b ;Set P3_Crit
                 JMP bGetChance_Final
-            
-            OR AL, 10000000b ;Set P4_Crit
-            
+            P3_SetCritical:
+                OR AL, 10000000b ;Set P4_Crit
         bGetChance_Final:
-        MOV [CurrentTurnStats], AL
+        MOV CurrentTurnStats, AL
         RET  
             
      WrappedIncrement:
         INC AL
         MOV AH, 0
-        MOV BL, [PlayerCount]
+        MOV BL, PlayerCount
         DIV BL  ; Remainder in AH is the actual turn number   
-        MOV [CurrentTurn], AH   ; Remainder = CurrwntTurn 
+        MOV CurrentTurn, AH   ; Remainder = CurrentTurn 
         RET
 
      AlternateTurn:
@@ -117,54 +111,43 @@ code SEGMENT
         INC DH
         CMP DH, 4
         JE AllDead  ; Jump to AllDead to prevent infinite recursion
-        
-        MOV AL, [CurrentTurn]
+        MOV AL, CurrentTurn
         CALL WrappedIncrement   ; Increment AL, wrap if necessary
-        MOV DL, [AliveState]    ; Load AliveState byte into DL to check if the current player is dead or not
+        MOV DL, AliveState    ; Load AliveState byte into DL to check if the current player is dead or not
         ; AH holds current turn
         CMP AH, 0
         JE P1_Turn
-        
         CMP AH, 1
-        JE P2_Turn
-        
+        JE P2_Turn        
         CMP AH, 2
-        JE P3_Turn
-        
-        
-                 
+        JE P3_Turn   
         ; JZ ensures that if the CurrentTurn's player is dead (nth bit = 0), we alternate turn again                
         P4_Turn:
         TEST DL, 10000000b  ;Check if P4 is alive
         JZ AlternateTurn                            
         JMP Final
-        
         P3_Turn:
         TEST DL, 01000000b  ;Check if P3 is alive    
         JZ AlternateTurn
         JMP Final
-        
         P2_Turn:
         TEST DL, 00100000b  ;Check if P2 is alive
         JZ AlternateTurn
         JMP Final
-        
         P1_Turn:
         TEST DL, 00010000b  ;Check if P1 is alive
         JZ AlternateTurn
         JMP Final
-        
         Final:
         MOV DH, 0
         RET
-        
         ; Exception Case: All players are dead
         AllDead:
         MOV DX, offset AllDeadMsg
         CALL PrintLine
         CALL PrintNewLine
         RET
-         
+ 
 main:
     MOV AX, data
     MOV ds, AX                   
