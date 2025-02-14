@@ -464,12 +464,12 @@ main:
 	CALL PrintPlayerName    
 	CALL PrintNewLine   		          
     MOV DX, OFFSET PrintPlayerStatsText  
-	CALL PrintLine  
-	CALL SelectPlayerClass
-    ; Load P1 Stats
+	CALL PrintLine        
+	; Class Selection
+	CALL SelectPlayerClass    
     MOV SI, OFFSET Player1Stats
    	CALL LoadPlayerStats    
-   	; Print P1 Stats
+   	; Print Stats
    	MOV SI, OFFSET Player1Stats
     CALL PrintPlayerStats      
     CALL PrintNewLine 
@@ -480,24 +480,63 @@ main:
 	CALL PrintPlayerName    
 	CALL PrintNewLine      	
     MOV DX, OFFSET PrintPlayerStatsText
-	CALL PrintLine  
-	CALL SelectPlayerClass
-	; Load P1 Stats
+	CALL PrintLine        
+	; Class Selection
+	CALL SelectPlayerClass	
     MOV SI, OFFSET Player2Stats
    	CALL LoadPlayerStats    
-	; Print Player Stats  
+	; Print Stats 
 	MOV SI, OFFSET Player2Stats
     CALL PrintPlayerStats    
     CALL PrintNewLine 
+    CALL PrintNewLine      
+    
+ 	; Print P3 MSG
+    MOV CurrentTurn, 2 ; do this for printing correct name
+	CALL PrintPlayerName    
+	CALL PrintNewLine      	
+    MOV DX, OFFSET PrintPlayerStatsText
+	CALL PrintLine        
+	; Class Selection
+	CALL SelectPlayerClass	
+    MOV SI, OFFSET Player3Stats
+   	CALL LoadPlayerStats    
+	; Print Stats 
+	MOV SI, OFFSET Player3Stats
+    CALL PrintPlayerStats    
+    CALL PrintNewLine 
+    CALL PrintNewLine 
+    
+ 	; Print P4 MSG
+    MOV CurrentTurn, 3 ; do this for printing correct name
+	CALL PrintPlayerName    
+	CALL PrintNewLine      	
+    MOV DX, OFFSET PrintPlayerStatsText
+	CALL PrintLine        
+	; Class Selection
+	CALL SelectPlayerClass	
+    MOV SI, OFFSET Player4Stats
+   	CALL LoadPlayerStats    
+	; Print Stats 
+	MOV SI, OFFSET Player4Stats
+    CALL PrintPlayerStats    
+    CALL PrintNewLine 
     CALL PrintNewLine   
-           
+                             
+	; CHOICES For Round 1 (Should be moved to a function)                          	
 	; Give Player 1 Choice	 
 	MOV CurrentTurn, 0	
 	CALL GivePlayerMainChoice   
-	
 	; Give Player 2 Choice	 
 	MOV CurrentTurn, 1	
-	CALL GivePlayerMainChoice         
+	CALL GivePlayerMainChoice
+	; Give Player 3 Choice	 
+	MOV CurrentTurn, 2	
+	CALL GivePlayerMainChoice   
+	; Give Player 4 Choice	 
+	MOV CurrentTurn, 3
+	CALL GivePlayerMainChoice
+	         
                    
     MOV AH, 4Ch        ; DOS function to terminate program
     INT 21h            ; Exit program
