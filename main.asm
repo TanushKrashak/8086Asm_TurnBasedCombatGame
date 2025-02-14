@@ -125,7 +125,34 @@ code SEGMENT
                 INC SI              ; Move to the next player
                 LOOP StaminaRecoveryLoop
         RET
-           
+    
+    ; Set block bit in CurrentTurnStatus for player with current turn.
+    ; Must be called after AlternateTurn, as this function does NOT check the AliveStatus block
+    SetBlock:
+        MOV AL, CurrentTurnStats
+        MOV AH, CurrentTurn
+        CMP CurrentTurn, 0
+        JNE P2_Check
+        OR AL, 000000001B           ; Set Player 1's block bit
+        MOV CurrentTurnStats, AL
+        RET
+        P2_Check:
+            CMP CurrentTurn, 1
+            JNE P3_Check
+            OR AL, 00000010B        ; Set Player 2's block bit
+            MOV CurrentTurnStats, AL
+            RET
+        P3_Check:
+            CMP CurrentTurn, 2
+            JNE P4_Check
+            OR AL, 00000100B        ; Set Player 3's block bit
+            MOV CurrentTurnStats, AL
+            RET
+        P4_Check:
+            OR AL, 00001000B        ; Set Player 4's block bit
+            MOV CurrentTurnStats, AL 
+            RET   
+    
 	; Load system time into CX and DX (CH: Hour, CL: Minute, DH: Second, DL: 1/100th of a second)
 	GetTime:
         MOV AH, 2CH
