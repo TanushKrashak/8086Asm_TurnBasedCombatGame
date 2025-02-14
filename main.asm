@@ -48,8 +48,8 @@ data SEGMENT
 ; STRINGS
 ;==================================================================================  
 	; Player Names
-    P1 DB 'Player 1:', '$'  
-    P2 DB 'Player 2:', '$'      
+    P1 DB 'Player 1', '$'  
+    P2 DB 'Player 2', '$'      
     
     ; Class Names
     Knight DB 'Knight', '$'     
@@ -58,6 +58,8 @@ data SEGMENT
     
     ; Game Option Texts    
     PrintPlayerStatsText DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
+    ChooseYourMoveText DB 'Make Your Choice!',0Dh,0Ah, '$'
+    MoveChoicesText DB '1-Light Attack',0Dh,0Ah, '2-Heavy Attack',0Dh,0Ah, '3-Defend',0Dh,0Ah, '4-Heal',0Dh,0Ah, '5-Ultimate',0Dh,0Ah, '$'
     YouCheckIfText DB 'You Selected Class ', '$' 
     Player1StatsText DB 0DH, 0AH, 'Player 1 Stats:', '$'  
     Player2StatsText DB 0DH, 0AH, 'Player 2 Stats:', '$'
@@ -239,8 +241,8 @@ code SEGMENT
             P3_SetCritical:
                 OR AL, 10000000b ;Set P4_Crit
         bGetChance_Final:
-        MOV CurrentTurnStats, AL
-        RET 
+        	MOV CurrentTurnStats, AL
+        	RET 
 
 	; Circular increments current turn
      WrappedIncrement:
@@ -269,30 +271,31 @@ code SEGMENT
         JE P3_Turn   
         ; JZ ensures that if the CurrentTurn's player is dead (nth bit = 0), we alternate turn again                
         P4_Turn:
-        TEST DL, 10000000b  ;Check if P4 is alive
-        JZ AlternateTurn                            
-        JMP Final
+	        TEST DL, 10000000b  ;Check if P4 is alive
+	        JZ AlternateTurn                            
+	        JMP Final
         P3_Turn:
-        TEST DL, 01000000b  ;Check if P3 is alive    
-        JZ AlternateTurn
-        JMP Final
+	        TEST DL, 01000000b  ;Check if P3 is alive    
+	        JZ AlternateTurn
+	        JMP Final
         P2_Turn:
-        TEST DL, 00100000b  ;Check if P2 is alive
-        JZ AlternateTurn
-        JMP Final
+	        TEST DL, 00100000b  ;Check if P2 is alive
+	        JZ AlternateTurn
+	        JMP Final
         P1_Turn:
-        TEST DL, 00010000b  ;Check if P1 is alive
-        JZ AlternateTurn
-        JMP Final
+	        TEST DL, 00010000b  ;Check if P1 is alive
+	        JZ AlternateTurn
+	        JMP Final
         Final:
-        MOV DH, 0
-        RET
+	        MOV DH, 0
+	        RET
         ; Exception Case: All players are dead
         AllDead:
         MOV DX, OFFSET AllDeadMsg
         CALL PrintLine
         CALL PrintNewLine
-        RET
+        RET     
+        
  	; This function converts an Integer to a String and then prints it
  	; Each digit in the int has to be scanned individually and then 
  	; you have to add '0' to convert it to a Character 
@@ -402,13 +405,24 @@ code SEGMENT
 	        INC SI          
 	        INC DI          
 	        LOOP LoadPlayerStatsLoop  ; Repeat until CX = 0
-	    RET     
+	    RET      
+	    
+	; Give Player choice for in Combat, Loads Choice in AX	    
+	GivePlayerMainChoice:				
+ 	 	MOV DX, OFFSET ChooseYourMoveText  
+    	CALL PrintLine   	 
+	    MOV DX, OFFSET MoveChoicesText  
+    	CALL PrintLine                                    
+    	CALL TakeCharInput
+    	RET
+    	
+    	    
 main:
 ;==================================================================================
 ; MAIN FUNCTION
 ;================================================================================== 
     MOV AX, data
-    MOV DS, AX         ; Initialize Data Segment
+    MOV DS, AX        
                
     ; Print P1 MSG           
     MOV DX, OFFSET P1  
@@ -438,8 +452,12 @@ main:
    	CALL LoadPlayerStats    
 	; Print Player Stats  
 	MOV SI, OFFSET Player2Stats
-    CALL PrintPlayerStats  
-    
+    CALL PrintPlayerStats    
+    CALL PrintNewLine 
+    CALL PrintNewLine   
+           
+	; Give Player 1 Choice	
+	CALL GivePlayerMainChoice           
                    
     MOV AH, 4Ch        ; DOS function to terminate program
     INT 21h            ; Exit program
