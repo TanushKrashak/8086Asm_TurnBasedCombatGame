@@ -60,8 +60,7 @@ data SEGMENT
     ChooseYourMoveText DB 'Make Your Choice!',0Dh,0Ah, '$'
     MoveChoicesText DB '1-Light Attack',0Dh,0Ah, '2-Heavy Attack',0Dh,0Ah, '3-Defend',0Dh,0Ah, '4-Heal',0Dh,0Ah, '5-Ultimate',0Dh,0Ah, '$'
     YouCheckIfText DB 'You Selected Class ', '$' 
-    Player1StatsText DB 0DH, 0AH, 'Player 1 Stats:', '$'  
-    Player2StatsText DB 0DH, 0AH, 'Player 2 Stats:', '$'
+    StatsText DB 'Stats:', '$'      
     
     ; Stat Printing Texts
     HealthText DB 0DH, 0AH, 'Health: ', '$' 
@@ -320,11 +319,12 @@ code SEGMENT
 			LOOP PopFromStack     ; keep going till CX becomes 0
    		RET
 
- 	 
- 	PrintPlayerStats:
- 		MOV DX, OFFSET Player1StatsText
- 		CALL PrintLine    
- 		MOV DX,0000h ; Reset DX 		
+ 	; Prints the player stats
+	PrintPlayerStats:
+ 	    ; Print Player Num Stats: 
+ 	    CALL PrintPlayerName
+		MOV DX, OFFSET StatsText		 	     	 
+    	CALL PrintLine    	     	        	
  		; Print Health	
  		MOV DX, OFFSET HealthText
  		CALL PrintLine	   			 
@@ -392,6 +392,7 @@ code SEGMENT
 	    EndClassSelection:	      
 	    CALL PrintLine 
 		CALL PrintNewLine			
+		CALL PrintNewLine
 		RET
 	 
 	; Loads Player Stats based on the DI Value
@@ -408,7 +409,8 @@ code SEGMENT
 	    
 	; Give Player choice for in Combat, Loads Choice in AX	    
 	GivePlayerMainChoice:
-		CALL PrintPlayerName				
+		CALL PrintPlayerName
+		CALL PrintNewLine 				
  	 	MOV DX, OFFSET ChooseYourMoveText  
     	CALL PrintLine   	 
 	    MOV DX, OFFSET MoveChoicesText  
@@ -446,8 +448,9 @@ code SEGMENT
 			MOV DX, '4'	  
 			JMP EndPrintPlayerName
 		EndPrintPlayerName:	    
-			CALL PrintChar			  
-			CALL PrintNewLine
+			CALL PrintChar
+			MOV DX, ' '
+			CALL PrintChar			  			
 			RET
 	    	    
 main:
@@ -458,7 +461,8 @@ main:
     MOV DS, AX        
                
     ; Print P1 MSG           
-	CALL PrintPlayerName      		          
+	CALL PrintPlayerName    
+	CALL PrintNewLine   		          
     MOV DX, OFFSET PrintPlayerStatsText  
 	CALL PrintLine  
 	CALL SelectPlayerClass
@@ -473,7 +477,8 @@ main:
     
     ; Print P2 MSG
     MOV CurrentTurn, 1 ; do this for printing correct name
-	CALL PrintPlayerName         	
+	CALL PrintPlayerName    
+	CALL PrintNewLine      	
     MOV DX, OFFSET PrintPlayerStatsText
 	CALL PrintLine  
 	CALL SelectPlayerClass
