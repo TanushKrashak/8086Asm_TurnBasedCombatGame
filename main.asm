@@ -9,14 +9,22 @@ data SEGMENT
 	TotalStats DB 6
 	
 	; Player Stats
-	Player1Stats  DB 0,0,0,0,0,10  	
-	Player2Stats  DB 0,0,0,0,0,0      
+	Player1Stats  DB 0,0,0,0,0,0  	
+	Player2Stats  DB 0,0,0,0,0,0
+	Player3Stats  DB 0,0,0,0,0,0
+	Player4Stats  DB 0,0,0,0,0,0
+	
+	; Player Statuses
+	; burn,poison,paralyse,0,vitality,rage,0,0
+	Player1Status  DB 0000000B
+	Player2Status  DB 0000000B
+	Player3Status  DB 0000000B
+	Player4Status  DB 0000000B
 
-    PlayerCount DB 4	; Number of players, 2 or 4
-    CurrentTurn DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
-    AliveState DB 00000000B	; p4_alive, p3_alive, p2_alive, p1_alive
+    PlayerCount      DB 4	; Number of players, 4
+    CurrentTurn      DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
+    AliveState       DB 00000000B	; p4_alive, p3_alive, p2_alive, p1_alive. Lower nibble reserved
     CurrentTurnStats DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block
-
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC)
 	KnightStats    DB  85,  85,  20,  35,  60,  30  ; Balanced, high defense
