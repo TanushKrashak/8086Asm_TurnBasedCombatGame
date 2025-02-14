@@ -17,11 +17,11 @@ data SEGMENT
 	
 	
 	; Player Stats
-	Player1Stats  DB 0,0,0,0,0,0	
-	Player2Stats  DB 0,0,0,0,0,0
-	Player3Stats  DB 0,0,0,0,0,0
-	Player4Stats  DB 0,0,0,0,0,0   
-	PlayerST      DB 100, 100, 100, 100     ; All players' stamina stored here 
+	Player1Stats  	DB 0,0,0,0,0,0	
+	Player2Stats  	DB 0,0,0,0,0,0
+	Player3Stats  	DB 0,0,0,0,0,0
+	Player4Stats  	DB 0,0,0,0,0,0   
+	PlayersStamina	DB 100, 60, 100, 100     ; All players' stamina stored here 
 	
 	; Player Statuses
 	; burn,poison,paralyse,0,vitality,rage,0,0
@@ -72,7 +72,8 @@ data SEGMENT
     LightAttackDamageText DB 0DH, 0AH, 'Light Attack Damage: ', '$'
     HeavyAttackDamageText DB 0DH, 0AH, 'Heavy Attack Damage: ', '$'
     DefenseText DB 0DH, 0AH, 'Defense: ', '$'
-    CriticalChanceText DB 0DH, 0AH, 'Critical Chance: ', '$'
+    CriticalChanceText DB 0DH, 0AH, 'Critical Chance: ', '$' 
+    StaminaText DB 0DH, 0AH, 'Stamina: ', '$' 
 
 	; In-Combat Texts
 	Crit_Message DB 'Critical Hit!', '$'
@@ -115,7 +116,7 @@ code SEGMENT
     ; Restore Stamina of each player after every turn by STGainPerTurn. Increases stamina of a dead player too, as it doesn't matter since they can't act and upon revival, stamina is restored to 100 regardless
     RecoverStamina:
         MOV AL, STGainPerTurn
-        MOV SI, OFFSET PlayerST
+        MOV SI, OFFSET PlayersStamina
         MOV CX, 4
         StaminaRecoveryLoop: 
             MOV AH, [SI]
@@ -298,7 +299,7 @@ code SEGMENT
         CALL PrintNewLine
         RET     
         
- 	; This function converts an Integer to a String and then prints it
+ 	; This function converts an Integer in AL to a String and then prints it
  	; Each digit in the int has to be scanned individually and then 
  	; you have to add '0' to convert it to a Character 
 	PrintInt:	 
@@ -358,8 +359,34 @@ code SEGMENT
  		MOV DX, OFFSET CriticalChanceText     
  		CALL PrintLine	  		 	
  		MOV AL, [SI+5]       
- 		CALL PrintInt 
- 		RET
+ 		CALL PrintInt    
+ 		; Print Player Stamina
+ 		 MOV DX, OFFSET StaminaText     
+ 		CALL PrintLine	 
+ 		MOV DH,0h   
+ 		; Player 1 Stamina
+		 CMP CurrentTurn, 0
+ 		JNE P2StaminaPrintCheck
+ 		MOV AL, [PlayersStamina+0] 
+ 		JMP StaminaPrintCheckFinish 	
+ 		; Player 2 Stamina
+ 		P2StaminaPrintCheck:     
+ 			CMP CurrentTurn, 1 
+ 			JNE P3StaminaPrintCheck
+ 			MOV AL, [PlayersStamina+1]  
+ 			JMP StaminaPrintCheckFinish 
+ 		; Player 3 Stamina
+ 		P3StaminaPrintCheck:   
+ 		 	CMP CurrentTurn, 2 
+ 			JNE P4StaminaPrintCheck
+ 			MOV AL, [PlayersStamina+2] 
+ 			JMP StaminaPrintCheckFinish 
+ 		 ; Player 3 Stamina
+ 		P4StaminaPrintCheck:  		 	 			
+ 			MOV AL, [PlayersStamina+3]
+ 		StaminaPrintCheckFinish:  
+ 			CALL PrintInt	
+ 			RET
      
 	; Function to get the player's class, stores result
 	; in the BL Register     
@@ -490,7 +517,7 @@ main:
 ;================================================================================== 
     MOV AX, data
     MOV DS, AX        
-               
+    
     ; Print P1 MSG           
 	CALL PrintPlayerName    
 	CALL PrintNewLine   		          
