@@ -48,8 +48,7 @@ data SEGMENT
 ; STRINGS
 ;==================================================================================  
 	; Player Names
-    P1 DB 'Player 1', '$'  
-    P2 DB 'Player 2', '$'      
+    PlayerText DB 'Player ', '$'           
     
     ; Class Names
     Knight DB 'Knight', '$'     
@@ -190,7 +189,7 @@ code SEGMENT
 	; Generic random function
     GetChance:  
         CALL GetTime   ; Load Counter and Data registers with time data
-        MOV BL, [TotalStats]    ; Load length of array for based offset later   
+        MOV BL, TotalStats    ; Load length of array for based offset later   
         MOV BH, 0   ;Ensure BX is same as BL in terms of actual value
         MOV AL, [Player1Stats + BX]  ;Load crit chance stat into AL
         CMP AL, DL      ; DL has hundredth of a second 
@@ -408,15 +407,49 @@ code SEGMENT
 	    RET      
 	    
 	; Give Player choice for in Combat, Loads Choice in AX	    
-	GivePlayerMainChoice:				
+	GivePlayerMainChoice:
+		CALL PrintPlayerName				
  	 	MOV DX, OFFSET ChooseYourMoveText  
     	CALL PrintLine   	 
 	    MOV DX, OFFSET MoveChoicesText  
     	CALL PrintLine                                    
-    	CALL TakeCharInput
+    	CALL TakeCharInput        
+    	CALL PrintNewLine
+    	CALL PrintNewLine
     	RET
     	
-    	    
+	; Prints the current turn's player name, can be used to be print
+	; all of the player names    	
+	PrintPlayerName:      	
+		; print "Player"    		
+	    MOV DX, OFFSET PlayerText    
+	    CALL PrintLine  
+	    ; Check Turn 0 (Player 1)  
+		CMP CurrentTurn, 0
+		JNE CheckForOneTurn
+		MOV DX, '1'		
+		JMP EndPrintPlayerName
+		CheckForOneTurn:
+		    ; Check Turn 1 (Player 2)  
+			CMP CurrentTurn, 1
+			JNE CheckForTwoTurn
+			MOV DX, '2'		
+			JMP EndPrintPlayerName
+		CheckForTwoTurn:
+		    ; Check Turn 2 (Player 3)  
+			CMP CurrentTurn, 2
+			JNE CheckForThreeTurn
+			MOV DX, '3'		
+			JMP EndPrintPlayerName
+		CheckForThreeTurn:
+			; Turn 3 (Player 4)	
+			MOV DX, '4'	  
+			JMP EndPrintPlayerName
+		EndPrintPlayerName:	    
+			CALL PrintChar			  
+			CALL PrintNewLine
+			RET
+	    	    
 main:
 ;==================================================================================
 ; MAIN FUNCTION
@@ -425,9 +458,7 @@ main:
     MOV DS, AX        
                
     ; Print P1 MSG           
-    MOV DX, OFFSET P1  
-	CALL PrintLine       
-	CALL PrintNewLine	          	
+	CALL PrintPlayerName      		          
     MOV DX, OFFSET PrintPlayerStatsText  
 	CALL PrintLine  
 	CALL SelectPlayerClass
@@ -440,10 +471,9 @@ main:
     CALL PrintNewLine 
     CALL PrintNewLine    
     
-    ; Print P2 MSG           
-    MOV DX, OFFSET P2  
-	CALL PrintLine       
-	CALL PrintNewLine	          	
+    ; Print P2 MSG
+    MOV CurrentTurn, 1 ; do this for printing correct name
+	CALL PrintPlayerName         	
     MOV DX, OFFSET PrintPlayerStatsText
 	CALL PrintLine  
 	CALL SelectPlayerClass
@@ -456,8 +486,13 @@ main:
     CALL PrintNewLine 
     CALL PrintNewLine   
            
-	; Give Player 1 Choice	
-	CALL GivePlayerMainChoice           
+	; Give Player 1 Choice	 
+	MOV CurrentTurn, 0	
+	CALL GivePlayerMainChoice   
+	
+	; Give Player 2 Choice	 
+	MOV CurrentTurn, 1	
+	CALL GivePlayerMainChoice         
                    
     MOV AH, 4Ch        ; DOS function to terminate program
     INT 21h            ; Exit program
