@@ -15,13 +15,17 @@ data SEGMENT
     PlayerCount DB 4	; Number of players, 2 or 4
     CurrentTurn DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
     AliveState DB 00000000B	; p4_alive, p3_alive, p2_alive, p1_alive
-    CurrentTurnStats DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit
+    CurrentTurnStats DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block
 
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC)
-	KnightStats    DB 100, 100,  20,  50,  40,  10  ; Balanced, high defense
-	AssassinStats  DB  60,  60,  30,  20,  20,  50  ; Lower health, high crit chance
+	KnightStats    DB  85,  85,  20,  35,  60,  30  ; Balanced, high defense
+	AssassinStats  DB  60,  60,  30,  40,  20,  50  ; Lower health, high crit chance
 	DuelistStats   DB  90,  90,  35,  15,  25,  20  ; Good health, High LDmg and medium crit
+	PyroStats      DB  50,  50,  20,  30,  40,  30  ; Lower stats overall, but compensated by burn passive
+	HealerStats    DB  70 , 70,  15,  30,  30,  30  ; LDmg deals actual damage to enemy, HDmg heals teammate
+	VanguardStats  DB  100, 100, 10,  35,  100, 5   ; Max HP and Def, very low crit
+	VampireStats   DB  70,  70,  15,  25,  30,  25  ; High health, low attack to account for 50% heal chance
 		         
 ;==================================================================================
 ; STRINGS
