@@ -36,13 +36,13 @@ data SEGMENT
     CurrentTurnStats DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC)
-	KnightStats    DB  85,  85,  20,  35,  60,  30  ; Balanced, high defense
-	AssassinStats  DB  60,  60,  30,  40,  20,  50  ; Lower health, high crit chance
-	DuelistStats   DB  90,  90,  35,  15,  25,  20  ; Good health, High LDmg and medium crit
-	PyroStats      DB  50,  50,  20,  30,  40,  30  ; Lower stats overall, but compensated by burn passive
-	HealerStats    DB  70 , 70,  15,  30,  30,  30  ; LDmg deals actual damage to enemy, HDmg heals teammate
-	VanguardStats  DB  100, 100, 10,  35,  100, 5   ; Max HP and Def, very low crit
-	VampireStats   DB  70,  70,  15,  25,  30,  25  ; High health, low attack to account for 50% heal chance
+	KnightStats    	DB  85,  85,  20,  35,  60,  30  ; Balanced, high defense
+	AssassinStats  	DB  60,  60,  30,  40,  20,  50  ; Lower health, high crit chance
+	DuelistStats  	DB  90,  90,  35,  15,  25,  20  ; Good health, High LDmg and medium crit
+	PyromancerStats	DB  50,  50,  20,  30,  40,  30  ; Lower stats overall, but compensated by burn passive
+	HealerStats    	DB  70 , 70,  15,  30,  30,  30  ; LDmg deals actual damage to enemy, HDmg heals teammate
+	VanguardStats  	DB  100, 100, 10,  35,  100, 5   ; Max HP and Def, very low crit
+	VampireStats   	DB  70,  70,  15,  25,  30,  25  ; High health, low attack to account for 50% heal chance
 		         
 ;==================================================================================
 ; STRINGS
@@ -53,10 +53,14 @@ data SEGMENT
     ; Class Names
     Knight DB 'Knight', '$'     
     Assassin DB 'Assassin', '$'
-    Duelist DB 'Duelist', '$'    
+    Duelist DB 'Duelist', '$' 
+    Pyromancer DB 'Pyromancer', '$'
+    Healer DB 'Healer', '$'
+    Vanguard DB 'Vanguard', '$'
+    Vampire DB 'Vampire', '$'      
     
     ; Game Option Texts    
-    PrintPlayerStatsText DB 'Choose Your Class! (Press 1-Knight, 2-Assassin, or 3-Duelist): ', '$'  
+    PrintPlayerStatsText DB 'Choose Your Class!',0Dh,0Ah, '[1]-Knight',0Dh,0Ah, '[2]-Assassin',0Dh,0Ah, '[3]-Duelist',0Dh,0Ah, '[4]-Pyromancer',0Dh,0Ah, '[5]-Healer',0Dh,0Ah, '[6]-Vanguard',0Dh,0Ah, '[7]-Vampire ',0Dh,0Ah, '$'
     ChooseYourMoveText DB 'Make Your Choice!',0Dh,0Ah, '$'
     MoveChoicesText DB '1-Light Attack',0Dh,0Ah, '2-Heavy Attack',0Dh,0Ah, '3-Defend',0Dh,0Ah, '4-Heal',0Dh,0Ah, '5-Ultimate',0Dh,0Ah, '$'
     YouCheckIfText DB 'You Selected Class ', '$' 
@@ -367,33 +371,60 @@ code SEGMENT
 		CALL PrintNewLine   
 	  	; Print CheckIf Class Name
 	    MOV DX, OFFSET YouCheckIfText     
-	    CALL PrintLine       
-	    ; Knight  
+	    CALL PrintLine
+	    ; Knight       
 	    CheckIfKnight:
-		    CMP BL,'1'      
-		    JNE CheckIfAssassin  
-		    MOV DI, OFFSET KnightStats      
-			MOV DX, OFFSET Knight				
-			JMP EndClassSelection    
-		; Assassin  
-		CheckIfAssassin:  	
-		    CMP BL,'2'          		    
-		    JNE CheckIfDuelist:  
-		    MOV DI, OFFSET AssassinStats   
-	    	MOV DX, OFFSET Assassin
-	    	JMP EndClassSelection 	
-		; Duelist
-		CheckIfDuelist:    	
-			CMP BL,'3'    			 
-			JNE EndClassSelection:	
-			MOV DI, OFFSET DuelistStats 	 
-	    	MOV DX, OFFSET Duelist 
-	    	JMP EndClassSelection     	
-	    EndClassSelection:	      
-	    CALL PrintLine 
-		CALL PrintNewLine			
-		CALL PrintNewLine
-		RET
+	        CMP BL, '1'
+	        JNE CheckIfAssassin
+	        MOV DI, OFFSET KnightStats
+	        MOV DX, OFFSET Knight
+	        JMP EndClassSelection
+	    ; Assassin  
+	    CheckIfAssassin:  
+	        CMP BL, '2'  
+	        JNE CheckIfDuelist  
+	        MOV DI, OFFSET AssassinStats  
+	        MOV DX, OFFSET Assassin  
+	        JMP EndClassSelection  
+	    ; Duelist  
+	    CheckIfDuelist:  
+	        CMP BL, '3'  
+	        JNE CheckIfPyromancer  
+	        MOV DI, OFFSET DuelistStats  
+	        MOV DX, OFFSET Duelist  
+	        JMP EndClassSelection  
+	    ; Pyromancer  
+	    CheckIfPyromancer:  
+	        CMP BL, '4'  
+	        JNE CheckIfHealer  
+	        MOV DI, OFFSET PyromancerStats  
+	        MOV DX, OFFSET Pyromancer  
+	        JMP EndClassSelection  
+	    ; Healer  
+	    CheckIfHealer:  
+	        CMP BL, '5'  
+	        JNE CheckIfVanguard  
+	        MOV DI, OFFSET HealerStats  
+	        MOV DX, OFFSET Healer  
+	        JMP EndClassSelection  
+	    ; Vanguard  
+	    CheckIfVanguard:  
+	        CMP BL, '6'  
+	        JNE CheckIfVampire  
+	        MOV DI, OFFSET VanguardStats  
+	        MOV DX, OFFSET Vanguard  
+	        JMP EndClassSelection  
+	    ; Vampire  
+	    CheckIfVampire:  
+	        CMP BL, '7'  
+	        JNE EndClassSelection  
+	        MOV DI, OFFSET VampireStats  
+	        MOV DX, OFFSET Vampire  
+	    EndClassSelection:	     
+		    CALL PrintLine 
+			CALL PrintNewLine			
+			CALL PrintNewLine
+			RET
 	 
 	; Loads Player Stats based on the DI Value
 	; Player Has To Be Loaded inside SI	
