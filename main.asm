@@ -153,6 +153,32 @@ code SEGMENT
             MOV CurrentTurnStats, AL 
             RET   
     
+    ; Update AliveState after every turn by checking HP of every player
+    UpdateStatusOnDeath:
+        MOV AL, AliveState
+        MOV AH, Player1Stats
+        CMP AH, 0
+        JNE Check_P2_Alive
+        AND AL, 11101111B       ; P1 dead, reset their alive bit
+        Check_P2_Alive:
+            MOV AH, Player2Stats
+            CMP AH, 0           
+            JNE Check_P3_Alive
+            AND AL, 11011111B   ; P2 dead, reset their alive bit
+        Check_P3_Alive:
+            MOV AH, Player3Stats
+            CMP AH, 0
+            JNE Check_P4_Alive
+            AND AL, 10111111B    ; P3 dead, reset their alive bit
+        Check_P4_Alive:
+            MOV AH, Player4Stats
+            CMP AH, 0
+            JNE UpdateStatusOnDeath_Final
+            AND AL, 01111111B    ; P4 dead, reset their alive bit
+        UpdateStatusOnDeath_Final:
+            MOV AliveState, AL  ;Update AliveState finally   
+            RET
+            
 	; Load system time into CX and DX (CH: Hour, CL: Minute, DH: Second, DL: 1/100th of a second)
 	GetTime:
         MOV AH, 2CH
