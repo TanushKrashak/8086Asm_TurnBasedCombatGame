@@ -6,13 +6,22 @@ data SEGMENT
 ; PROPERTIES & VARIABLES
 ;==================================================================================    	
 	; Game Stats
-	TotalStats DB 6
+	TotalStats   DB 6 
+	MaxStamina   DB 100
+	LStaminaCost DB 15 ; LAttack cost
+	HStaminaCost DB 35 ; HAttack cost
+	BStaminaCost DB 5   ; Block cost
+	; Ultimate cost would be 100 anyways, so no need to declare it here.
+	HPGainPerTurn DB 5
+	STGainPerTurn DB 10
+	
 	
 	; Player Stats
-	Player1Stats  DB 0,0,0,0,0,0  	
+	Player1Stats  DB 0,0,0,0,0,0	
 	Player2Stats  DB 0,0,0,0,0,0
 	Player3Stats  DB 0,0,0,0,0,0
-	Player4Stats  DB 0,0,0,0,0,0
+	Player4Stats  DB 0,0,0,0,0,0   
+	PlayerST      DB 100, 100, 100, 100     ; All players' stamina stored here 
 	
 	; Player Statuses
 	; burn,poison,paralyse,0,vitality,rage,0,0
@@ -98,7 +107,25 @@ code SEGMENT
 		MOV AH, 01h        ; DOS function to read a character 
 	    INT 21h            ; Input from user
 	    RET
-
+	 
+    ; Restore Stamina of each player after every turn by STGainPerTurn. Increases stamina of a dead player too, as it doesn't matter since they can't act and upon revival, stamina is restored to 100 regardless
+    RecoverStamina:
+        MOV AL, STGainPerTurn
+        MOV SI, OFFSET PlayerST
+        MOV CX, 4
+        StaminaRecoveryLoop: 
+            MOV AH, [SI]
+            ADD AH, AL
+            CMP AH, 100
+            JNC NoClamp
+            MOV AH, 100             ; Current Player's stamina is above 100, clamp that mf
+            NoClamp:
+                MOV [SI], AH        ; Since SI holds address of current player's stamina, store updated stamina value back into it
+            PDead:                  
+                INC SI              ; Move to the next player
+                LOOP StaminaRecoveryLoop
+        RET
+           
 	; Load system time into CX and DX (CH: Hour, CL: Minute, DH: Second, DL: 1/100th of a second)
 	GetTime:
         MOV AH, 2CH
