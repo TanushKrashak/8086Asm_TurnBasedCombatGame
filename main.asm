@@ -369,7 +369,7 @@ code SEGMENT
         	RET 
 
 	; Circular increments current turn
-     WrappedIncrement:
+     UpdateCurrentTurn:
         INC CurrentTurn
         CMP CurrentTurn, 4
         JE WrappedIs4
@@ -385,7 +385,7 @@ code SEGMENT
         CMP DH, 4
         JE AllDead  ; Jump to AllDead to prevent infinite recursion
         MOV AL, CurrentTurn
-        CALL WrappedIncrement   ; Increment AL, wrap if necessary
+        CALL UpdateCurrentTurn   ; Increment AL, wrap if necessary
         MOV DL, AliveAndHealStatus    ; Load AliveAndHealStatus byte into DL to check if the current player is dead or not
         ; AH holds current turn
         CMP AH, 0
@@ -663,12 +663,36 @@ code SEGMENT
         	    RET      
     	    ClampSection:
     	        CALL ClampHP 
-    	        JMP PrintHealText    	   
+    	        JMP PrintHealText  
+ 		; Light Attack 	   
     	LightAttack:
-    	    CALL TargetEnemy 
-    	      	    
-    	HeavyAttack:
     	    CALL TargetEnemy   
+    	    ; Change Status Indicating which type of attack 
+			; was chosen by the player, it is done by updating
+    	    ; the 3rd last bit on the PlayerXStatus vars
+    	    CMP CurrentTurn, 0
+    	    JNE LightMChoice_1    	    
+    	    OR Player1Status, 00000100B
+    	    JMP AttackFinal
+    	    LightMChoice_1:
+        	    CMP CurrentTurn, 1
+        	    JNE LightMChoice_2
+        	    OR Player2Status, 00000100B
+        	    JMP AttackFinal
+            LightMChoice_2:
+                CMP CurrentTurn, 2
+                JNE LightMChoice_3
+        	    OR Player3Status, 00000100B 
+                JMP AttackFinal
+            LightMChoice_3:        	    
+        	    OR Player4Status, 00000100B
+        	    JMP AttackFinal    
+		; Heavy Attack    	      	    
+    	HeavyAttack:
+    	    CALL TargetEnemy    
+    	    ; Change Status Indicating which type of attack 
+    	    ; was chosen by the player, it is done by updating
+    	    ; the 2nd last bit on the PlayerXStatus vars
     	    CMP CurrentTurn, 0
     	    JNE HeavyMChoice_1    	    
     	    OR Player1Status, 00000010B
@@ -686,8 +710,8 @@ code SEGMENT
             HeavyMChoice_3:        	    
         	    OR Player4Status, 00000010B
         	    JMP AttackFinal    
-        	AttackFinal:
-        	    RET
+    	AttackFinal:
+    	    RET
     	GivePlayerMainChoice_InvalidInput:
     	    MOV DX, OFFSET InvalidInputText
     	    CALL PrintLine
@@ -802,9 +826,6 @@ main:
 	; Give Player 1 Choice
 	MOV CurrentTurn, 0	
 	CALL GivePlayerMainChoice 
-	MOV DI, OFFSET Player1Stats
-	MOV AX, [DI]
-	CALL PrintInt 
 	  
 	; Give Player 2 Choice	 
 	MOV CurrentTurn, 1	
