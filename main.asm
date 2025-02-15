@@ -21,7 +21,8 @@ data SEGMENT
 	Player2Stats  	DB 0,0,0,0,0,0
 	Player3Stats  	DB 0,0,0,0,0,0
 	Player4Stats  	DB 0,0,0,0,0,0   
-	PlayersStamina	DB 100, 60, 100, 100     ; All players' stamina stored here 
+	PlayersStamina	DB 80, 80, 80, 80     ; All players' stamina stored here
+	PlayersCooldown DB 0, 0, 0, 0         ; All players' ultimate cooldown, wraps after their class' UltC   
 	
 	; Player Statuses
 	; burn,poison,paralyse,0,vitality,rage,0,0
@@ -35,14 +36,13 @@ data SEGMENT
     AliveState       DB 00000000B	; p4_alive, p3_alive, p2_alive, p1_alive. Lower nibble reserved
     CurrentTurnStats DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block
 
-	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC)
-	KnightStats    	DB  85,  85,  20,  35,  60,  30  ; Balanced, high defense
-	AssassinStats  	DB  60,  60,  30,  40,  20,  50  ; Lower health, high crit chance
-	DuelistStats  	DB  90,  90,  35,  15,  25,  20  ; Good health, High LDmg and medium crit
-	PyromancerStats	DB  50,  50,  20,  30,  40,  30  ; Lower stats overall, but compensated by burn passive
-	HealerStats    	DB  70 , 70,  15,  30,  30,  30  ; LDmg deals actual damage to enemy, HDmg heals teammate
-	VanguardStats  	DB  100, 100, 10,  35,  100, 5   ; Max HP and Def, very low crit
-	VampireStats   	DB  70,  70,  15,  25,  30,  25  ; High health, low attack to account for 50% heal chance
+	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
+	KnightStats    	DB  85,  85,  20,  35,  60,  30  3 ; Balanced, high defense
+	AssassinStats  	DB  60,  60,  30,  40,  20,  50  4 ; Lower health, high crit chance
+	PyromancerStats	DB  50,  50,  20,  30,  40,  30  4 ; Lower stats overall, but compensated by burn passive
+	HealerStats    	DB  70 , 70,  15,  30,  30,  30  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
+	VanguardStats  	DB  100, 100, 10,  35,  100, 5   4  ; Max HP and Def, very low crit
+	VampireStats   	DB  70,  70,  15,  25,  30,  25  4  ; High health, low attack to account for 50% heal chance
 		         
 ;==================================================================================
 ; STRINGS
@@ -249,12 +249,13 @@ code SEGMENT
 
 	; Circular increments current turn
      WrappedIncrement:
-        INC AL
-        MOV AH, 0
-        MOV BL, PlayerCount
-        DIV BL  ; Remainder in AH is the actual turn number   
-        MOV CurrentTurn, AH   ; Remainder = CurrentTurn 
+        INC CurrentTurn
+        CMP CurrentTurn, 4
+        JE WrappedIs4
         RET
+        WrappedIs4: 
+            MOV CurrentTurn, 0
+            RET
 	
 	; Progress player turns
 	 AlternateTurn:
