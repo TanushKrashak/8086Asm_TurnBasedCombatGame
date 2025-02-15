@@ -31,10 +31,11 @@ data SEGMENT
 	Player3Status  DB 0000000B
 	Player4Status  DB 0000000B
 
-    PlayerCount      DB 4	; Number of players, 4
-    CurrentTurn      DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
-    AliveState       DB 00000000B	; p4_alive, p3_alive, p2_alive, p1_alive. Lower nibble reserved
-    CurrentTurnStats DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block
+    PlayerCount        DB 4	; Number of players, 4
+    CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
+    AliveState         DB 11110000B	; p4_alive, p3_alive, p2_alive, p1_alive. Lower nibble reserved
+    CurrentTurnStats   DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block  
+    CurrentlyTargeting DB 00000000B        ; p1_target, p2_target, p3_target, p4_target
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
 	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
@@ -79,6 +80,8 @@ data SEGMENT
 	Crit_Message DB 'Critical Hit!', '$'
     Hit_Message DB 'Normal Hit!', '$' 
     AllDeadMsg DB 'All players are dead!', '$'
+    SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
+    SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'
 
 data ENDS
       
@@ -130,6 +133,74 @@ code SEGMENT
                 INC SI              ; Move to the next player
                 LOOP StaminaRecoveryLoop
         RET
+    
+    ; Target an enemy player
+    TargetEnemy:
+        CMP CurrentTurn, 2
+        JNC Team2Selection:
+            TEST AliveState, 10000000B
+            JZ P3Select                 ; P4 dead, skip to P3
+            TEST AliveState, 01000000B
+            JZ Team1Selection_Final
+            MOV DX, OFFSET SelectTeam1TargetText
+            CALL PrintLine
+            CALL TakeCharInput
+            CMP AL, '1'
+            JE P3Selected    
+            ; P4 Selected
+            CMP CurrentTurn, 0
+            JNE SetP2TargetP4 
+            OR CurrentlyTargeting, 11000000B        ; P1 selected P4    
+            JMP Team1Selection_Final
+            SetP2TargetP4:
+                OR CurrentlyTargeting, 00110000B    ; P2 selected P4
+            RET
+            ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
+            P3Select:
+                TEST AliveState, 01000000B
+                JZ Team1Selection_Final
+                P3Selected:
+                    CMP CurrentTurn, 0
+                    JNE SetP2TargetP3 
+                    OR CurrentlyTargeting, 10000000B        ; P1 selected P3 
+                    JMP Team1Selection_Final
+                    SetP2TargetP3:
+                        OR CurrentlyTargeting, 00100000B    ; P2 selected P3
+                    Team1Selection_Final:
+                        RET  
+        Team2Selection:
+            TEST AliveState, 00010000B
+            JZ P2Select                 ; P1 dead, skip to P2
+            TEST AliveState, 00100000B
+            JZ Team2Selection_Final
+            MOV DX, OFFSET SelectTeam2TargetText
+            CALL PrintLine
+            CALL TakeCharInput
+            CMP AL, '1'
+            JE P1Selected    
+            ; P1 Selected
+            CMP CurrentTurn, 2
+            JE SetP3TargetP1
+            OR CurrentlyTargeting, 00000001B        ; P4 selected P2 
+            JMP Team2Selection_Final
+            SetP3TargetP1:
+                OR CurrentlyTargeting, 00000100B    ; P3 selected P2
+            RET
+            ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
+            P2Select:
+                TEST AliveState, 01000000B
+                JZ Team2Selection_Final
+                P1Selected:
+                    CMP CurrentTurn, 2
+                    JE SetP3TargetP2
+                    OR CurrentlyTargeting, 00000000B        ; P4 selected P1  
+                    JMP Team2Selection_Final
+                    SetP3TargetP2:
+                        OR CurrentlyTargeting, 00000000B    ; P3 selected P1
+                    Team2Selection_Final:
+                        RET 
+                 
+            
     
     ; Set block bit in CurrentTurnStatus for player with current turn.
     ; Must be called after AlternateTurn, as this function does NOT check the AliveStatus block
@@ -560,8 +631,8 @@ main:
     CALL PrintPlayerStats      
     CALL PrintNewLine 
     CALL PrintNewLine
-
-    CALL UpdateCrit    
+    MOV CurrentTurn, 2
+    CALL TargetEnemy    
     
     ; Print P2 MSG
     MOV CurrentTurn, 1 ; do this for printing correct name
@@ -578,8 +649,7 @@ main:
     CALL PrintPlayerStats    
     CALL PrintNewLine 
     CALL PrintNewLine   
-    
-    CALL UpdateCrit   
+     
     
  	; Print P3 MSG
     MOV CurrentTurn, 2 ; do this for printing correct name
