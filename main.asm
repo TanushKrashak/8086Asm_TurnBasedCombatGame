@@ -75,11 +75,11 @@ data SEGMENT
     UltimateCDText DB 0DH, 0AH,  'Ultimate Cooldown: ', '$'
 
 	; In-Combat Texts
-	CriticalHitText DB 'Critical Hit!', '$'
-    NormalHitText DB 'Normal Hit!', '$'    
+	CriticalHitText DB 'Critical Hit!',0DH, 0AH, '$'
+    NormalHitText DB 'Normal Hit!',0DH, 0AH,'$'    
     DamagedText DB 'Damaged ', '$'       
     ShowEnemyHPText DB 'Enemy Currently Has ', '$'   
-    LeftText DB 'HP Left!', '$'
+    LeftText DB 'HP Left!',0DH, 0AH, '$'
     ForText DB 'For ', '$'
     AllPlayersDiedText DB 'All players are dead!', '$'
     SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
@@ -262,33 +262,37 @@ code SEGMENT
     ; Func to deal damage, needs Damage to be moved to AL    
     ; Enemy Stats should be Loaded on DI
     DoDamage:       
-    	CALL UpdateCrit
+    	CALL UpdateCrit 
+    	; Add crit Calcs On AL
+    	
     	MOV BH, DL ; Temp Store the enemy ID 
 		SUB [DI], AL  
+		MOV CH, AL ; Store Damage Dealt
 		JNC DoDamage_NoClamp
 		MOV [DI], 0
 		DoDamage_NoClamp: 			
-		; Print Damage Value	
-        MOV DX, OFFSET DamagedText
-        CALL PrintLine        
-        ; Temp Change CurrentTurn
-        MOV BL, CurrentTurn   
-        MOV CurrentTurn, BH 
-    	CALL PrintPlayerName
-    	MOV CurrentTurn, BL ; Revert CurrentTurn    
-    	MOV DX, OFFSET ForText
-    	CALL PrintLine
-    	MOV DH, 00
-    	MOV DL, AL
-    	CALL PrintInt  
-    	; Display Enemy Remaining HP
-    	MOV DX, OFFSET ShowEnemyHPText
-    	CALL PrintLine
-    	MOV DL, [DI]
-    	CALL PrintInt
-    	MOV DX, OFFSET LeftText
-    	CALL PrintLine
-   		RET                        	  
+			; Print Damage Value	
+	        MOV DX, OFFSET DamagedText
+	        CALL PrintLine        
+	        ; Temp Change CurrentTurn
+	        MOV BL, CurrentTurn   
+	        MOV CurrentTurn, BH 
+	    	CALL PrintPlayerName
+	    	MOV CurrentTurn, BL ; Revert CurrentTurn 
+	    	MOV BL, AL ; Store Dmg Dealt	    	
+	    	MOV DX, OFFSET ForText
+	    	CALL PrintLine
+	    	MOV AL, CH ; Print stored damage dealt    	
+	    	CALL PrintInt              
+	    	CALL PrintNewLine
+	    	; Display Enemy Remaining HP
+	    	MOV DX, OFFSET ShowEnemyHPText
+	    	CALL PrintLine
+	    	MOV AL, [DI]
+	    	CALL PrintInt
+	    	MOV DX, OFFSET LeftText
+	    	CALL PrintLine
+	   	RET                        	  
 	         
     ; Deals DPS damage to players with poison/burn statuses
     DealDOT:
