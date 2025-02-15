@@ -26,10 +26,10 @@ data SEGMENT
 	
 	; Player Statuses
 	; burn,poison,paralyse,0,vitality,rage,0,0
-	Player1Status  DB 0000000B
-	Player2Status  DB 0000000B
-	Player3Status  DB 0000000B
-	Player4Status  DB 0000000B
+	Player1Status  DB 00000000B
+	Player2Status  DB 00000000B
+	Player3Status  DB 00000000B
+	Player4Status  DB 00000000B
 
     PlayerCount        DB 4	; Number of players, 4
     CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
@@ -62,7 +62,7 @@ data SEGMENT
     ; Game Option Texts    
     PrintPlayerStatsText DB 'Choose Your Class!',0Dh,0Ah, '[1]-Knight',0Dh,0Ah, '[2]-Assassin',0Dh,0Ah, '[3]-Pyromancer',0Dh,0Ah, '[4]-Healer',0Dh,0Ah, '[5]-Vanguard',0Dh,0Ah, '[6]-Vampire ',0Dh,0Ah, '$'
     ChooseYourMoveText DB 'Make Your Choice!',0Dh,0Ah, '$'
-    MoveChoicesText DB '1-Light Attack',0Dh,0Ah, '2-Heavy Attack',0Dh,0Ah, '3-Defend',0Dh,0Ah, '4-Heal',0Dh,0Ah, '5-Ultimate',0Dh,0Ah, '$'
+    MoveChoicesText DB '[1]-Light Attack',0Dh,0Ah, '[2]-Heavy Attack',0Dh,0Ah, '[3]-Defend',0Dh,0Ah, '[4]-Heal',0Dh,0Ah, '[5]-Ultimate',0Dh,0Ah, '$'
     YouCheckIfText DB 'You Selected Class ', '$' 
     StatsText DB 'Stats:', '$'      
     
@@ -81,7 +81,9 @@ data SEGMENT
     Hit_Message DB 'Normal Hit!', '$' 
     AllDeadMsg DB 'All players are dead!', '$'
     SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
-    SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'
+    SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
+    InvalidInputText DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
+    SelfHealText DB 'Health restored by 5', 0Dh, 0Ah, '$'
 
 data ENDS
       
@@ -198,10 +200,14 @@ code SEGMENT
                     SetP3TargetP2:
                         OR CurrentlyTargeting, 00000000B    ; P3 selected P1
                     Team2Selection_Final:
-                        RET 
-                 
-            
-    
+                        RET
+    ; Attacks the selected enemy
+    ; Priority: Heal -> 
+    EvaluateAttack:
+         
+    ; Deals DPS damage to players with poison/burn statuses
+    DealDPS:
+        
     ; Set block bit in CurrentTurnStatus for player with current turn.
     ; Must be called after AlternateTurn, as this function does NOT check the AliveStatus block
     SetBlock:
@@ -564,7 +570,7 @@ code SEGMENT
 	        LOOP LoadPlayerStatsLoop  ; Repeat until CX = 0
 	    RET      
 	    
-	; Give Player choice for in Combat, Loads Choice in AX	    
+	; Give Player choice for in Combat, Loads Choice in AL    
 	GivePlayerMainChoice:
 		CALL PrintPlayerName
 		CALL PrintNewLine 				
@@ -572,9 +578,82 @@ code SEGMENT
     	CALL PrintLine   	 
 	    MOV DX, OFFSET MoveChoicesText  
     	CALL PrintLine                                    
-    	CALL TakeCharInput        
+    	CALL TakeCharInput
+    	MOV BL, AL        
     	CALL PrintNewLine
-    	CALL PrintNewLine
+    	CALL PrintNewLine 
+    	MOV AL, BL   
+    	CMP AL, '1'
+    	JE LightAttack
+    	CMP AL, '2'
+    	JE HeavyAttack
+    	CMP AL, '3'
+    	JE Defend
+    	CMP AL, '4'
+    	JE Heal
+    	CMP AL, '5'
+    	JNE GivePlayerMainChoice_InvalidInput
+    	 
+    	RET
+    	Defend:
+    	    CMP CurrentTurn, 0
+    	    JNE CheckMChoice_1
+    	    OR CurrentTurnStats, 00000001B
+    	    RET
+    	    CheckMChoice_1:
+        	    CMP CurrentTurn, 1
+        	    JNE CheckMChoice_2
+        	    OR CurrentTurnStats, 00000010B
+        	    RET
+            CheckMChoice_2:
+                CMP CurrentTurn, 2
+                JNE CheckMChoice_3
+                OR CurrentTurnStats, 00000100B
+                RET
+            CheckMChoice_3:
+                OR CurrentTurnStats, 00001000B
+                RET
+        Heal:
+            CMP CurrentTurn, 0
+    	    JNE HealMChoice_1
+    	    MOV SI, OFFSET Player1Stats
+    	    JMP HealFinal
+    	    HealMChoice_1:
+        	    CMP CurrentTurn, 1
+        	    JNE HealMChoice_2
+        	    MOV SI, OFFSET Player2Stats
+        	    JMP HealFinal
+            HealMChoice_2:
+                CMP CurrentTurn, 2
+                JNE HealMChoice_3
+        	    MOV SI, OFFSET Player3Stats 
+                JMP HealFinal
+            HealMChoice_3:
+        	    MOV SI, OFFSET Player4Stats
+        	    JMP HealFinal             
+        ClampHP:      
+            MOV [SI], 100
+            RET
+    	HealFinal: 
+    	    MOV AL, HPGainPerTurn
+    	    ADD [SI], AL
+    	    CMP [SI], 100
+    	    JGE ClampSection
+    	    PrintHealText:  
+        	    MOV DX, OFFSET SelfHealText
+        	    CALL PrintLine
+        	    RET      
+    	    ClampSection:
+    	        CALL ClampHP 
+    	        JMP PrintHealText
+    	    
+    	LightAttack:
+    	
+    	HeavyAttack:   	    
+    	GivePlayerMainChoice_InvalidInput:
+    	    MOV DX, OFFSET InvalidInputText
+    	    CALL PrintLine
+    	    JMP GivePlayerMainChoice   
     	RET
     	
 	; Prints the current turn's player name, can be used to be print
@@ -630,63 +709,65 @@ main:
    	MOV SI, OFFSET Player1Stats
     CALL PrintPlayerStats      
     CALL PrintNewLine 
-    CALL PrintNewLine
-    MOV CurrentTurn, 2
-    CALL TargetEnemy    
-    
-    ; Print P2 MSG
-    MOV CurrentTurn, 1 ; do this for printing correct name
-	CALL PrintPlayerName    
-	CALL PrintNewLine      	
-    MOV DX, OFFSET PrintPlayerStatsText
-	CALL PrintLine        
-	; Class Selection
-	CALL SelectPlayerClass	
-    MOV SI, OFFSET Player2Stats
-   	CALL LoadPlayerStats    
-	; Print Stats 
-	MOV SI, OFFSET Player2Stats
-    CALL PrintPlayerStats    
-    CALL PrintNewLine 
     CALL PrintNewLine   
-     
     
- 	; Print P3 MSG
-    MOV CurrentTurn, 2 ; do this for printing correct name
-	CALL PrintPlayerName    
-	CALL PrintNewLine      	
-    MOV DX, OFFSET PrintPlayerStatsText
-	CALL PrintLine        
-	; Class Selection
-	CALL SelectPlayerClass	
-    MOV SI, OFFSET Player3Stats
-   	CALL LoadPlayerStats    
-	; Print Stats 
-	MOV SI, OFFSET Player3Stats
-    CALL PrintPlayerStats    
-    CALL PrintNewLine 
-    CALL PrintNewLine 
-    
- 	; Print P4 MSG
-    MOV CurrentTurn, 3 ; do this for printing correct name
-	CALL PrintPlayerName    
-	CALL PrintNewLine      	
-    MOV DX, OFFSET PrintPlayerStatsText
-	CALL PrintLine        
-	; Class Selection
-	CALL SelectPlayerClass	
-    MOV SI, OFFSET Player4Stats
-   	CALL LoadPlayerStats    
-	; Print Stats 
-	MOV SI, OFFSET Player4Stats
-    CALL PrintPlayerStats    
-    CALL PrintNewLine 
-    CALL PrintNewLine   
-                             
+;    ; Print P2 MSG
+;    MOV CurrentTurn, 1 ; do this for printing correct name
+;	CALL PrintPlayerName    
+;	CALL PrintNewLine      	
+;    MOV DX, OFFSET PrintPlayerStatsText
+;	CALL PrintLine        
+;	; Class Selection
+;	CALL SelectPlayerClass	
+;    MOV SI, OFFSET Player2Stats
+;   	CALL LoadPlayerStats    
+;	; Print Stats 
+;	MOV SI, OFFSET Player2Stats
+;    CALL PrintPlayerStats    
+;    CALL PrintNewLine 
+;    CALL PrintNewLine   
+;     
+;    
+; 	; Print P3 MSG
+;    MOV CurrentTurn, 2 ; do this for printing correct name
+;	CALL PrintPlayerName    
+;	CALL PrintNewLine      	
+;    MOV DX, OFFSET PrintPlayerStatsText
+;	CALL PrintLine        
+;	; Class Selection
+;	CALL SelectPlayerClass	
+;    MOV SI, OFFSET Player3Stats
+;   	CALL LoadPlayerStats    
+;	; Print Stats 
+;	MOV SI, OFFSET Player3Stats
+;    CALL PrintPlayerStats    
+;    CALL PrintNewLine 
+;    CALL PrintNewLine 
+;    
+; 	; Print P4 MSG
+;    MOV CurrentTurn, 3 ; do this for printing correct name
+;	CALL PrintPlayerName    
+;	CALL PrintNewLine      	
+;    MOV DX, OFFSET PrintPlayerStatsText
+;	CALL PrintLine        
+;	; Class Selection
+;	CALL SelectPlayerClass	
+;    MOV SI, OFFSET Player4Stats
+;   	CALL LoadPlayerStats    
+;	; Print Stats 
+;	MOV SI, OFFSET Player4Stats
+;    CALL PrintPlayerStats    
+;    CALL PrintNewLine 
+;    CALL PrintNewLine   
+                        
 	; CHOICES For Round 1 (Should be moved to a function)                          	
-	; Give Player 1 Choice	 
+	; Give Player 1 Choice
 	MOV CurrentTurn, 0	
-	CALL GivePlayerMainChoice   
+	CALL GivePlayerMainChoice 
+	MOV DI, OFFSET Player1Stats
+	MOV AX, [DI]
+	CALL PrintInt 
+	  
 	; Give Player 2 Choice	 
 	MOV CurrentTurn, 1	
 	CALL GivePlayerMainChoice
