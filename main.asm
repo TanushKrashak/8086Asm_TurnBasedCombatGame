@@ -17,7 +17,7 @@ data SEGMENT
 	; Player Stats
 	Player1Stats  	DB 0,0,0,0,0,0,0	
 	Player2Stats  	DB 0,0,0,0,0,0,0
-	Player3Stats  	DB 0,0,0,0,0,0,0
+	Player3Stats  	DB 50,50,0,0,0,0,0
 	Player4Stats  	DB 0,0,0,0,0,0,0   
 	PlayersStamina	DB 80,80,80,80     ; All players' stamina stored here
 	PlayersCooldown DB 0,0,0,0         ; All players' ultimate cooldown, wraps after their class' UltC   
@@ -76,7 +76,11 @@ data SEGMENT
 
 	; In-Combat Texts
 	CriticalHitText DB 'Critical Hit!', '$'
-    NormalHitText DB 'Normal Hit!', '$' 
+    NormalHitText DB 'Normal Hit!', '$'    
+    DamagedText DB 'Damaged ', '$'       
+    ShowEnemyHPText DB 'Enemy Currently Has ', '$'   
+    LeftText DB 'HP Left!', '$'
+    ForText DB 'For ', '$'
     AllPlayersDiedText DB 'All players are dead!', '$'
     SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
     SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
@@ -201,23 +205,93 @@ code SEGMENT
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack
     EvaluateAttack:                    
-        TEST AliveAndHealStatus, 00010000B
-        JZ EvaluateAttack_P2Alive           
-        TEST AliveAndHealStatus, 00000001B 
-        JZ P1Attack 
+        TEST AliveAndHealStatus, 00010000B ; is P1 Alive
+        JZ EvaluateAttack_P2Alive 
+        TEST AliveAndHealStatus, 00000001B ; is P1 Healing
+        JZ P1LightAttack          
+        
         EvaluateAttack_P2Alive:
-            TEST AliveAndHealStatus, 00100000B 
-            JZ FinishAttack 
-
-        P1Attack:                      
-            
+            TEST AliveAndHealStatus, 00100000B ; Check if P2 Alive 
+            JZ FinishAttack
+             
+        P1LightAttack:
+        	TEST Player1Status, 00000100B ; Check if Light Attack 
+        	JZ P1HeavyAttack        	
+        	CALL LoadPStats       	
+        	MOV AL, [DI+2]  ; light atk dmg  
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting             
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
+        	AND BL, 00001100B
+        	CMP BL, 00001000B ; Check if Atking P3         	
+        	JNE P1StoreLightAtkDmgForP4
+        	     MOV CurrentTurn, 2 ; Attacking P3
+        	     CALL LoadPStats
+        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
+        	     CALL DoDamage
+        	     JMP FinishAttack
+        	P1StoreLightAtkDmgForP4:
+        		
+        	CALL DoDamage
+        	JMP FinishAttack
+        P1HeavyAttack:  
+        	TEST Player1Status, 00000010B ; Check if Heavy Attack 
+			JZ P1Ultimate        	
+        	CALL LoadPStats       	
+        	MOV AL, [DI+3] ; heavy atk dmg 
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
+        	AND BL, 00001100B  
+        	CMP BL, 00001100B      	         
+        	JE P1StoreHeavyAtkDmgForP4
+    	     MOV CurrentTurn, 2 ; Attacking P3
+    	     CALL LoadPStats
+    	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
+    	     CALL DoDamage
+    	     JMP FinishAttack  
+    	     P1StoreHeavyAtkDmgForP4:
+    	                
+        P1Ultimate:
+        	    
         FinishAttack:
         MOV CurrentlyTargeting, 0B         ; reset targetting
         AND AliveAndHealStatus, 11110000B  ; reset healing
         RET
-         
+    
+    ; Func to deal damage, needs Damage to be moved to AL    
+    ; Enemy Stats should be Loaded on DI
+    DoDamage:       
+    	CALL UpdateCrit
+    	MOV BH, DL ; Temp Store the enemy ID 
+		SUB [DI], AL  
+		JNC DoDamage_NoClamp
+		MOV [DI], 0
+		DoDamage_NoClamp: 			
+		; Print Damage Value	
+        MOV DX, OFFSET DamagedText
+        CALL PrintLine        
+        ; Temp Change CurrentTurn
+        MOV BL, CurrentTurn   
+        MOV CurrentTurn, BH 
+    	CALL PrintPlayerName
+    	MOV CurrentTurn, BL ; Revert CurrentTurn    
+    	MOV DX, OFFSET ForText
+    	CALL PrintLine
+    	MOV DH, 00
+    	MOV DL, AL
+    	CALL PrintInt  
+    	; Display Enemy Remaining HP
+    	MOV DX, OFFSET ShowEnemyHPText
+    	CALL PrintLine
+    	MOV DL, [DI]
+    	CALL PrintInt
+    	MOV DX, OFFSET LeftText
+    	CALL PrintLine
+   		RET                        	  
+	         
     ; Deals DPS damage to players with poison/burn statuses
-    DealDPS:
+    DealDOT:
         
     ; Set block bit in CurrentTurnStatus for player with current turn.
     ; Must be called after AlternateTurn, as this function does NOT check the AliveAndHealStatus block
@@ -278,7 +352,7 @@ code SEGMENT
         INT 21H  
         RET
         
-    ; Loads current player's stats into SI
+    ; Loads current player's stats into DI
     LoadPStats:
 	    ; Check Turn 0 (Player 1)  
 		CMP CurrentTurn, 0
@@ -705,7 +779,7 @@ code SEGMENT
         	    OR Player3Status, 00000010B 
                 JMP AttackFinal
             HeavyMChoice_3:        	    
-        	    OR Player4Status, 00000010B
+        	    OR Player4Status, 00000011B
         	    JMP AttackFinal    
     	AttackFinal:
     	    RET
@@ -770,68 +844,73 @@ main:
     CALL PrintNewLine 
     CALL PrintNewLine   
     
-;    ; Print P2 MSG
-;    MOV CurrentTurn, 1 ; do this for printing correct name
-;	CALL PrintPlayerName    
-;	CALL PrintNewLine      	
-;    MOV DX, OFFSET PrintPlayerStatsText
-;	CALL PrintLine        
-;	; Class Selection
-;	CALL SelectPlayerClass	
-;    MOV SI, OFFSET Player2Stats
-;   	CALL LoadPlayerStats    
-;	; Print Stats 
-;	MOV SI, OFFSET Player2Stats
-;    CALL PrintPlayerStats    
-;    CALL PrintNewLine 
-;    CALL PrintNewLine   
-;     
-;    
-; 	; Print P3 MSG
-;    MOV CurrentTurn, 2 ; do this for printing correct name
-;	CALL PrintPlayerName    
-;	CALL PrintNewLine      	
-;    MOV DX, OFFSET PrintPlayerStatsText
-;	CALL PrintLine        
-;	; Class Selection
-;	CALL SelectPlayerClass	
-;    MOV SI, OFFSET Player3Stats
-;   	CALL LoadPlayerStats    
-;	; Print Stats 
-;	MOV SI, OFFSET Player3Stats
-;    CALL PrintPlayerStats    
-;    CALL PrintNewLine 
-;    CALL PrintNewLine 
-;    
-; 	; Print P4 MSG
-;    MOV CurrentTurn, 3 ; do this for printing correct name
-;	CALL PrintPlayerName    
-;	CALL PrintNewLine      	
-;    MOV DX, OFFSET PrintPlayerStatsText
-;	CALL PrintLine        
-;	; Class Selection
-;	CALL SelectPlayerClass	
-;    MOV SI, OFFSET Player4Stats
-;   	CALL LoadPlayerStats    
-;	; Print Stats 
-;	MOV SI, OFFSET Player4Stats
-;    CALL PrintPlayerStats    
-;    CALL PrintNewLine 
-;    CALL PrintNewLine   
+    ; Print P2 MSG
+    MOV CurrentTurn, 1 ; do this for printing correct name
+	CALL PrintPlayerName    
+	CALL PrintNewLine      	
+    MOV DX, OFFSET PrintPlayerStatsText
+	CALL PrintLine        
+	; Class Selection
+	CALL SelectPlayerClass	
+    MOV SI, OFFSET Player2Stats
+   	CALL LoadPlayerStats    
+	; Print Stats 
+	MOV SI, OFFSET Player2Stats
+    CALL PrintPlayerStats    
+    CALL PrintNewLine 
+    CALL PrintNewLine   
+     
+    
+ 	; Print P3 MSG
+    MOV CurrentTurn, 2 ; do this for printing correct name
+	CALL PrintPlayerName    
+	CALL PrintNewLine      	
+    MOV DX, OFFSET PrintPlayerStatsText
+	CALL PrintLine        
+	; Class Selection
+	CALL SelectPlayerClass	
+    MOV SI, OFFSET Player3Stats
+   	CALL LoadPlayerStats    
+	; Print Stats 
+	MOV SI, OFFSET Player3Stats
+    CALL PrintPlayerStats    
+    CALL PrintNewLine 
+    CALL PrintNewLine 
+    
+ 	; Print P4 MSG
+    MOV CurrentTurn, 3 ; do this for printing correct name
+	CALL PrintPlayerName    
+	CALL PrintNewLine      	
+    MOV DX, OFFSET PrintPlayerStatsText
+	CALL PrintLine        
+	; Class Selection
+	CALL SelectPlayerClass	
+    MOV SI, OFFSET Player4Stats
+   	CALL LoadPlayerStats    
+	; Print Stats 
+	MOV SI, OFFSET Player4Stats
+    CALL PrintPlayerStats    
+    CALL PrintNewLine 
+    CALL PrintNewLine   
                         
 	; CHOICES For Round 1 (Should be moved to a function)                          	
 	; Give Player 1 Choice
 	MOV CurrentTurn, 0	
-	CALL GivePlayerMainChoice 	 
+	CALL GivePlayerMainChoice 
+	CALL PrintNewLine	 
 	; Give Player 2 Choice	 
 	CALL UpdateCurrentTurn	
 	CALL GivePlayerMainChoice
+	CALL PrintNewLine
 	; Give Player 3 Choice	 
 	CALL UpdateCurrentTurn
-	CALL GivePlayerMainChoice   
+	CALL GivePlayerMainChoice 
+	CALL PrintNewLine  
 	; Give Player 4 Choice	 
 	CALL UpdateCurrentTurn
 	CALL GivePlayerMainChoice
+	CALL UpdateCurrentTurn
+	CALL EvaluateAttack
 	         
                    
     MOV AH, 4Ch        ; DOS function to terminate program
