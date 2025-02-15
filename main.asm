@@ -10,19 +10,17 @@ data SEGMENT
 	MaxStamina   DB 100
 	LStaminaCost DB 15 ; LAttack cost
 	HStaminaCost DB 35 ; HAttack cost
-	BStaminaCost DB 5   ; Block cost
-	; Ultimate cost would be 100 anyways, so no need to declare it here.
+	BStaminaCost DB 5   ; Block cost	
 	HPGainPerTurn DB 5
 	STGainPerTurn DB 10
-	
 	
 	; Player Stats
 	Player1Stats  	DB 0,0,0,0,0,0,0	
 	Player2Stats  	DB 0,0,0,0,0,0,0
 	Player3Stats  	DB 0,0,0,0,0,0,0
 	Player4Stats  	DB 0,0,0,0,0,0,0   
-	PlayersStamina	DB 80, 80, 80, 80     ; All players' stamina stored here
-	PlayersCooldown DB 0, 0, 0, 0         ; All players' ultimate cooldown, wraps after their class' UltC   
+	PlayersStamina	DB 80,80,80,80     ; All players' stamina stored here
+	PlayersCooldown DB 0,0,0,0         ; All players' ultimate cooldown, wraps after their class' UltC   
 	
 	; Player Statuses
 	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
@@ -31,11 +29,11 @@ data SEGMENT
 	Player3Status  DB 00000000B
 	Player4Status  DB 00000000B
 
-    PlayerCount        DB 4	; Number of players, 4
+    PlayerCount        DB 4	; Number of players
     CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
     AliveAndHealStatus DB 11110000B	; p4_alive, p3_alive, p2_alive, p1_alive, p4_heal,p3_heal,p2_heal,p1_heal
     CurrentTurnStats   DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block  
-    CurrentlyTargeting DB 00000000B        ; p1_target, p2_target, p3_target, p4_target  
+    CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target  
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
 	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
@@ -77,14 +75,13 @@ data SEGMENT
     UltimateCDText DB 0DH, 0AH,  'Ultimate Cooldown: ', '$'
 
 	; In-Combat Texts
-	Crit_Message DB 'Critical Hit!', '$'
-    Hit_Message DB 'Normal Hit!', '$' 
-    AllDeadMsg DB 'All players are dead!', '$'
+	CriticalHitText DB 'Critical Hit!', '$'
+    NormalHitText DB 'Normal Hit!', '$' 
+    AllPlayersDiedText DB 'All players are dead!', '$'
     SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
     SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
     InvalidInputText DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
     SelfHealText DB 'Health restored by 5', 0Dh, 0Ah, '$'
-
 data ENDS
       
       
@@ -323,7 +320,7 @@ code SEGMENT
         CALL GetChance 
         JNC GoodLuck ;If current 1/100 of second is less than crit chance, we have critical hit >:)    
         ; Logic for normal hit
-        MOV DX, OFFSET Hit_Message 
+        MOV DX, OFFSET NormalHitText 
         CALL PrintLine
         CMP CurrentTurn, 0
         JNE P1_ResetCritical
@@ -344,7 +341,7 @@ code SEGMENT
             JMP bGetChance_Final    
         ;Critical Hit
         GoodLuck:
-            MOV DX, OFFSET Crit_Message
+            MOV DX, OFFSET CriticalHitText
             CALL PrintLine
             MOV AH, CurrentTurn 
             MOV AL, CurrentTurnStats
@@ -416,7 +413,7 @@ code SEGMENT
 	        RET
         ; Exception Case: All players are dead
         AllDead:
-        MOV DX, OFFSET AllDeadMsg
+        MOV DX, OFFSET AllPlayersDiedText
         CALL PrintLine
         CALL PrintNewLine
         RET     
@@ -825,16 +822,15 @@ main:
 	; CHOICES For Round 1 (Should be moved to a function)                          	
 	; Give Player 1 Choice
 	MOV CurrentTurn, 0	
-	CALL GivePlayerMainChoice 
-	  
+	CALL GivePlayerMainChoice 	 
 	; Give Player 2 Choice	 
-	MOV CurrentTurn, 1	
+	CALL UpdateCurrentTurn	
 	CALL GivePlayerMainChoice
 	; Give Player 3 Choice	 
-	MOV CurrentTurn, 2	
+	CALL UpdateCurrentTurn
 	CALL GivePlayerMainChoice   
 	; Give Player 4 Choice	 
-	MOV CurrentTurn, 3
+	CALL UpdateCurrentTurn
 	CALL GivePlayerMainChoice
 	         
                    
