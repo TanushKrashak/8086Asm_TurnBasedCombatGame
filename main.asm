@@ -41,8 +41,8 @@ data SEGMENT
 	AssassinStats  	DB  60,  60,  30,  40,  20,  50,  4 ; Lower health, high crit chance
 	PyromancerStats	DB  50,  50,  20,  30,  40,  30,  4 ; Lower stats overall, but compensated by burn passive
 	HealerStats    	DB  70 , 70,  15,  30,  30,  30,  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
-	VanguardStats  	DB  100, 100, 10,  35,  100, 5,   4  ; Max HP and Def, very low crit
-	VampireStats   	DB  70,  70,  15,  25,  30,  25,  4  ; High health, low attack to account for 50% heal chance
+	VanguardStats  	DB  100, 100, 10,  35,  100, 0,   4  ; Max HP and Def, very low crit
+	VampireStats   	DB  70,  70,  15,  25,  30,  99,  4  ; High health, low attack to account for 50% heal chance
 		         
 ;==================================================================================
 ; STRINGS
@@ -73,6 +73,7 @@ data SEGMENT
     DefenseText DB 0DH, 0AH, 'Defense: ', '$'
     CriticalChanceText DB 0DH, 0AH, 'Critical Chance: ', '$' 
     StaminaText DB 0DH, 0AH, 'Stamina: ', '$' 
+    UltimateCDText DB 0DH, 0AH,  'Ultimate Cooldown: ', '$'
 
 	; In-Combat Texts
 	Crit_Message DB 'Critical Hit!', '$'
@@ -194,70 +195,61 @@ code SEGMENT
 	    ; Check Turn 0 (Player 1)  
 		CMP CurrentTurn, 0
 		JNE LCheckForOneTurn
-		MOV SI, OFFSET Player1Stats		
+		MOV DI, OFFSET Player1Stats		
 		JMP LEndPrintPlayerName
 		LCheckForOneTurn:
 		    ; Check Turn 1 (Player 2)  
 			CMP CurrentTurn, 1
 			JNE LCheckForTwoTurn
-			MOV SI, OFFSET Player2Stats			
+			MOV DI, OFFSET Player2Stats			
 			JMP LEndPrintPlayerName
 		LCheckForTwoTurn:
 		    ; Check Turn 2 (Player 3)  
 			CMP CurrentTurn, 2
 			JNE LCheckForThreeTurn
-			MOV SI, OFFSET Player3Stats			
+			MOV DI, OFFSET Player3Stats			
 			JMP LEndPrintPlayerName
 		LCheckForThreeTurn:
 			; Turn 3 (Player 4)	
-			MOV SI, OFFSET Player4Stats		  
+			MOV DI, OFFSET Player4Stats		  
 			JMP LEndPrintPlayerName
-		LEndPrintPlayerName:
-		    CALL LoadPlayerStats
-		    SUB SI, 7	    		  			
+		LEndPrintPlayerName:    		  			
 			RET 
                  
-	; Generic random function, expects chance in AL. Returns 1/0 in AL 
+	; Generic random function, expects chance in AL. Result in CF
 	GetChance:
 	    CALL GetTime   ; Load Counter and Data registers with time data
         MOV BL, TotalStats    ; Load length of array for based offset later   
         MOV BH, 0   ;Ensure BX is same as BL in terms of actual value
         CMP AL, DL      ; DL has hundredth of a second
-        JNC SetChanceTrue
-        MOV AL, 0
-        RET
-        SetChanceTrue:
-            MOV AL, 1 
         RET          
         
     ; Updates critical bit in CurrentTurnStatus for players
     UpdateCrit:
-        
         ; Determine current player
-        MOV AH, CurrentTurn
-
-        MOV AL, [Player1Stats + BX]  ;Load chance to be compared into AL
-        CALL GetChance
+        CALL LoadPStats                  
+        MOV AL, [DI+5]  ;Load chance to be compared into AL       
+        CALL GetChance 
         JNC GoodLuck ;If current 1/100 of second is less than crit chance, we have critical hit >:)    
         ; Logic for normal hit
         MOV DX, OFFSET Hit_Message 
         CALL PrintLine
-        CMP AH, 0   ; P1?
+        CMP CurrentTurn, 0
         JNE P1_ResetCritical
         AND AL, 11101111b ;Reset P1_Crit
         JMP bGetChance_Final
         P1_ResetCritical:
-            CMP AH, 1
+            CMP CurrentTurn, 1
             JNE P2_ResetCritical
             AND AL, 11011111b;Reset P2_Crit
             JMP bGetChance_Final
         P2_ResetCritical:
-            CMP AH, 2
+            CMP CurrentTurn, 2
             JNE P3_ResetCritical
             AND AL, 10111111b ;Reset P3_Crit
             JMP bGetChance_Final
         P3_ResetCritical:
-            AND AH, 01111111b    ;  Reset P4_Crit
+            AND CurrentTurn, 01111111b    ;  Reset P4_Crit
             JMP bGetChance_Final    
         ;Critical Hit
         GoodLuck:
@@ -265,17 +257,17 @@ code SEGMENT
             CALL PrintLine
             MOV AH, CurrentTurn 
             MOV AL, CurrentTurnStats
-            CMP AH, 0
+            CMP CurrentTurn, 0
             JNE P1_SetCritical
             OR AL, 00010000b ;Set P1_Crit 
             JMP bGetChance_Final
             P1_SetCritical:
-                CMP AH, 1     
+                CMP CurrentTurn, 1     
                 JNE P2_SetCritical
                 OR AL, 00100000b ;Set P2_Crit
                 JMP bGetChance_Final 
             P2_SetCritical:
-                CMP AH, 2  
+                CMP CurrentTurn, 2  
                 JNE P3_SetCritical
                 OR AL, 01000000b ;Set P3_Crit
                 JMP bGetChance_Final
@@ -404,7 +396,7 @@ code SEGMENT
  		CALL PrintLine	 
  		MOV DH,0h   
  		; Player 1 Stamina
-		 CMP CurrentTurn, 0
+		CMP CurrentTurn, 0
  		JNE P2StaminaPrintCheck
  		MOV AL, [PlayersStamina+0] 
  		JMP StaminaPrintCheckFinish 	
@@ -425,7 +417,11 @@ code SEGMENT
  			MOV AL, [PlayersStamina+3]
  		StaminaPrintCheckFinish:  
  			CALL PrintInt	
- 			RET
+ 		MOV DX, OFFSET UltimateCDText     
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+6]       
+ 		CALL PrintInt 
+ 		RET  
      
 	; Function to get the player's class, stores result
 	; in the BL Register     
@@ -563,7 +559,9 @@ main:
    	MOV SI, OFFSET Player1Stats
     CALL PrintPlayerStats      
     CALL PrintNewLine 
-    CALL PrintNewLine    
+    CALL PrintNewLine
+
+    CALL UpdateCrit    
     
     ; Print P2 MSG
     MOV CurrentTurn, 1 ; do this for printing correct name
@@ -579,7 +577,9 @@ main:
 	MOV SI, OFFSET Player2Stats
     CALL PrintPlayerStats    
     CALL PrintNewLine 
-    CALL PrintNewLine      
+    CALL PrintNewLine   
+    
+    CALL UpdateCrit   
     
  	; Print P3 MSG
     MOV CurrentTurn, 2 ; do this for printing correct name
