@@ -25,7 +25,7 @@ data SEGMENT
 	PlayersCooldown DB 0, 0, 0, 0         ; All players' ultimate cooldown, wraps after their class' UltC   
 	
 	; Player Statuses
-	; burn,poison,paralyse,0,vitality,rage,0,0
+	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
 	Player1Status  DB 00000000B
 	Player2Status  DB 00000000B
 	Player3Status  DB 00000000B
@@ -204,8 +204,19 @@ code SEGMENT
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack
     EvaluateAttack:                    
-        
-        MOV CurrentlyTargeting, 0B
+        TEST AliveAndHealStatus, 00010000B
+        JZ EvaluateAttack_P2Alive           
+        TEST AliveAndHealStatus, 00000001B 
+        JZ P1Attack 
+        EvaluateAttack_P2Alive:
+            TEST AliveAndHealStatus, 00100000B 
+            JZ FinishAttack 
+
+        P1Attack:                      
+            
+        FinishAttack:
+        MOV CurrentlyTargeting, 0B         ; reset targetting
+        AND AliveAndHealStatus, 11110000B  ; reset healing
         RET
          
     ; Deals DPS damage to players with poison/burn statuses
@@ -587,9 +598,9 @@ code SEGMENT
     	CALL PrintNewLine 
     	MOV AL, BL   
     	CMP AL, '1'
-    	JE Attack
+    	JE LightAttack
     	CMP AL, '2'
-    	JE Attack
+    	JE HeavyAttack
     	CMP AL, '3'
     	JE Defend
     	CMP AL, '4'
@@ -653,8 +664,30 @@ code SEGMENT
     	    ClampSection:
     	        CALL ClampHP 
     	        JMP PrintHealText    	   
-    	Attack:
-    	    CALL TargetEnemy   	    
+    	LightAttack:
+    	    CALL TargetEnemy 
+    	      	    
+    	HeavyAttack:
+    	    CALL TargetEnemy   
+    	    CMP CurrentTurn, 0
+    	    JNE HeavyMChoice_1    	    
+    	    OR Player1Status, 00000010B
+    	    JMP AttackFinal
+    	    HeavyMChoice_1:
+        	    CMP CurrentTurn, 1
+        	    JNE HeavyMChoice_2
+        	    OR Player2Status, 00000010B
+        	    JMP AttackFinal
+            HeavyMChoice_2:
+                CMP CurrentTurn, 2
+                JNE HeavyMChoice_3
+        	    OR Player3Status, 00000010B 
+                JMP AttackFinal
+            HeavyMChoice_3:        	    
+        	    OR Player4Status, 00000010B
+        	    JMP AttackFinal    
+        	AttackFinal:
+        	    RET
     	GivePlayerMainChoice_InvalidInput:
     	    MOV DX, OFFSET InvalidInputText
     	    CALL PrintLine
