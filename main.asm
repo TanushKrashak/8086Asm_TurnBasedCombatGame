@@ -17,10 +17,10 @@ data SEGMENT
 	
 	
 	; Player Stats
-	Player1Stats  	DB 0,0,0,0,0,0	
-	Player2Stats  	DB 0,0,0,0,0,0
-	Player3Stats  	DB 0,0,0,0,0,0
-	Player4Stats  	DB 0,0,0,0,0,0   
+	Player1Stats  	DB 0,0,0,0,0,0,0	
+	Player2Stats  	DB 0,0,0,0,0,0,0
+	Player3Stats  	DB 0,0,0,0,0,0,0
+	Player4Stats  	DB 0,0,0,0,0,0,0   
 	PlayersStamina	DB 80, 80, 80, 80     ; All players' stamina stored here
 	PlayersCooldown DB 0, 0, 0, 0         ; All players' ultimate cooldown, wraps after their class' UltC   
 	
@@ -37,12 +37,12 @@ data SEGMENT
     CurrentTurnStats DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
-	KnightStats    	DB  85,  85,  20,  35,  60,  30  3 ; Balanced, high defense
-	AssassinStats  	DB  60,  60,  30,  40,  20,  50  4 ; Lower health, high crit chance
-	PyromancerStats	DB  50,  50,  20,  30,  40,  30  4 ; Lower stats overall, but compensated by burn passive
-	HealerStats    	DB  70 , 70,  15,  30,  30,  30  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
-	VanguardStats  	DB  100, 100, 10,  35,  100, 5   4  ; Max HP and Def, very low crit
-	VampireStats   	DB  70,  70,  15,  25,  30,  25  4  ; High health, low attack to account for 50% heal chance
+	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
+	AssassinStats  	DB  60,  60,  30,  40,  20,  50,  4 ; Lower health, high crit chance
+	PyromancerStats	DB  50,  50,  20,  30,  40,  30,  4 ; Lower stats overall, but compensated by burn passive
+	HealerStats    	DB  70 , 70,  15,  30,  30,  30,  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
+	VanguardStats  	DB  100, 100, 10,  35,  100, 5,   4  ; Max HP and Def, very low crit
+	VampireStats   	DB  70,  70,  15,  25,  30,  25,  4  ; High health, low attack to account for 50% heal chance
 		         
 ;==================================================================================
 ; STRINGS
@@ -53,14 +53,13 @@ data SEGMENT
     ; Class Names
     Knight DB 'Knight', '$'     
     Assassin DB 'Assassin', '$'
-    Duelist DB 'Duelist', '$' 
     Pyromancer DB 'Pyromancer', '$'
     Healer DB 'Healer', '$'
     Vanguard DB 'Vanguard', '$'
     Vampire DB 'Vampire', '$'      
     
     ; Game Option Texts    
-    PrintPlayerStatsText DB 'Choose Your Class!',0Dh,0Ah, '[1]-Knight',0Dh,0Ah, '[2]-Assassin',0Dh,0Ah, '[3]-Duelist',0Dh,0Ah, '[4]-Pyromancer',0Dh,0Ah, '[5]-Healer',0Dh,0Ah, '[6]-Vanguard',0Dh,0Ah, '[7]-Vampire ',0Dh,0Ah, '$'
+    PrintPlayerStatsText DB 'Choose Your Class!',0Dh,0Ah, '[1]-Knight',0Dh,0Ah, '[2]-Assassin',0Dh,0Ah, '[3]-Pyromancer',0Dh,0Ah, '[4]-Healer',0Dh,0Ah, '[5]-Vanguard',0Dh,0Ah, '[6]-Vampire ',0Dh,0Ah, '$'
     ChooseYourMoveText DB 'Make Your Choice!',0Dh,0Ah, '$'
     MoveChoicesText DB '1-Light Attack',0Dh,0Ah, '2-Heavy Attack',0Dh,0Ah, '3-Defend',0Dh,0Ah, '4-Heal',0Dh,0Ah, '5-Ultimate',0Dh,0Ah, '$'
     YouCheckIfText DB 'You Selected Class ', '$' 
@@ -189,17 +188,56 @@ code SEGMENT
         MOV AH, 2CH
         INT 21H  
         RET
+        
+    ; Loads current player's stats into SI
+    LoadPStats:
+	    ; Check Turn 0 (Player 1)  
+		CMP CurrentTurn, 0
+		JNE LCheckForOneTurn
+		MOV SI, OFFSET Player1Stats		
+		JMP LEndPrintPlayerName
+		LCheckForOneTurn:
+		    ; Check Turn 1 (Player 2)  
+			CMP CurrentTurn, 1
+			JNE LCheckForTwoTurn
+			MOV SI, OFFSET Player2Stats			
+			JMP LEndPrintPlayerName
+		LCheckForTwoTurn:
+		    ; Check Turn 2 (Player 3)  
+			CMP CurrentTurn, 2
+			JNE LCheckForThreeTurn
+			MOV SI, OFFSET Player3Stats			
+			JMP LEndPrintPlayerName
+		LCheckForThreeTurn:
+			; Turn 3 (Player 4)	
+			MOV SI, OFFSET Player4Stats		  
+			JMP LEndPrintPlayerName
+		LEndPrintPlayerName:
+		    CALL LoadPlayerStats
+		    SUB SI, 7	    		  			
+			RET 
                  
-	; Generic random function
-    GetChance:  
-        CALL GetTime   ; Load Counter and Data registers with time data
+	; Generic random function, expects chance in AL. Returns 1/0 in AL 
+	GetChance:
+	    CALL GetTime   ; Load Counter and Data registers with time data
         MOV BL, TotalStats    ; Load length of array for based offset later   
         MOV BH, 0   ;Ensure BX is same as BL in terms of actual value
-        MOV AL, [Player1Stats + BX]  ;Load crit chance stat into AL
-        CMP AL, DL      ; DL has hundredth of a second 
+        CMP AL, DL      ; DL has hundredth of a second
+        JNC SetChanceTrue
+        MOV AL, 0
+        RET
+        SetChanceTrue:
+            MOV AL, 1 
+        RET          
+        
+    ; Updates critical bit in CurrentTurnStatus for players
+    UpdateCrit:
+        
         ; Determine current player
-        MOV AH, CurrentTurn 
-        MOV AL, CurrentTurnStats  ; Load current turn'stats for updation
+        MOV AH, CurrentTurn
+
+        MOV AL, [Player1Stats + BX]  ;Load chance to be compared into AL
+        CALL GetChance
         JNC GoodLuck ;If current 1/100 of second is less than crit chance, we have critical hit >:)    
         ; Logic for normal hit
         MOV DX, OFFSET Hit_Message 
@@ -410,41 +448,34 @@ code SEGMENT
 	    ; Assassin  
 	    CheckIfAssassin:  
 	        CMP BL, '2'  
-	        JNE CheckIfDuelist  
+	        JNE CheckIfPyromancer  
 	        MOV DI, OFFSET AssassinStats  
 	        MOV DX, OFFSET Assassin  
-	        JMP EndClassSelection  
-	    ; Duelist  
-	    CheckIfDuelist:  
-	        CMP BL, '3'  
-	        JNE CheckIfPyromancer  
-	        MOV DI, OFFSET DuelistStats  
-	        MOV DX, OFFSET Duelist  
-	        JMP EndClassSelection  
+	        JMP EndClassSelection   
 	    ; Pyromancer  
 	    CheckIfPyromancer:  
-	        CMP BL, '4'  
+	        CMP BL, '3'  
 	        JNE CheckIfHealer  
 	        MOV DI, OFFSET PyromancerStats  
 	        MOV DX, OFFSET Pyromancer  
 	        JMP EndClassSelection  
 	    ; Healer  
 	    CheckIfHealer:  
-	        CMP BL, '5'  
+	        CMP BL, '4'  
 	        JNE CheckIfVanguard  
 	        MOV DI, OFFSET HealerStats  
 	        MOV DX, OFFSET Healer  
 	        JMP EndClassSelection  
 	    ; Vanguard  
 	    CheckIfVanguard:  
-	        CMP BL, '6'  
+	        CMP BL, '5'  
 	        JNE CheckIfVampire  
 	        MOV DI, OFFSET VanguardStats  
 	        MOV DX, OFFSET Vanguard  
 	        JMP EndClassSelection  
 	    ; Vampire  
 	    CheckIfVampire:  
-	        CMP BL, '7'  
+	        CMP BL, '6'  
 	        JNE EndClassSelection  
 	        MOV DI, OFFSET VampireStats  
 	        MOV DX, OFFSET Vampire  
@@ -457,7 +488,7 @@ code SEGMENT
 	; Loads Player Stats based on the DI Value
 	; Player Has To Be Loaded inside SI	
     LoadPlayerStats:           
-        MOV CX, 6                    ; Loop counter (6 elements)        
+        MOV CX, 7                    ; Loop counter (7 elements)        
 	    LoadPlayerStatsLoop:
 	        MOV AL, [DI]    
 	        MOV [SI], AL    
