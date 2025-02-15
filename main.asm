@@ -33,9 +33,9 @@ data SEGMENT
 
     PlayerCount        DB 4	; Number of players, 4
     CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
-    AliveState         DB 11110000B	; p4_alive, p3_alive, p2_alive, p1_alive. Lower nibble reserved
+    AliveAndHealStatus DB 11110000B	; p4_alive, p3_alive, p2_alive, p1_alive, p4_heal,p3_heal,p2_heal,p1_heal
     CurrentTurnStats   DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block  
-    CurrentlyTargeting DB 00000000B        ; p1_target, p2_target, p3_target, p4_target
+    CurrentlyTargeting DB 00000000B        ; p1_target, p2_target, p3_target, p4_target  
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
 	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
@@ -140,9 +140,9 @@ code SEGMENT
     TargetEnemy:
         CMP CurrentTurn, 2
         JNC Team2Selection:
-            TEST AliveState, 10000000B
+            TEST AliveAndHealStatus, 10000000B
             JZ P3Select                 ; P4 dead, skip to P3
-            TEST AliveState, 01000000B
+            TEST AliveAndHealStatus, 01000000B
             JZ Team1Selection_Final
             MOV DX, OFFSET SelectTeam1TargetText
             CALL PrintLine
@@ -159,7 +159,7 @@ code SEGMENT
             RET
             ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
             P3Select:
-                TEST AliveState, 01000000B
+                TEST AliveAndHealStatus, 01000000B
                 JZ Team1Selection_Final
                 P3Selected:
                     CMP CurrentTurn, 0
@@ -171,9 +171,9 @@ code SEGMENT
                     Team1Selection_Final:
                         RET  
         Team2Selection:
-            TEST AliveState, 00010000B
+            TEST AliveAndHealStatus, 00010000B
             JZ P2Select                 ; P1 dead, skip to P2
-            TEST AliveState, 00100000B
+            TEST AliveAndHealStatus, 00100000B
             JZ Team2Selection_Final
             MOV DX, OFFSET SelectTeam2TargetText
             CALL PrintLine
@@ -190,7 +190,7 @@ code SEGMENT
             RET
             ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
             P2Select:
-                TEST AliveState, 01000000B
+                TEST AliveAndHealStatus, 01000000B
                 JZ Team2Selection_Final
                 P1Selected:
                     CMP CurrentTurn, 2
@@ -202,14 +202,17 @@ code SEGMENT
                     Team2Selection_Final:
                         RET
     ; Attacks the selected enemy
-    ; Priority: Heal -> 
-    EvaluateAttack:
+    ; Priority: Ultimate attack, attack
+    EvaluateAttack:                    
+        
+        MOV CurrentlyTargeting, 0B
+        RET
          
     ; Deals DPS damage to players with poison/burn statuses
     DealDPS:
         
     ; Set block bit in CurrentTurnStatus for player with current turn.
-    ; Must be called after AlternateTurn, as this function does NOT check the AliveStatus block
+    ; Must be called after AlternateTurn, as this function does NOT check the AliveAndHealStatus block
     SetBlock:
         MOV AL, CurrentTurnStats
         MOV AH, CurrentTurn
@@ -235,9 +238,9 @@ code SEGMENT
             MOV CurrentTurnStats, AL 
             RET   
     
-    ; Update AliveState after every turn by checking HP of every player
+    ; Update AliveAndHealStatus after every turn by checking HP of every player
     UpdateStatusOnDeath:
-        MOV AL, AliveState
+        MOV AL, AliveAndHealStatus
         MOV AH, Player1Stats
         CMP AH, 0
         JNE Check_P2_Alive
@@ -258,7 +261,7 @@ code SEGMENT
             JNE UpdateStatusOnDeath_Final
             AND AL, 01111111B    ; P4 dead, reset their alive bit
         UpdateStatusOnDeath_Final:
-            MOV AliveState, AL  ;Update AliveState finally   
+            MOV AliveAndHealStatus, AL  ;Update AliveAndHealStatus finally   
             RET
             
 	; Load system time into CX and DX (CH: Hour, CL: Minute, DH: Second, DL: 1/100th of a second)
@@ -372,7 +375,7 @@ code SEGMENT
         JE AllDead  ; Jump to AllDead to prevent infinite recursion
         MOV AL, CurrentTurn
         CALL WrappedIncrement   ; Increment AL, wrap if necessary
-        MOV DL, AliveState    ; Load AliveState byte into DL to check if the current player is dead or not
+        MOV DL, AliveAndHealStatus    ; Load AliveAndHealStatus byte into DL to check if the current player is dead or not
         ; AH holds current turn
         CMP AH, 0
         JE P1_Turn
@@ -584,9 +587,9 @@ code SEGMENT
     	CALL PrintNewLine 
     	MOV AL, BL   
     	CMP AL, '1'
-    	JE LightAttack
+    	JE Attack
     	CMP AL, '2'
-    	JE HeavyAttack
+    	JE Attack
     	CMP AL, '3'
     	JE Defend
     	CMP AL, '4'
@@ -616,20 +619,24 @@ code SEGMENT
         Heal:
             CMP CurrentTurn, 0
     	    JNE HealMChoice_1
-    	    MOV SI, OFFSET Player1Stats
+    	    MOV SI, OFFSET Player1Stats   
+    	    OR AliveAndHealStatus, 00000001B;
     	    JMP HealFinal
     	    HealMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE HealMChoice_2
-        	    MOV SI, OFFSET Player2Stats
+        	    MOV SI, OFFSET Player2Stats 
+        	    OR AliveAndHealStatus, 00000010B;
         	    JMP HealFinal
             HealMChoice_2:
                 CMP CurrentTurn, 2
                 JNE HealMChoice_3
-        	    MOV SI, OFFSET Player3Stats 
+        	    MOV SI, OFFSET Player3Stats
+        	    OR AliveAndHealStatus, 00000100B; 
                 JMP HealFinal
             HealMChoice_3:
-        	    MOV SI, OFFSET Player4Stats
+        	    MOV SI, OFFSET Player4Stats 
+        	    OR AliveAndHealStatus, 00001000B;
         	    JMP HealFinal             
         ClampHP:      
             MOV [SI], 100
@@ -645,11 +652,9 @@ code SEGMENT
         	    RET      
     	    ClampSection:
     	        CALL ClampHP 
-    	        JMP PrintHealText
-    	    
-    	LightAttack:
-    	
-    	HeavyAttack:   	    
+    	        JMP PrintHealText    	   
+    	Attack:
+    	    CALL TargetEnemy   	    
     	GivePlayerMainChoice_InvalidInput:
     	    MOV DX, OFFSET InvalidInputText
     	    CALL PrintLine
