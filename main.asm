@@ -23,7 +23,7 @@ data SEGMENT
 	Player2Stats  	DB 0,0,0,0,0,0,0
 	Player3Stats  	DB 50,50,0,0,0,0,0
 	Player4Stats  	DB 0,0,0,0,0,0,0   
-	PlayersStamina	DB 80,80,80,80     ; All players' stamina stored here
+	PlayersStamina	DB 100,100,100,100     ; All players' stamina stored here
 	PlayersCooldown DB 0,0,0,0         ; All players' ultimate cooldown, wraps after their class' UltC   
 	
 	; Player Statuses
@@ -95,6 +95,7 @@ data SEGMENT
     SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
     SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
     InvalidInputText DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
+    NotEnoughStaminaText DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$' 
     SelfHealText DB 'Health restored by 5', 0Dh, 0Ah, '$'   
     BurnDamageText DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
     PoisonDamageText DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'      
@@ -232,22 +233,23 @@ code SEGMENT
         	TEST Player1Status, 00000100B ; Check if Light Attack 
         	JZ P1HeavyAttack        	
         	CALL LoadPStats       	
-        	MOV AL, [DI+2]  ; light atk dmg  
+        	MOV AL, [DI+2]  ; light atk dmg   
+        	MOV AH, 0
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
         	AND BL, 11000000B  ; Remove redundant bits
         	CMP BL, 11000000B  ; Check if Atking P4         	   	         
         	JE P1StoreLightAtkDmgForP4
-        	     MOV CurrentTurn, 2 ; Attacking P3
+        	     MOV CurrentTurn, 2 ; Attacking P3  
+        	     MOV EnemyIdentifier, 2 ; Store enemy ID  
+        	P1StoreLightAtkDmgForP4:        	
+        	     MOV CurrentTurn, 3 ; Attacking P4  
+        	     MOV EnemyIdentifier, 3 ; Store enemy ID  
         	     CALL LoadPStats
-        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
-        	     CALL DoDamage
-        	     JMP FinishAttack
-        	P1StoreLightAtkDmgForP4:
-        		
-        	CALL DoDamage
-        	JMP FinishAttack
+        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
+        	     CALL DoDamage       	     
+        	     JMP FinishAttack	       
         P1HeavyAttack:  
         	TEST Player1Status, 00000010B ; Check if Heavy Attack 
 			JZ P1Ultimate        	
@@ -262,14 +264,14 @@ code SEGMENT
         	CMP BL, 11000000B  ; Check if Atking P4         	   	         
         	JE P1StoreHeavyAtkDmgForP4
     	     MOV CurrentTurn, 2 ; Attacking P3    	      
-    	     MOV EnemyIdentifier, 2 ; Store enemy ID  
-    	     INT 20H
+    	     MOV EnemyIdentifier, 2 ; Store enemy ID      	     
+    	     P1StoreHeavyAtkDmgForP4: 
+			    MOV CurrentTurn, 3 ; Attacking P3    	      
+				MOV EnemyIdentifier, 3; Store enemy ID  
     	     CALL LoadPStats
     	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
     	     CALL DoDamage
-    	     JMP FinishAttack  
-    	     P1StoreHeavyAtkDmgForP4:
-    	                
+    	     JMP FinishAttack      	         	               
         P1Ultimate:
         	    
         FinishAttack:
@@ -927,9 +929,60 @@ code SEGMENT
     	CMP AL, '4'
     	JE Heal
     	CMP AL, '5'
-    	JNE GivePlayerMainChoice_InvalidInput
-    	 
-    	RET
+    	JNE GivePlayerMainChoice_InvalidInput    	
+    	RET  
+    	; Light Attack 	   
+    	LightAttack:    	    
+    	    ; Change Status Indicating which type of attack 
+			; was chosen by the player, it is done by updating
+    	    ; the 3rd last bit on the PlayerXStatus vars
+    	    CMP CurrentTurn, 0
+    	    JNE LightMChoice_1    	    
+    	    OR Player1Status, 00000100B
+    	    JMP AttackFinal
+    	    LightMChoice_1:
+        	    CMP CurrentTurn, 1
+        	    JNE LightMChoice_2
+        	    OR Player2Status, 00000100B
+        	    JMP AttackFinal
+            LightMChoice_2:
+                CMP CurrentTurn, 2
+                JNE LightMChoice_3
+        	    OR Player3Status, 00000100B 
+                JMP AttackFinal
+            LightMChoice_3:        	    
+        	    OR Player4Status, 00000100B
+        	    JMP AttackFinal 
+        ; Heavy Attack    	      	    
+    	HeavyAttack:    	      
+    	    ; Change Status Indicating which type of attack 
+    	    ; was chosen by the player, it is done by updating
+    	    ; the 2nd last bit on the PlayerXStatus vars
+    	    CMP CurrentTurn, 0
+    	    JNE HeavyMChoice_1   
+    	    CMP [PlayersStamina+0], 30 ; Check if has 30 stamina
+    	    JC NotEnoughStamina 	    
+    	    OR Player1Status, 00000010B
+    	    JMP AttackFinal
+    	    HeavyMChoice_1:
+        	    CMP CurrentTurn, 1
+        	    JNE HeavyMChoice_2 
+        	    CMP [PlayersStamina+1], 30 ; Check if has 30 stamina
+				JC NotEnoughStamina 
+        	    OR Player2Status, 00000010B
+        	    JMP AttackFinal
+            HeavyMChoice_2:
+                CMP CurrentTurn, 2
+                JNE HeavyMChoice_3 
+        	    CMP [PlayersStamina+1], 30 ; Check if has 30 stamina
+				JC NotEnoughStamina                 
+        	    OR Player3Status, 00000010B 
+                JMP AttackFinal
+            HeavyMChoice_3:    
+        	    CMP [PlayersStamina+1], 30 ; Check if has 30 stamina
+				JC NotEnoughStamina     	    
+        	    OR Player4Status, 00000011B
+        	    JMP AttackFinal  	    
     	Defend:
     	    CMP CurrentTurn, 0
     	    JNE CheckMChoice_1
@@ -984,55 +1037,19 @@ code SEGMENT
         	    RET      
     	    ClampSection:
     	        CALL ClampHP 
-    	        JMP PrintHealText  
- 		; Light Attack 	   
-    	LightAttack:
-    	    CALL TargetEnemy   
-    	    ; Change Status Indicating which type of attack 
-			; was chosen by the player, it is done by updating
-    	    ; the 3rd last bit on the PlayerXStatus vars
-    	    CMP CurrentTurn, 0
-    	    JNE LightMChoice_1    	    
-    	    OR Player1Status, 00000100B
-    	    JMP AttackFinal
-    	    LightMChoice_1:
-        	    CMP CurrentTurn, 1
-        	    JNE LightMChoice_2
-        	    OR Player2Status, 00000100B
-        	    JMP AttackFinal
-            LightMChoice_2:
-                CMP CurrentTurn, 2
-                JNE LightMChoice_3
-        	    OR Player3Status, 00000100B 
-                JMP AttackFinal
-            LightMChoice_3:        	    
-        	    OR Player4Status, 00000100B
-        	    JMP AttackFinal    
-		; Heavy Attack    	      	    
-    	HeavyAttack:
-    	    CALL TargetEnemy    
-    	    ; Change Status Indicating which type of attack 
-    	    ; was chosen by the player, it is done by updating
-    	    ; the 2nd last bit on the PlayerXStatus vars
-    	    CMP CurrentTurn, 0
-    	    JNE HeavyMChoice_1    	    
-    	    OR Player1Status, 00000010B
-    	    JMP AttackFinal
-    	    HeavyMChoice_1:
-        	    CMP CurrentTurn, 1
-        	    JNE HeavyMChoice_2
-        	    OR Player2Status, 00000010B
-        	    JMP AttackFinal
-            HeavyMChoice_2:
-                CMP CurrentTurn, 2
-                JNE HeavyMChoice_3
-        	    OR Player3Status, 00000010B 
-                JMP AttackFinal
-            HeavyMChoice_3:        	    
-        	    OR Player4Status, 00000011B
-        	    JMP AttackFinal    
-    	AttackFinal:
-    	    RET
+    	        JMP PrintHealText 
+    	; Attack Chosen, In case some common finishing
+    	; logic is required           
+    	AttackFinal: 
+    		CALL TargetEnemy
+    		CALL PrintNewLine 
+    	    RET      
+    	; Not Enough Stamina             
+ 		NotEnoughStamina:
+ 			MOV DX, OFFSET NotEnoughStaminaText
+ 			CALL PrintLine
+ 			JMP GivePlayerMainChoice
+ 		; Invalid INput
     	GivePlayerMainChoice_InvalidInput:
     	    MOV DX, OFFSET InvalidInputText
     	    CALL PrintLine
