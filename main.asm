@@ -1134,24 +1134,24 @@ main:
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice 
-    	CMP CurrentTurn, 1
+    	CMP CurrentTurn, 0
     	JNE P2GameChoice
     	CALL GivePlayerMainChoice 
     	CALL PrintNewLine	 
     	; Give Player 2 Choice	 
     	CALL AlternateTurn	
     	P2GameChoice:
-    	    CMP CurrentTurn, 2
+    	    CMP CurrentTurn, 1
     	    JNE P3GameChoice
         	CALL GivePlayerMainChoice
-        	CALL PrintNewLine
-    	; Give Player 3 Choice	 
-    	CALL AlternateTurn
+        	CALL PrintNewLine    	
+    		CALL AlternateTurn  
+    	; Give Player 3 Choice	
     	P3GameChoice:
         	CALL GivePlayerMainChoice 
-        	CALL PrintNewLine  
-    	; Give Player 4 Choice	 
-    	CALL AlternateTurn      
+        	CALL PrintNewLine   
+        	CALL AlternateTurn 
+    	; Give Player 4 Choice	     		
     	P4GameChoice:
         	CALL GivePlayerMainChoice
         	CALL AlternateTurn 
