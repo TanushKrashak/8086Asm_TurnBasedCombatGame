@@ -219,22 +219,32 @@ code SEGMENT
                         RET
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack
-    EvaluateAttack:                    
-        TEST AliveAndHealStatus, 00010000B ; is P1 Alive
+    EvaluateAttack:             
+    	; Check P1 Status       
+        TEST AliveAndHealStatus, 00010000B ; P1 Alive
         JZ EvaluateAttack_P2Alive 
-        TEST AliveAndHealStatus, 00000001B ; is P1 Healing
+        TEST AliveAndHealStatus, 00000001B ; P1 Healing
         JZ P1LightAttack          
-        
+        ; Check P2 Status
         EvaluateAttack_P2Alive:
-            TEST AliveAndHealStatus, 00100000B ; Check if P2 Alive 
-            JZ FinishAttack
-             
+            TEST AliveAndHealStatus, 00100000B ; P2 Alive
+	        JZ EvaluateAttack_P3Alive 
+	        TEST AliveAndHealStatus, 00000010B ; P2 Healing
+	        JZ P2LightAttack 
+ 		; Check P3 Status
+        EvaluateAttack_P3Alive:
+            TEST AliveAndHealStatus, 01000000B ; P3 Alive
+	        JZ P4LightAttack 
+	        TEST AliveAndHealStatus, 00000100B ; P3 Healing
+	        JZ P3LightAttack	    
+	    ; P1 Attacks	      
         P1LightAttack:
         	TEST Player1Status, 00000100B ; Check if Light Attack 
         	JZ P1HeavyAttack        	
         	CALL LoadPStats       	
         	MOV AL, [DI+2]  ; light atk dmg   
-        	MOV AH, 0
+        	MOV AH, 0 
+        	MOV DamageToBeDealt, AX
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
@@ -273,7 +283,54 @@ code SEGMENT
     	     CALL DoDamage
     	     JMP FinishAttack      	         	               
         P1Ultimate:       
-        
+        ; P2 Attacks	      
+        P2LightAttack:
+        	TEST Player2Status, 00000100B ; Check if Light Attack 
+        	JZ P2HeavyAttack        	
+        	CALL LoadPStats       	
+        	MOV AL, [DI+2]  ; light atk dmg   
+        	MOV AH, 0 
+        	MOV DamageToBeDealt, AX
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting             
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
+        	AND BL, 00110000B  ; Remove redundant bits
+        	CMP BL, 00110000B  ; Check if Atking P4         	   	         
+        	JE P2StoreLightAtkDmgForP4
+        	     MOV CurrentTurn, 2 ; Attacking P3  
+        	     MOV EnemyIdentifier, 2 ; Store enemy ID  
+        	P2StoreLightAtkDmgForP4:        	
+        	     MOV CurrentTurn, 3 ; Attacking P4  
+        	     MOV EnemyIdentifier, 3 ; Store enemy ID  
+        	     CALL LoadPStats
+        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
+        	     CALL DoDamage       	     
+        	     JMP FinishAttack	       
+        P2HeavyAttack:  
+        	TEST Player2Status, 00000010B ; Check if Heavy Attack 
+			JZ P2Ultimate        	
+        	CALL LoadPStats         	      
+        	MOV AL, [DI+3] ; heavy atk dmg     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
+        	AND BL, 00110000B  ; Remove redundant bits
+        	CMP BL, 00110000B  ; Check if Atking P4         	   	         
+        	JE P2StoreHeavyAtkDmgForP4
+    	     MOV CurrentTurn, 2 ; Attacking P3    	      
+    	     MOV EnemyIdentifier, 2 ; Store enemy ID      	     
+    	     P2StoreHeavyAtkDmgForP4: 
+			    MOV CurrentTurn, 3 ; Attacking P3    	      
+				MOV EnemyIdentifier, 3; Store enemy ID  
+    	     CALL LoadPStats
+    	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
+    	     CALL DoDamage
+    	     JMP FinishAttack      	         	               
+        P2Ultimate:
+        P3LightAttack:
+        P4LightAttack:
         ; Finish Attack, used for Resetting some Variables	    
         FinishAttack:
 	        MOV CurrentlyTargeting, 0B         ; reset targetting
