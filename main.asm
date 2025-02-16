@@ -253,12 +253,10 @@ code SEGMENT
         	JE P1StoreLightAtkDmgForP4
         	     MOV CurrentTurn, 2 ; Attacking P3  
         	     MOV EnemyIdentifier, 2 ; Store enemy ID  
+        	     JMP FinishAttack
         	P1StoreLightAtkDmgForP4:        	
         	     MOV CurrentTurn, 3 ; Attacking P4  
-        	     MOV EnemyIdentifier, 3 ; Store enemy ID  
-        	     CALL LoadPStats
-        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
-        	     CALL DoDamage       	     
+        	     MOV EnemyIdentifier, 3 ; Store enemy ID    	    
         	     JMP FinishAttack	       
         P1HeavyAttack:  
         	TEST Player1Status, 00000010B ; Check if Heavy Attack 
@@ -273,15 +271,13 @@ code SEGMENT
         	AND BL, 11000000B  ; Remove redundant bits
         	CMP BL, 11000000B  ; Check if Atking P4         	   	         
         	JE P1StoreHeavyAtkDmgForP4
-    	     MOV CurrentTurn, 2 ; Attacking P3    	      
-    	     MOV EnemyIdentifier, 2 ; Store enemy ID      	     
-    	     P1StoreHeavyAtkDmgForP4: 
+	    	     MOV CurrentTurn, 2 ; Attacking P3    	      
+	    	     MOV EnemyIdentifier, 2 ; Store enemy ID 
+	    	     JMP FinishAttack     	     
+    	    P1StoreHeavyAtkDmgForP4: 
 			    MOV CurrentTurn, 3 ; Attacking P3    	      
-				MOV EnemyIdentifier, 3; Store enemy ID  
-    	     CALL LoadPStats
-    	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
-    	     CALL DoDamage
-    	     JMP FinishAttack      	         	               
+				MOV EnemyIdentifier, 3; Store enemy ID  			
+    	     	JMP FinishAttack      	         	               
         P1Ultimate:       
         ; P2 Attacks	      
         P2LightAttack:
@@ -298,13 +294,11 @@ code SEGMENT
         	CMP BL, 00110000B  ; Check if Atking P4         	   	         
         	JE P2StoreLightAtkDmgForP4
         	     MOV CurrentTurn, 2 ; Attacking P3  
-        	     MOV EnemyIdentifier, 2 ; Store enemy ID  
+        	     MOV EnemyIdentifier, 2 ; Store enemy ID 
+        	     JMP FinishAttack 
         	P2StoreLightAtkDmgForP4:        	
         	     MOV CurrentTurn, 3 ; Attacking P4  
-        	     MOV EnemyIdentifier, 3 ; Store enemy ID  
-        	     CALL LoadPStats
-        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
-        	     CALL DoDamage       	     
+        	     MOV EnemyIdentifier, 3 ; Store enemy ID     	    
         	     JMP FinishAttack	       
         P2HeavyAttack:  
         	TEST Player2Status, 00000010B ; Check if Heavy Attack 
@@ -319,15 +313,13 @@ code SEGMENT
         	AND BL, 00110000B  ; Remove redundant bits
         	CMP BL, 00110000B  ; Check if Atking P4         	   	         
         	JE P2StoreHeavyAtkDmgForP4
-    	     MOV CurrentTurn, 2 ; Attacking P3    	      
-    	     MOV EnemyIdentifier, 2 ; Store enemy ID      	     
+	    	     MOV CurrentTurn, 2 ; Attacking P3    	      
+	    	     MOV EnemyIdentifier, 2 ; Store enemy ID 
+	    	     JMP FinishAttack     	     
     	     P2StoreHeavyAtkDmgForP4: 
 			    MOV CurrentTurn, 3 ; Attacking P3    	      
 				MOV EnemyIdentifier, 3; Store enemy ID  
-    	     CALL LoadPStats
-    	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
-    	     CALL DoDamage
-    	     JMP FinishAttack      	         	               
+    	    	JMP FinishAttack      	         	               
         P2Ultimate:
         ; P3 Attacks	      
         P3LightAttack:
@@ -344,13 +336,11 @@ code SEGMENT
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JE P3StoreLightAtkDmgForP1
         	     MOV CurrentTurn, 0 ; Attacking P1 
-        	     MOV EnemyIdentifier, 0 ; Store enemy ID  
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID 
+        	     JMP FinishAttack  
         	P3StoreLightAtkDmgForP1:        	
         	     MOV CurrentTurn, 1 ; Attacking P2 
-        	     MOV EnemyIdentifier, 1 ; Store enemy ID  
-        	     CALL LoadPStats
-        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
-        	     CALL DoDamage       	     
+        	     MOV EnemyIdentifier, 1 ; Store enemy ID         	    	   
         	     JMP FinishAttack	       
         P3HeavyAttack:  
         	TEST Player3Status, 00000010B ; Check if Heavy Attack 
@@ -365,19 +355,62 @@ code SEGMENT
         	AND BL, 00000000B  ; Remove redundant bits
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JE P3StoreHeavyAtkDmgForP1
-        	     MOV CurrentTurn, 0 ; Attacking P1 
-        	     MOV EnemyIdentifier, 0 ; Store enemy ID  
-        	P3StoreHeavyAtkDmgForP1:        	
-        	     MOV CurrentTurn, 1 ; Attacking P2 
+        	     MOV CurrentTurn, 1 ; Attacking P1 
         	     MOV EnemyIdentifier, 1 ; Store enemy ID  
-        	     CALL LoadPStats
-        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
-        	     CALL DoDamage       	     
+        	     JMP FinishAttack 
+        	P3StoreHeavyAtkDmgForP1:        	
+        	     MOV CurrentTurn, 0 ; Attacking P2 
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID      	     
         	     JMP FinishAttack     	         	               
         P3Ultimate:
+        ; P4 Attacks	      
         P4LightAttack:
-        ; Finish Attack, used for Resetting some Variables	    
-        FinishAttack:
+        	TEST Player4Status, 00000100B ; Check if Light Attack 
+        	JZ P4HeavyAttack        	
+        	CALL LoadPStats       	
+        	MOV AL, [DI+2]  ; light atk dmg   
+        	MOV AH, 0 
+        	MOV DamageToBeDealt, AX
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting             
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
+        	AND BL, 00000000B  ; Remove redundant bits
+        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
+        	JE P4StoreLightAtkDmgForP2
+        	     MOV CurrentTurn, 0 ; Attacking P1 
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID
+        	     JMP FinishAttack   
+        	P4StoreLightAtkDmgForP2:        	
+        	     MOV CurrentTurn, 1 ; Attacking P2 
+        	     MOV EnemyIdentifier, 1 ; Store enemy ID      	    
+        	     JMP FinishAttack	       
+        P4HeavyAttack:  
+        	TEST Player4Status, 00000010B ; Check if Heavy Attack 
+			JZ P4Ultimate        	
+        	CALL LoadPStats         	      
+        	MOV AL, [DI+3] ; heavy atk dmg     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
+        	AND BL, 00000000B  ; Remove redundant bits
+        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
+        	JE P4StoreHeavyAtkDmgForP2
+        	     MOV CurrentTurn, 0 ; Attacking P1 
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID  
+        	     JMP FinishAttack 
+        	P4StoreHeavyAtkDmgForP2:        	
+        	     MOV CurrentTurn, 1 ; Attacking P2 
+        	     MOV EnemyIdentifier, 1 ; Store enemy ID     	     
+        	     JMP FinishAttack 
+        P4Ultimate:
+        	     
+        ; Finish Attack, used for Finishing Attack Logic and Reseting Vars	    
+        FinishAttack: 
+			CALL LoadPStats
+			MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
+			CALL DoDamage   
 	        MOV CurrentlyTargeting, 0B         ; reset targetting
 	        AND AliveAndHealStatus, 11110000B  ; reset healing
         RET
