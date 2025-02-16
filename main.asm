@@ -939,26 +939,30 @@ code SEGMENT
     	    CMP CurrentTurn, 0
     	    JNE LightMChoice_1  
     	    CMP [PlayersStamina+0], 15 ; Check if has 15 stamina
-    	    JC NotEnoughStamina   	    
+    	    JC NotEnoughStamina   	                      
+    	    SUB [PlayersStamina+0], 15 ; Deduct Stamina
     	    OR Player1Status, 00000100B
     	    JMP AttackFinal
     	    LightMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE LightMChoice_2 
-	    	    CMP [PlayersStamina+1], 15 ; Check if has 15 stamina
-	    	    JC NotEnoughStamina           	    
+	    	    CMP [PlayersStamina+1], 15 ; Check if has 15 stamina  	    	    
+	    	    JC NotEnoughStamina           	                       
+	    	    SUB [PlayersStamina+1], 15 ; Deduct Stamina
         	    OR Player2Status, 00000100B
         	    JMP AttackFinal
             LightMChoice_2:
                 CMP CurrentTurn, 2
                 JNE LightMChoice_3
 	    	    CMP [PlayersStamina+2], 15 ; Check if has 15 stamina
-	    	    JC NotEnoughStamina                   
+	    	    JC NotEnoughStamina          
+	    	    SUB [PlayersStamina+2], 15 ; Deduct Stamina         
         	    OR Player3Status, 00000100B 
                 JMP AttackFinal
             LightMChoice_3:        	
 	    	    CMP [PlayersStamina+3], 15 ; Check if has 15 stamina
-	    	    JC NotEnoughStamina                   
+	    	    JC NotEnoughStamina 
+	    	    SUB [PlayersStamina+3], 15 ; Deduct Stamina                  
         	    OR Player4Status, 00000100B
         	    JMP AttackFinal 
         ; Heavy Attack    	      	    
@@ -969,26 +973,30 @@ code SEGMENT
     	    CMP CurrentTurn, 0
     	    JNE HeavyMChoice_1   
     	    CMP [PlayersStamina+0], 30 ; Check if has 30 stamina
-    	    JC NotEnoughStamina 	    
+    	    JC NotEnoughStamina 	 
+    	    SUB [PlayersStamina+0], 30 ; Deduct Stamina   
     	    OR Player1Status, 00000010B
     	    JMP AttackFinal
     	    HeavyMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE HeavyMChoice_2 
         	    CMP [PlayersStamina+1], 30 ; Check if has 30 stamina
-				JC NotEnoughStamina 
+				JC NotEnoughStamina         
+				SUB [PlayersStamina+1], 30 ; Deduct Stamina   
         	    OR Player2Status, 00000010B
         	    JMP AttackFinal
             HeavyMChoice_2:
                 CMP CurrentTurn, 2
                 JNE HeavyMChoice_3 
         	    CMP [PlayersStamina+2], 30 ; Check if has 30 stamina
-				JC NotEnoughStamina                 
+				JC NotEnoughStamina  
+				SUB [PlayersStamina+2], 30 ; Deduct Stamina                  
         	    OR Player3Status, 00000010B 
                 JMP AttackFinal
             HeavyMChoice_3:    
         	    CMP [PlayersStamina+3], 30 ; Check if has 30 stamina
-				JC NotEnoughStamina     	    
+				JC NotEnoughStamina 
+				SUB [PlayersStamina+3], 30 ; Deduct Stamina       	    
         	    OR Player4Status, 00000011B
         	    JMP AttackFinal
         ; Defend	    	    
