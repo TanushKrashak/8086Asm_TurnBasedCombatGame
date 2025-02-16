@@ -37,7 +37,9 @@ data SEGMENT
     CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
     AliveAndHealStatus DB 11110000B	; p4_alive, p3_alive, p2_alive, p1_alive, p4_heal,p3_heal,p2_heal,p1_heal
     CurrentTurnStats   DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block  
-    CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target  
+    CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target       
+    Team1Classes       DB 00000000B ; Higher nibble for P1 class, lower nibble for P2 class
+    Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
 	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
@@ -726,46 +728,131 @@ code SEGMENT
 	    CALL PrintLine
 	    ; Knight       
 	    CheckIfKnight:
-	        CMP BL, '1'
+	        CMP BL, '1'        
 	        JNE CheckIfAssassin
 	        MOV DI, OFFSET KnightStats
 	        MOV DX, OFFSET Knight
 	        JMP EndClassSelection
-	    ; Assassin  
+	    ; Assassin   (1 in binary)
 	    CheckIfAssassin:  
-	        CMP BL, '2'  
-	        JNE CheckIfPyromancer  
-	        MOV DI, OFFSET AssassinStats  
-	        MOV DX, OFFSET Assassin  
-	        JMP EndClassSelection   
-	    ; Pyromancer  
+	        CMP BL, '2' 
+	        JNE CheckIfPyromancer     
+	        CMP CurrentTurn, 0  
+	        JNE CheckP2Assassin
+	        OR Team1Classes, 00010000B
+	        JMP Assassin_Final  
+	        CheckP2Assassin:        
+    	        CMP CurrentTurn, 1
+    	        JNE CheckP3Assassin
+    	        OR Team1Classes, 00000001B
+    	        JMP Assassin_Final
+    	    CheckP3Assassin:
+    	        CMP CurrentTurn, 2
+    	        JNE MakeP4Assassin
+    	        OR Team2Classes, 00010000B
+    	        JMP Assassin_Final
+            MakeP4Assassin:
+                OR Team2Classes, 00000001B
+            Assassin_Final:
+    	        MOV DI, OFFSET AssassinStats  
+    	        MOV DX, OFFSET Assassin  
+    	        JMP EndClassSelection   
+	    ; Pyromancer    (2 in binary)  
 	    CheckIfPyromancer:  
 	        CMP BL, '3'  
-	        JNE CheckIfHealer  
-	        MOV DI, OFFSET PyromancerStats  
-	        MOV DX, OFFSET Pyromancer  
-	        JMP EndClassSelection  
-	    ; Healer  
+	        JNE CheckIfHealer
+	        CMP CurrentTurn, 0  
+	        JNE CheckP2Pyromancer
+	        OR Team1Classes, 00100000B
+	        JMP Healer_Final  
+	        CheckP2Pyromancer:        
+    	        CMP CurrentTurn, 1
+    	        JNE CheckP3Pyromancer
+    	        OR Team1Classes, 00000010B
+    	        JMP Healer_Final
+    	    CheckP3Pyromancer:
+    	        CMP CurrentTurn, 2
+    	        JNE MakeP4Pyromancer
+    	        OR Team2Classes, 00100000B
+    	        JMP Healer_Final
+            MakeP4Pyromancer:
+                OR Team2Classes, 00000010B
+            Pyromancer_Final: 
+    	        MOV DI, OFFSET PyromancerStats  
+    	        MOV DX, OFFSET Pyromancer  
+    	        JMP EndClassSelection  
+	    ; Healer     (3 in binary)
 	    CheckIfHealer:  
 	        CMP BL, '4'  
-	        JNE CheckIfVanguard  
-	        MOV DI, OFFSET HealerStats  
-	        MOV DX, OFFSET Healer  
-	        JMP EndClassSelection  
-	    ; Vanguard  
+	        JNE CheckIfVanguard   
+	        CMP CurrentTurn, 0  
+	        JNE CheckP2Healer
+	        OR Team1Classes, 00110000B
+	        JMP Healer_Final  
+	        CheckP2Healer:        
+    	        CMP CurrentTurn, 1
+    	        JNE CheckP3Healer
+    	        OR Team1Classes, 00000011B
+    	        JMP Healer_Final
+    	    CheckP3Healer:
+    	        CMP CurrentTurn, 2
+    	        JNE MakeP4Healer
+    	        OR Team2Classes, 00110000B
+    	        JMP Healer_Final
+            MakeP4Healer:
+                OR Team2Classes, 00000011B
+            Healer_Final:  
+    	        MOV DI, OFFSET HealerStats  
+    	        MOV DX, OFFSET Healer  
+    	        JMP EndClassSelection  
+	    ; Vanguard     (4 in binary)
 	    CheckIfVanguard:  
 	        CMP BL, '5'  
-	        JNE CheckIfVampire  
-	        MOV DI, OFFSET VanguardStats  
-	        MOV DX, OFFSET Vanguard  
-	        JMP EndClassSelection  
-	    ; Vampire  
+	        JNE CheckIfVampire 
+	        CMP CurrentTurn, 0  
+	        JNE CheckP2Vanguard
+	        OR Team1Classes, 01000000B
+	        JMP Vanguard_Final  
+	        CheckP2Vanguard:        
+    	        CMP CurrentTurn, 1
+    	        JNE CheckP3Vanguard
+    	        OR Team1Classes, 00000100B
+    	        JMP Vanguard_Final
+    	    CheckP3Vanguard:
+    	        CMP CurrentTurn, 2
+    	        JNE MakeP4Vanguard
+    	        OR Team2Classes, 01000000B
+    	        JMP Vanguard_Final
+            MakeP4Vanguard:
+                OR Team2Classes, 00000100B
+            Vanguard_Final:     
+    	        MOV DI, OFFSET VanguardStats  
+    	        MOV DX, OFFSET Vanguard  
+    	        JMP EndClassSelection  
+	    ; Vampire        (5 in binary)
 	    CheckIfVampire:  
 	        CMP BL, '6'  
-	        JNE ClassSelection_InvalidInput  
-	        MOV DI, OFFSET VampireStats  
-	        MOV DX, OFFSET Vampire
-	        JMP EndClassSelection 
+	        JNE ClassSelection_InvalidInput 
+	        CMP CurrentTurn, 0  
+	        JNE CheckP2Vampire
+	        OR Team1Classes, 01010000B
+	        JMP Vampire_Final  
+	        CheckP2Vampire:        
+    	        CMP CurrentTurn, 1
+    	        JNE CheckP3Vampire
+    	        OR Team1Classes, 00000101B
+    	        JMP Vampire_Final
+    	    CheckP3Vampire:
+    	        CMP CurrentTurn, 2
+    	        JNE MakeP4Vampire
+    	        OR Team2Classes, 01010000B
+    	        JMP Vampire_Final
+            MakeP4Vampire:
+                OR Team2Classes, 00000101B
+            Vampire_Final: 
+    	        MOV DI, OFFSET VampireStats  
+    	        MOV DX, OFFSET Vampire
+    	        JMP EndClassSelection 
 	    ; Input out of bound 
 	    ClassSelection_InvalidInput:
             MOV DX, OFFSET InvalidInputText 
@@ -773,7 +860,7 @@ code SEGMENT
             CALL PrintLine
             CALL PrintNewLine
             RET  	    
-	    EndClassSelection:	     
+	    EndClassSelection:   
 		    CALL PrintLine 
 			CALL PrintNewLine			
 			CALL PrintNewLine
@@ -956,7 +1043,7 @@ code SEGMENT
 			CALL PrintChar
 			MOV DX, ' '
 			CALL PrintChar			  			
-			RET
+			RET                                                                                   
 	    	    
 main:
 ;==================================================================================
@@ -1039,29 +1126,31 @@ main:
     	MOV SI, OFFSET Player4Stats
         CALL PrintPlayerStats    
         CALL PrintNewLine 
-        CALL PrintNewLine   
-                        
-;	; CHOICES For Round 1 (Should be moved to a function)                          	
-;	; Give Player 1 Choice
-;	CALL UpdateCurrentTurn
-;	CALL GivePlayerMainChoice 
-;	CALL PrintNewLine	 
-;	; Give Player 2 Choice	 
-;	CALL UpdateCurrentTurn	
-;	CALL GivePlayerMainChoice
-;	CALL PrintNewLine
-;	; Give Player 3 Choice	 
-;	CALL UpdateCurrentTurn
-;	CALL GivePlayerMainChoice 
-;	CALL PrintNewLine  
-;	; Give Player 4 Choice	 
-;	CALL UpdateCurrentTurn
-;	CALL GivePlayerMainChoice
-;	CALL UpdateCurrentTurn
-;	CALL EvaluateAttack        
-
-    CALL ApplyDOT
-    MOV AL, Player1Stats
+        CALL PrintNewLine
+        
+    GameLoop:              
+    	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
+    	; Give Player 1 Choice
+    	CALL UpdateCurrentTurn
+    	CALL GivePlayerMainChoice 
+    	CALL PrintNewLine	 
+    	; Give Player 2 Choice	 
+    	CALL UpdateCurrentTurn	
+    	CALL GivePlayerMainChoice
+    	CALL PrintNewLine
+    	; Give Player 3 Choice	 
+    	CALL UpdateCurrentTurn
+    	CALL GivePlayerMainChoice 
+    	CALL PrintNewLine  
+    	; Give Player 4 Choice	 
+    	CALL UpdateCurrentTurn
+    	CALL GivePlayerMainChoice
+    	CALL UpdateCurrentTurn
+    	CALL EvaluateAttack        
+    
+        CALL ApplyDOT 
+        
+        MOV AL, Player1Stats
 	         
                    
     MOV AH, 4Ch        ; DOS function to terminate program
