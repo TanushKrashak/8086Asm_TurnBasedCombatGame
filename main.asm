@@ -39,8 +39,11 @@ data SEGMENT
     CurrentTurnStats   DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block  
     CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target       
     Team1Classes       DB 00000000B ; Higher nibble for P1 class, lower nibble for P2 class
-    Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class  
+    Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class     
+    
+    ; Temporary Values
     DamageToBeDealt DW 0 ; used for the damage function, prevents value being discarded from GPRs
+    EnemyIdentifier DB 0;
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
 	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
@@ -233,8 +236,8 @@ code SEGMENT
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
-        	AND BL, 00001100B  ; Remove redundant bits
-        	CMP BL, 00001100B  ; Check if Atking P4         	   	         
+        	AND BL, 11000000B  ; Remove redundant bits
+        	CMP BL, 11000000B  ; Check if Atking P4         	   	         
         	JE P1StoreLightAtkDmgForP4
         	     MOV CurrentTurn, 2 ; Attacking P3
         	     CALL LoadPStats
@@ -255,10 +258,12 @@ code SEGMENT
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
-        	AND BL, 00001100B  ; Remove redundant bits
-        	CMP BL, 00001100B  ; Check if Atking P4         	   	         
+        	AND BL, 11000000B  ; Remove redundant bits
+        	CMP BL, 11000000B  ; Check if Atking P4         	   	         
         	JE P1StoreHeavyAtkDmgForP4
-    	     MOV CurrentTurn, 2 ; Attacking P3
+    	     MOV CurrentTurn, 2 ; Attacking P3    	      
+    	     MOV EnemyIdentifier, 2 ; Store enemy ID  
+    	     INT 20H
     	     CALL LoadPStats
     	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
     	     CALL DoDamage
@@ -273,11 +278,11 @@ code SEGMENT
         RET
     
     ; Func to deal damage, needs Damage to be moved to DamageToBeDealt    
-    ; Enemy Stats should be Loaded on DI
+    ; Enemy Stats should be Loaded on DI      
+    ; Enemy Number should be Loaded on BH
     DoDamage:     	                	
-    	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI
-    	CALL UpdateCrit           
-    	INT 20H    	    
+    	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI      	
+    	CALL UpdateCrit               	    	   
     	; Crits Calc    	
     	; CurrentTurn AND CurrentTurnStats For P1
 	    TEST CurrentTurnStats, 00010000B
@@ -291,33 +296,33 @@ code SEGMENT
     	DoDamage_PlayerHasCrit:
     		; Double Damage
     		MOV AX, DamageToBeDealt
-    		MOV BH, 2 ; For Doubling Damage
-    		MUL BH
-    		MOV DamageToBeDealt, AX
-    	MOV BH, DL ; Temp Store the enemy ID 
+    		MOV BL, 2 ; For Doubling Damage
+    		MUL BL
+    		MOV DamageToBeDealt, AX    	
     	MOV AX, DamageToBeDealt
-		SUB [DI], AL   		
+		SUB [SI], AL   		
 		JNC DoDamage_NoClamp
-		MOV [DI], 0
+		MOV [SI], 0
 		DoDamage_NoClamp: 			
 			; Print Damage Value	
 	        MOV DX, OFFSET DamagedText
 	        CALL PrintLine        
 	        ; Temp Change CurrentTurn
-	        MOV BL, CurrentTurn   
-	        MOV CurrentTurn, BH 
+	        INT 20H	           
+	        MOV BL, CurrentTurn
+	        MOV BH, EnemyIdentifier 	
+	        MOV CurrentTurn, BH        
 	    	CALL PrintPlayerName
-	    	MOV CurrentTurn, BL ; Revert CurrentTurn 
-	    	MOV BL, AL ; Store Dmg Dealt	    	
+	    	MOV CurrentTurn, BL ; Revert CurrentTurn 	    		    
 	    	MOV DX, OFFSET ForText
 	    	CALL PrintLine
-	    	MOV AL, CH ; Print stored damage dealt    	
+	    	MOV AX, DamageToBeDealt ; Print stored damage dealt    	
 	    	CALL PrintInt              
 	    	CALL PrintNewLine
 	    	; Display Enemy Remaining HP
 	    	MOV DX, OFFSET ShowEnemyHPText
 	    	CALL PrintLine
-	    	MOV AL, [DI]
+	    	MOV AL, [SI]
 	    	CALL PrintInt
 	    	MOV DX, OFFSET LeftText
 	    	CALL PrintLine
@@ -537,7 +542,8 @@ code SEGMENT
         CMP AL, DL      ; DL has hundredth of a second
         RET          
         
-    ; Updates critical bit in CurrentTurnStatus for players (Uses AL)
+    ; Updates critical bit in CurrentTurnStatus for players 
+    ; USES DX, AH and AL
     UpdateCrit:
         ; Determine current player
         CALL LoadPStats                  
@@ -1073,81 +1079,104 @@ main:
     MOV AX, data
     MOV DS, AX        
     
-    ; Print P1 MSG 
-    MainP1ClassSelection:          
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine   		          
-        MOV DX, OFFSET PrintPlayerStatsText  
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass  
-    	CMP BL, 'X'
-    	JE MainP1ClassSelection  
-        MOV SI, OFFSET Player1Stats
-       	CALL LoadPlayerStats    
-       	; Print Stats
-       	MOV SI, OFFSET Player1Stats
-        CALL PrintPlayerStats      
-        CALL PrintNewLine 
-        CALL PrintNewLine   
-    
-    ; Print P2 MSG  
-    MainP2ClassSelection:
-        CALL UpdateCurrentTurn
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine      	
-        MOV DX, OFFSET PrintPlayerStatsText
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass	 
-    	CMP BL, 'X'
-    	JE MainP2ClassSelection 
-        MOV SI, OFFSET Player2Stats
-       	CALL LoadPlayerStats    
-    	; Print Stats 
-    	MOV SI, OFFSET Player2Stats
-        CALL PrintPlayerStats    
-        CALL PrintNewLine 
-        CALL PrintNewLine   
-       
- 	; Print P3 MSG
- 	MainP3ClassSelection:
-        CALL UpdateCurrentTurn
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine      	
-        MOV DX, OFFSET PrintPlayerStatsText
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass	   
-    	CMP BL, 'X'
-    	JE MainP3ClassSelection 
-        MOV SI, OFFSET Player3Stats
-       	CALL LoadPlayerStats    
-    	; Print Stats 
-    	MOV SI, OFFSET Player3Stats
-        CALL PrintPlayerStats    
-        CALL PrintNewLine 
-        CALL PrintNewLine 
-    
- 	; Print P4 MSG    
- 	MainP4ClassSelection:
-        CALL UpdateCurrentTurn
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine      	
-        MOV DX, OFFSET PrintPlayerStatsText
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass	
-    	CMP BL, 'X'
-    	JE MainP4ClassSelection
-        MOV SI, OFFSET Player4Stats
-       	CALL LoadPlayerStats    
-    	; Print Stats 
-    	MOV SI, OFFSET Player4Stats
-        CALL PrintPlayerStats    
-        CALL PrintNewLine 
-        CALL PrintNewLine
-        
+    ; Print P1 MSG     
+					;====; 
+					; COMMENTED OUT FOR DEBUGGING, NO NEED TO KEEP ON SELECTING CLASSES OVER AND OVER!!!!!
+					;====;
+;    MainP1ClassSelection:          
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine   		          
+;        MOV DX, OFFSET PrintPlayerStatsText  
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass  
+;    	CMP BL, 'X'
+;    	JE MainP1ClassSelection  
+;        MOV SI, OFFSET Player1Stats
+;       	CALL LoadPlayerStats    
+;       	; Print Stats
+;       	MOV SI, OFFSET Player1Stats
+;        CALL PrintPlayerStats      
+;        CALL PrintNewLine 
+;        CALL PrintNewLine   
+;    
+;    ; Print P2 MSG  
+;    MainP2ClassSelection:
+;        CALL UpdateCurrentTurn
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine      	
+;        MOV DX, OFFSET PrintPlayerStatsText
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass	 
+;    	CMP BL, 'X'
+;    	JE MainP2ClassSelection 
+;        MOV SI, OFFSET Player2Stats
+;       	CALL LoadPlayerStats    
+;    	; Print Stats 
+;    	MOV SI, OFFSET Player2Stats
+;        CALL PrintPlayerStats    
+;        CALL PrintNewLine 
+;        CALL PrintNewLine   
+;       
+; 	; Print P3 MSG
+; 	MainP3ClassSelection:
+;        CALL UpdateCurrentTurn
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine      	
+;        MOV DX, OFFSET PrintPlayerStatsText
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass	   
+;    	CMP BL, 'X'
+;    	JE MainP3ClassSelection 
+;        MOV SI, OFFSET Player3Stats
+;       	CALL LoadPlayerStats    
+;    	; Print Stats 
+;    	MOV SI, OFFSET Player3Stats
+;        CALL PrintPlayerStats    
+;        CALL PrintNewLine 
+;        CALL PrintNewLine 
+;    
+; 	; Print P4 MSG    
+; 	MainP4ClassSelection:
+;        CALL UpdateCurrentTurn
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine      	
+;        MOV DX, OFFSET PrintPlayerStatsText
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass	
+;    	CMP BL, 'X'
+;    	JE MainP4ClassSelection
+;        MOV SI, OFFSET Player4Stats
+;       	CALL LoadPlayerStats    
+;    	; Print Stats 
+;    	MOV SI, OFFSET Player4Stats
+;        CALL PrintPlayerStats    
+;        CALL PrintNewLine 
+;        CALL PrintNewLine
+                        
+	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
+	; p1 	
+	MOV DI, OFFSET VampireStats
+	MOV SI, OFFSET Player1Stats
+	CALL LoadPlayerStats
+		; p2
+	CALL UpdateCurrentTurn
+	MOV DI, OFFSET AssassinStats
+	MOV SI, OFFSET Player2Stats
+	CALL LoadPlayerStats                        
+    CALL UpdateCurrentTurn   
+    ; p3
+	MOV DI, OFFSET AssassinStats
+	MOV SI, OFFSET Player3Stats
+	CALL LoadPlayerStats                        
+    CALL UpdateCurrentTurn  
+        ; p4
+	MOV DI, OFFSET AssassinStats 	
+	MOV SI, OFFSET Player4Stats
+	CALL LoadPlayerStats                        
     CALL UpdateCurrentTurn 
     
     GameLoop:              
