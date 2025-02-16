@@ -638,9 +638,17 @@ code SEGMENT
 	    ; Vampire  
 	    CheckIfVampire:  
 	        CMP BL, '6'  
-	        JNE EndClassSelection  
+	        JNE ClassSelection_InvalidInput  
 	        MOV DI, OFFSET VampireStats  
-	        MOV DX, OFFSET Vampire  
+	        MOV DX, OFFSET Vampire
+	        JMP EndClassSelection 
+	    ; Input out of bound 
+	    ClassSelection_InvalidInput:
+            MOV DX, OFFSET InvalidInputText 
+            MOV BL, 'X'
+            CALL PrintLine
+            CALL PrintNewLine
+            RET  	    
 	    EndClassSelection:	     
 		    CALL PrintLine 
 			CALL PrintNewLine			
@@ -833,73 +841,85 @@ main:
     MOV AX, data
     MOV DS, AX        
     
-    ; Print P1 MSG           
-	CALL PrintPlayerName    
-	CALL PrintNewLine   		          
-    MOV DX, OFFSET PrintPlayerStatsText  
-	CALL PrintLine        
-	; Class Selection
-	CALL SelectPlayerClass    
-    MOV SI, OFFSET Player1Stats
-   	CALL LoadPlayerStats    
-   	; Print Stats
-   	MOV SI, OFFSET Player1Stats
-    CALL PrintPlayerStats      
-    CALL PrintNewLine 
-    CALL PrintNewLine   
+    ; Print P1 MSG 
+    MainP1ClassSelection:          
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine   		          
+        MOV DX, OFFSET PrintPlayerStatsText  
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass  
+    	CMP BL, 'X'
+    	JE MainP1ClassSelection  
+        MOV SI, OFFSET Player1Stats
+       	CALL LoadPlayerStats    
+       	; Print Stats
+       	MOV SI, OFFSET Player1Stats
+        CALL PrintPlayerStats      
+        CALL PrintNewLine 
+        CALL PrintNewLine   
     
-    ; Print P2 MSG
-    MOV CurrentTurn, 1 ; do this for printing correct name
-	CALL PrintPlayerName    
-	CALL PrintNewLine      	
-    MOV DX, OFFSET PrintPlayerStatsText
-	CALL PrintLine        
-	; Class Selection
-	CALL SelectPlayerClass	
-    MOV SI, OFFSET Player2Stats
-   	CALL LoadPlayerStats    
-	; Print Stats 
-	MOV SI, OFFSET Player2Stats
-    CALL PrintPlayerStats    
-    CALL PrintNewLine 
-    CALL PrintNewLine   
+    ; Print P2 MSG  
+    MainP2ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	 
+    	CMP BL, 'X'
+    	JE MainP2ClassSelection 
+        MOV SI, OFFSET Player2Stats
+       	CALL LoadPlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player2Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine   
      
     
  	; Print P3 MSG
-    MOV CurrentTurn, 2 ; do this for printing correct name
-	CALL PrintPlayerName    
-	CALL PrintNewLine      	
-    MOV DX, OFFSET PrintPlayerStatsText
-	CALL PrintLine        
-	; Class Selection
-	CALL SelectPlayerClass	
-    MOV SI, OFFSET Player3Stats
-   	CALL LoadPlayerStats    
-	; Print Stats 
-	MOV SI, OFFSET Player3Stats
-    CALL PrintPlayerStats    
-    CALL PrintNewLine 
-    CALL PrintNewLine 
+ 	MainP3ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	   
+    	CMP BL, 'X'
+    	JE MainP3ClassSelection 
+        MOV SI, OFFSET Player3Stats
+       	CALL LoadPlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player3Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine 
     
- 	; Print P4 MSG
-    MOV CurrentTurn, 3 ; do this for printing correct name
-	CALL PrintPlayerName    
-	CALL PrintNewLine      	
-    MOV DX, OFFSET PrintPlayerStatsText
-	CALL PrintLine        
-	; Class Selection
-	CALL SelectPlayerClass	
-    MOV SI, OFFSET Player4Stats
-   	CALL LoadPlayerStats    
-	; Print Stats 
-	MOV SI, OFFSET Player4Stats
-    CALL PrintPlayerStats    
-    CALL PrintNewLine 
-    CALL PrintNewLine   
+ 	; Print P4 MSG    
+ 	MainP4ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	
+    	CMP BL, 'X'
+    	JE MainP4ClassSelection
+        MOV SI, OFFSET Player4Stats
+       	CALL LoadPlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player4Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine   
                         
 	; CHOICES For Round 1 (Should be moved to a function)                          	
 	; Give Player 1 Choice
-	MOV CurrentTurn, 0	
+	CALL UpdateCurrentTurn
 	CALL GivePlayerMainChoice 
 	CALL PrintNewLine	 
 	; Give Player 2 Choice	 
