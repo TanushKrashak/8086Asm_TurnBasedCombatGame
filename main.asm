@@ -8,9 +8,9 @@ data SEGMENT
 	; Game Stats
 	TotalStats   DB 6 
 	MaxStamina   DB 100
-	LStaminaCost DB 15 ; LAttack cost
-	HStaminaCost DB 35 ; HAttack cost
-	BStaminaCost DB 5   ; Block cost	
+	LightAttackStaminaCost DB 15
+	HeavyAttackStaminaCost DB 30
+	DefendStaminaCost DB 5 
 	HPGainPerTurn DB 5
 	STGainPerTurn DB 10  
 	BurnDamage      DB 10
@@ -272,11 +272,12 @@ code SEGMENT
     	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
     	     CALL DoDamage
     	     JMP FinishAttack      	         	               
-        P1Ultimate:
-        	    
+        P1Ultimate:       
+        
+        ; Finish Attack, used for Resetting some Variables	    
         FinishAttack:
-        MOV CurrentlyTargeting, 0B         ; reset targetting
-        AND AliveAndHealStatus, 11110000B  ; reset healing
+	        MOV CurrentlyTargeting, 0B         ; reset targetting
+	        AND AliveAndHealStatus, 11110000B  ; reset healing
         RET
     
     ; Func to deal damage, needs Damage to be moved to DamageToBeDealt    
@@ -932,71 +933,73 @@ code SEGMENT
     	JNE GivePlayerMainChoice_InvalidInput    	
     	RET  
     	; Light Attack 	   
-    	LightAttack:    	    
+    	LightAttack:    	   
+    		MOV DH, LightAttackStaminaCost 
     	    ; Change Status Indicating which type of attack 
 			; was chosen by the player, it is done by updating
     	    ; the 3rd last bit on the PlayerXStatus vars
     	    CMP CurrentTurn, 0
-    	    JNE LightMChoice_1  
-    	    CMP [PlayersStamina+0], 15 ; Check if has 15 stamina
+    	    JNE LightMChoice_1        	    
+    	    CMP [PlayersStamina+0], DH ; Check if has 15 stamina
     	    JC NotEnoughStamina   	                      
-    	    SUB [PlayersStamina+0], 15 ; Deduct Stamina
+    	    SUB [PlayersStamina+0], DH ; Deduct Stamina  
     	    OR Player1Status, 00000100B
     	    JMP AttackFinal
     	    LightMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE LightMChoice_2 
-	    	    CMP [PlayersStamina+1], 15 ; Check if has 15 stamina  	    	    
+	    	    CMP [PlayersStamina+1], DH ; Check if has 15 stamina  	    	    
 	    	    JC NotEnoughStamina           	                       
-	    	    SUB [PlayersStamina+1], 15 ; Deduct Stamina
+	    	    SUB [PlayersStamina+1], DH ; Deduct Stamina
         	    OR Player2Status, 00000100B
         	    JMP AttackFinal
             LightMChoice_2:
                 CMP CurrentTurn, 2
                 JNE LightMChoice_3
-	    	    CMP [PlayersStamina+2], 15 ; Check if has 15 stamina
+	    	    CMP [PlayersStamina+2], DH ; Check if has 15 stamina
 	    	    JC NotEnoughStamina          
-	    	    SUB [PlayersStamina+2], 15 ; Deduct Stamina         
+	    	    SUB [PlayersStamina+2], DH ; Deduct Stamina         
         	    OR Player3Status, 00000100B 
                 JMP AttackFinal
             LightMChoice_3:        	
-	    	    CMP [PlayersStamina+3], 15 ; Check if has 15 stamina
+	    	    CMP [PlayersStamina+3], DH ; Check if has 15 stamina
 	    	    JC NotEnoughStamina 
-	    	    SUB [PlayersStamina+3], 15 ; Deduct Stamina                  
+	    	    SUB [PlayersStamina+3], DH ; Deduct Stamina                  
         	    OR Player4Status, 00000100B
         	    JMP AttackFinal 
         ; Heavy Attack    	      	    
-    	HeavyAttack:    	      
+    	HeavyAttack:   
+    		MOV DH, HeavyAttackStaminaCost 	      
     	    ; Change Status Indicating which type of attack 
     	    ; was chosen by the player, it is done by updating
     	    ; the 2nd last bit on the PlayerXStatus vars
     	    CMP CurrentTurn, 0
     	    JNE HeavyMChoice_1   
-    	    CMP [PlayersStamina+0], 30 ; Check if has 30 stamina
+    	    CMP [PlayersStamina+0], DH ; Check if has 30 stamina
     	    JC NotEnoughStamina 	 
-    	    SUB [PlayersStamina+0], 30 ; Deduct Stamina   
+    	    SUB [PlayersStamina+0], DH ; Deduct Stamina   
     	    OR Player1Status, 00000010B
     	    JMP AttackFinal
     	    HeavyMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE HeavyMChoice_2 
-        	    CMP [PlayersStamina+1], 30 ; Check if has 30 stamina
+        	    CMP [PlayersStamina+1], DH ; Check if has 30 stamina
 				JC NotEnoughStamina         
-				SUB [PlayersStamina+1], 30 ; Deduct Stamina   
+				SUB [PlayersStamina+1], DH ; Deduct Stamina   
         	    OR Player2Status, 00000010B
         	    JMP AttackFinal
             HeavyMChoice_2:
                 CMP CurrentTurn, 2
                 JNE HeavyMChoice_3 
-        	    CMP [PlayersStamina+2], 30 ; Check if has 30 stamina
+        	    CMP [PlayersStamina+2], DH ; Check if has 30 stamina
 				JC NotEnoughStamina  
-				SUB [PlayersStamina+2], 30 ; Deduct Stamina                  
+				SUB [PlayersStamina+2], DH ; Deduct Stamina                  
         	    OR Player3Status, 00000010B 
                 JMP AttackFinal
             HeavyMChoice_3:    
-        	    CMP [PlayersStamina+3], 30 ; Check if has 30 stamina
+        	    CMP [PlayersStamina+3], DH ; Check if has 30 stamina
 				JC NotEnoughStamina 
-				SUB [PlayersStamina+3], 30 ; Deduct Stamina       	    
+				SUB [PlayersStamina+3], DH ; Deduct Stamina       	    
         	    OR Player4Status, 00000011B
         	    JMP AttackFinal
         ; Defend	    	    
