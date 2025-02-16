@@ -1128,31 +1128,47 @@ main:
         CALL PrintNewLine 
         CALL PrintNewLine
         
+        CALL UpdateCurrentTurn
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
-    	; Give Player 1 Choice
-    	CALL UpdateCurrentTurn
+    	; Give Player 1 Choice 
+    	CMP CurrentTurn, 1
+    	JNE P2GameChoice
     	CALL GivePlayerMainChoice 
     	CALL PrintNewLine	 
     	; Give Player 2 Choice	 
-    	CALL UpdateCurrentTurn	
-    	CALL GivePlayerMainChoice
-    	CALL PrintNewLine
+    	CALL AlternateTurn	
+    	P2GameChoice:
+    	    CMP CurrentTurn, 2
+    	    JNE P3GameChoice
+        	CALL GivePlayerMainChoice
+        	CALL PrintNewLine
     	; Give Player 3 Choice	 
-    	CALL UpdateCurrentTurn
-    	CALL GivePlayerMainChoice 
-    	CALL PrintNewLine  
+    	CALL AlternateTurn
+    	P3GameChoice:
+        	CALL GivePlayerMainChoice 
+        	CALL PrintNewLine  
     	; Give Player 4 Choice	 
-    	CALL UpdateCurrentTurn
-    	CALL GivePlayerMainChoice
-    	CALL UpdateCurrentTurn
+    	CALL AlternateTurn      
+    	P4GameChoice:
+        	CALL GivePlayerMainChoice
+        	CALL AlternateTurn 
+        ; All alive players have chosen their moves, begin evaluation
     	CALL EvaluateAttack        
-    
-        CALL ApplyDOT 
         
-        MOV AL, Player1Stats
-	         
-                   
+;        ; Apply DOT, update AliveAndHealStatus if any player is dead
+;        CALL ApplyDOT 
+;        CALL UpdateStatusOnDeath
+        
+        ; Check if either team is dead
+        TEST AliveAndHealStatus, 11000000B
+        JZ Team2Victory
+        TEST AliveAndHealStatus, 00110000B
+        JZ Team1Victory
+        JMP GameLoop 
+    
+    Team1Victory:
+    Team2Victory:
     MOV AH, 4Ch        ; DOS function to terminate program
     INT 21h            ; Exit program
 code ENDS
