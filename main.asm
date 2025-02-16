@@ -93,7 +93,9 @@ data SEGMENT
     InvalidInputText DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
     SelfHealText DB 'Health restored by 5', 0Dh, 0Ah, '$'   
     BurnDamageText DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
-    PoisonDamageText DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'
+    PoisonDamageText DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'      
+    Team1Won DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
+    Team2Won DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$'
 data ENDS
       
       
@@ -617,9 +619,9 @@ code SEGMENT
 	        RET
         ; Exception Case: All players are dead
         AllDead:
-        MOV DX, OFFSET AllPlayersDiedText
-        CALL PrintLine
-        CALL PrintNewLine
+	        MOV DX, OFFSET AllPlayersDiedText
+	        CALL PrintLine
+	        CALL PrintNewLine
         RET     
         
  	; This function converts an Integer in AL to a String and then prints it
@@ -1088,8 +1090,7 @@ main:
         CALL PrintPlayerStats    
         CALL PrintNewLine 
         CALL PrintNewLine   
-     
-    
+       
  	; Print P3 MSG
  	MainP3ClassSelection:
         CALL UpdateCurrentTurn
@@ -1128,7 +1129,8 @@ main:
         CALL PrintNewLine 
         CALL PrintNewLine
         
-        CALL UpdateCurrentTurn
+    CALL UpdateCurrentTurn 
+    
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice 
@@ -1167,9 +1169,15 @@ main:
         JZ Team1Victory
         JMP GameLoop 
     
-    Team1Victory:
-    Team2Victory:
-    MOV AH, 4Ch        ; DOS function to terminate program
-    INT 21h            ; Exit program
+    Team1Victory:  
+    	MOV DX, OFFSET Team1Won
+    	CALL PrintLine 
+    	JMP EndGame       	   
+    Team2Victory:  
+    	MOV DX, OFFSET Team2Won
+		CALL PrintLine  
+    EndGame:
+		MOV AH, 4Ch        ; DOS function to terminate program
+		INT 21h            ; Exit program
 code ENDS
 END main
