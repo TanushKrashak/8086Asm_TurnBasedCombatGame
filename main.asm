@@ -937,20 +937,28 @@ code SEGMENT
 			; was chosen by the player, it is done by updating
     	    ; the 3rd last bit on the PlayerXStatus vars
     	    CMP CurrentTurn, 0
-    	    JNE LightMChoice_1    	    
+    	    JNE LightMChoice_1  
+    	    CMP [PlayersStamina+0], 15 ; Check if has 15 stamina
+    	    JC NotEnoughStamina   	    
     	    OR Player1Status, 00000100B
     	    JMP AttackFinal
     	    LightMChoice_1:
         	    CMP CurrentTurn, 1
-        	    JNE LightMChoice_2
+        	    JNE LightMChoice_2 
+	    	    CMP [PlayersStamina+1], 15 ; Check if has 15 stamina
+	    	    JC NotEnoughStamina           	    
         	    OR Player2Status, 00000100B
         	    JMP AttackFinal
             LightMChoice_2:
                 CMP CurrentTurn, 2
                 JNE LightMChoice_3
+	    	    CMP [PlayersStamina+2], 15 ; Check if has 15 stamina
+	    	    JC NotEnoughStamina                   
         	    OR Player3Status, 00000100B 
                 JMP AttackFinal
-            LightMChoice_3:        	    
+            LightMChoice_3:        	
+	    	    CMP [PlayersStamina+3], 15 ; Check if has 15 stamina
+	    	    JC NotEnoughStamina                   
         	    OR Player4Status, 00000100B
         	    JMP AttackFinal 
         ; Heavy Attack    	      	    
@@ -974,15 +982,16 @@ code SEGMENT
             HeavyMChoice_2:
                 CMP CurrentTurn, 2
                 JNE HeavyMChoice_3 
-        	    CMP [PlayersStamina+1], 30 ; Check if has 30 stamina
+        	    CMP [PlayersStamina+2], 30 ; Check if has 30 stamina
 				JC NotEnoughStamina                 
         	    OR Player3Status, 00000010B 
                 JMP AttackFinal
             HeavyMChoice_3:    
-        	    CMP [PlayersStamina+1], 30 ; Check if has 30 stamina
+        	    CMP [PlayersStamina+3], 30 ; Check if has 30 stamina
 				JC NotEnoughStamina     	    
         	    OR Player4Status, 00000011B
-        	    JMP AttackFinal  	    
+        	    JMP AttackFinal
+        ; Defend	    	    
     	Defend:
     	    CMP CurrentTurn, 0
     	    JNE CheckMChoice_1
@@ -1000,7 +1009,8 @@ code SEGMENT
                 RET
             CheckMChoice_3:
                 OR CurrentTurnStats, 00001000B
-                RET
+                RET 
+		; Heal                
         Heal:
             CMP CurrentTurn, 0
     	    JNE HealMChoice_1
@@ -1039,7 +1049,7 @@ code SEGMENT
     	        CALL ClampHP 
     	        JMP PrintHealText 
     	; Attack Chosen, In case some common finishing
-    	; logic is required           
+    	; logic is required         
     	AttackFinal: 
     		CALL TargetEnemy
     		CALL PrintNewLine 
