@@ -39,7 +39,8 @@ data SEGMENT
     CurrentTurnStats   DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block  
     CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target       
     Team1Classes       DB 00000000B ; Higher nibble for P1 class, lower nibble for P2 class
-    Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class
+    Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class  
+    DamageToBeDealt DW 0 ; used for the damage function, prevents value being discarded from GPRs
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
 	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
@@ -232,9 +233,9 @@ code SEGMENT
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
-        	AND BL, 00001100B
-        	CMP BL, 00001000B ; Check if Atking P3         	
-        	JNE P1StoreLightAtkDmgForP4
+        	AND BL, 00001100B  ; Remove redundant bits
+        	CMP BL, 00001100B  ; Check if Atking P4         	   	         
+        	JE P1StoreLightAtkDmgForP4
         	     MOV CurrentTurn, 2 ; Attacking P3
         	     CALL LoadPStats
         	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
@@ -247,13 +248,15 @@ code SEGMENT
         P1HeavyAttack:  
         	TEST Player1Status, 00000010B ; Check if Heavy Attack 
 			JZ P1Ultimate        	
-        	CALL LoadPStats       	
-        	MOV AL, [DI+3] ; heavy atk dmg 
+        	CALL LoadPStats         	      
+        	MOV AL, [DI+3] ; heavy atk dmg     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
-        	AND BL, 00001100B  
-        	CMP BL, 00001100B      	         
+        	AND BL, 00001100B  ; Remove redundant bits
+        	CMP BL, 00001100B  ; Check if Atking P4         	   	         
         	JE P1StoreHeavyAtkDmgForP4
     	     MOV CurrentTurn, 2 ; Attacking P3
     	     CALL LoadPStats
@@ -269,15 +272,31 @@ code SEGMENT
         AND AliveAndHealStatus, 11110000B  ; reset healing
         RET
     
-    ; Func to deal damage, needs Damage to be moved to AL    
+    ; Func to deal damage, needs Damage to be moved to DamageToBeDealt    
     ; Enemy Stats should be Loaded on DI
-    DoDamage:       
-    	CALL UpdateCrit 
-    	; Add crit Calcs On AL
-    	
+    DoDamage:     	                	
+    	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI
+    	CALL UpdateCrit           
+    	INT 20H    	    
+    	; Crits Calc    	
+    	; CurrentTurn AND CurrentTurnStats For P1
+	    TEST CurrentTurnStats, 00010000B
+	    JZ DoDamage_CheckP2Crit
+	    CMP CurrentTurn, 0
+	    JNZ DoDamage_CheckP2Crit
+	    JMP DoDamage_PlayerHasCrit  
+	    ; CurrentTurn AND CurrentTurnStats For P2
+    	DoDamage_CheckP2Crit:
+    		
+    	DoDamage_PlayerHasCrit:
+    		; Double Damage
+    		MOV AX, DamageToBeDealt
+    		MOV BH, 2 ; For Doubling Damage
+    		MUL BH
+    		MOV DamageToBeDealt, AX
     	MOV BH, DL ; Temp Store the enemy ID 
-		SUB [DI], AL  
-		MOV CH, AL ; Store Damage Dealt
+    	MOV AX, DamageToBeDealt
+		SUB [DI], AL   		
 		JNC DoDamage_NoClamp
 		MOV [DI], 0
 		DoDamage_NoClamp: 			
@@ -518,7 +537,7 @@ code SEGMENT
         CMP AL, DL      ; DL has hundredth of a second
         RET          
         
-    ; Updates critical bit in CurrentTurnStatus for players
+    ; Updates critical bit in CurrentTurnStatus for players (Uses AL)
     UpdateCrit:
         ; Determine current player
         CALL LoadPStats                  
@@ -1155,7 +1174,7 @@ main:
     	P4GameChoice:
         	CALL GivePlayerMainChoice
         	CALL AlternateTurn 
-        ; All alive players have chosen their moves, begin evaluation
+        ; All alive players have chosen their moves, begin evaluation         
     	CALL EvaluateAttack        
         
 ;        ; Apply DOT, update AliveAndHealStatus if any player is dead
