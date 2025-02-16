@@ -12,7 +12,11 @@ data SEGMENT
 	HStaminaCost DB 35 ; HAttack cost
 	BStaminaCost DB 5   ; Block cost	
 	HPGainPerTurn DB 5
-	STGainPerTurn DB 10
+	STGainPerTurn DB 10  
+	BurnDamage      DB 10
+	BurnDuration    DB 2
+	PoisonDamage    DB 5
+	PoisonDuration  DB 4
 	
 	; Player Stats
 	Player1Stats  	DB 0,0,0,0,0,0,0	
@@ -24,10 +28,10 @@ data SEGMENT
 	
 	; Player Statuses
 	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
-	Player1Status  DB 00000000B
-	Player2Status  DB 00000000B
-	Player3Status  DB 00000000B
-	Player4Status  DB 00000000B
+	Player1Status  DB 11000000B
+	Player2Status  DB 11000000B
+	Player3Status  DB 11000000B
+	Player4Status  DB 11000000B
 
     PlayerCount        DB 4	; Number of players
     CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
@@ -85,7 +89,9 @@ data SEGMENT
     SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
     SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
     InvalidInputText DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
-    SelfHealText DB 'Health restored by 5', 0Dh, 0Ah, '$'
+    SelfHealText DB 'Health restored by 5', 0Dh, 0Ah, '$'   
+    BurnDamageText DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
+    PoisonDamageText DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'
 data ENDS
       
       
@@ -348,8 +354,126 @@ code SEGMENT
             AND AL, 01111111B    ; P4 dead, reset their alive bit
         UpdateStatusOnDeath_Final:
             MOV AliveAndHealStatus, AL  ;Update AliveAndHealStatus finally   
+            RET    
+                                                     
+                                                     
+    ; Generic function to clamp value between 0 and 100, expects target value in SI
+    ; Must always be called immediately after subtraction to prevent against the SF being overwritten later 
+    ClampThatMf:
+        LAHF
+        TEST AH, 10000000B          ; Test whether sign flag is set
+        JZ TestOver100
+        MOV [SI], 0
+        RET
+        TestOver100:  
+            CMP [SI], 100
+            JNC ClampThatMf_End
+            MOV [SI], 100
+            RET                
+        ClampThatMf_End:
             RET
-            
+
+    ; Apply Burn and Poison effects after every turn 
+    ApplyDOT:  
+        MOV BL, BurnDamage
+        MOV BH, PoisonDamage
+        TEST AliveAndHealStatus, 00010000B      ; Test whether P1 is alive
+        JZ ApplyDOTP2 
+        MOV SI, OFFSET Player1Stats             ; Load P1 health into SI
+        TEST Player1Status, 10000000B           ; Test P1 burn bit
+        JZ PoisonCheckP1         
+        SUB [SI], BL                            ; Apply burn damage to P1 
+        MOV DX, OFFSET PlayerText
+        CALL PrintLine
+        MOV DL, '1'
+        CALL PrintChar
+        MOV DX, OFFSET BurnDamageText
+        CALL PrintLine
+        PoisonCheckP1:    
+            TEST Player1Status, 01000000B               ; Test P1 poison bit
+            JZ ApplyDOTP2
+            SUB [SI], BH                                ; Apply poison damage to P1
+            MOV DX, OFFSET PlayerText
+            CALL PrintLine
+            MOV DL, '1'
+            CALL PrintChar
+            MOV DX, OFFSET PoisonDamageText
+            CALL PrintLine      
+        ApplyDOTP2:       
+            CALL ClampThatMf                            ; Clamp P1's health if needed                                 
+            TEST AliveAndHealStatus, 00100000B          ; Test whether P2 is alive
+            JZ ApplyDOTP3
+            MOV SI, OFFSET Player2Stats                 ; Load P2 health into SI
+            TEST Player2Status, 10000000B               ; Test P2 burn bit
+            JZ PoisonCheckP2
+            SUB [SI], BL                                ; Apply burn damage to P2   
+            MOV DX, OFFSET PlayerText
+            CALL PrintLine
+            MOV DL, '2'
+            CALL PrintChar
+            MOV DX, OFFSET BurnDamageText
+            CALL PrintLine
+            PoisonCheckP2:
+                TEST Player2Status, 01000000B       ; Check P2 poison bit
+                JZ ApplyDOTP3
+                SUB [SI], BH                        ; Apply poison damage to P2
+                MOV DX, OFFSET PlayerText
+                CALL PrintLine
+                MOV DL, '2'
+                CALL PrintChar
+                MOV DX, OFFSET PoisonDamageText
+                CALL PrintLine                    
+        ApplyDOTP3:
+            CALL ClampThatMf                          ; Clamp P2's health if needed
+            TEST AliveAndHealStatus, 01000000B        ; Test whether P3 is alive
+            JZ ApplyDOTP4
+            MOV SI, OFFSET Player3Stats               ; Load P3 health into SI
+            TEST Player3Status, 10000000B             ; Test P3 burn bit
+            JZ PoisonCheckP3
+            SUB [SI], BL                              ; Apply burn damage to P3 
+            MOV DX, OFFSET PlayerText
+            CALL PrintLine
+            MOV DL, '3'
+            CALL PrintChar
+            MOV DX, OFFSET BurnDamageText
+            CALL PrintLine
+            PoisonCheckP3:
+                TEST Player3Status, 01000000B       ; Check P3 poison bit
+                JZ ApplyDOTP4
+                SUB [SI], BH                        ; Apply poison damage to P3
+                MOV DX, OFFSET PlayerText
+                CALL PrintLine
+                MOV DL, '3'
+                CALL PrintChar
+                MOV DX, OFFSET PoisonDamageText
+                CALL PrintLine
+        ApplyDOTP4:   
+            CALL ClampThatMf                          ; Clamp P3's health if needed
+            TEST AliveAndHealStatus, 10000000B        ; Test whether P4 is alive
+            JZ ApplyDOT_Final
+            MOV SI, OFFSET Player4Stats               ; Load P4 health into SI
+            TEST Player4Status, 10000000B             ; Test P4 burn bit
+            JZ PoisonCheckP4
+            SUB [SI], BL                              ; Apply burn damage to P4 
+            MOV DX, OFFSET PlayerText
+            CALL PrintLine
+            MOV DL, '4'
+            CALL PrintChar
+            MOV DX, OFFSET BurnDamageText
+            CALL PrintLine            
+            PoisonCheckP4:
+                TEST Player4Status, 01000000B           ; Check P4 poison bit
+                JZ ApplyDOT_Final
+                SUB [SI], BH                            ; Apply poison damage to P4  
+                MOV DX, OFFSET PlayerText
+                CALL PrintLine
+                MOV DL, '4'
+                CALL PrintChar
+                MOV DX, OFFSET PoisonDamageText
+                CALL PrintLine
+        ApplyDOT_Final:
+            CALL ClampThatMf                            ; Clamp P4's health if needed
+            RET    
 	; Load system time into CX and DX (CH: Hour, CL: Minute, DH: Second, DL: 1/100th of a second)
 	GetTime:
         MOV AH, 2CH
@@ -917,24 +1041,27 @@ main:
         CALL PrintNewLine 
         CALL PrintNewLine   
                         
-	; CHOICES For Round 1 (Should be moved to a function)                          	
-	; Give Player 1 Choice
-	CALL UpdateCurrentTurn
-	CALL GivePlayerMainChoice 
-	CALL PrintNewLine	 
-	; Give Player 2 Choice	 
-	CALL UpdateCurrentTurn	
-	CALL GivePlayerMainChoice
-	CALL PrintNewLine
-	; Give Player 3 Choice	 
-	CALL UpdateCurrentTurn
-	CALL GivePlayerMainChoice 
-	CALL PrintNewLine  
-	; Give Player 4 Choice	 
-	CALL UpdateCurrentTurn
-	CALL GivePlayerMainChoice
-	CALL UpdateCurrentTurn
-	CALL EvaluateAttack
+;	; CHOICES For Round 1 (Should be moved to a function)                          	
+;	; Give Player 1 Choice
+;	CALL UpdateCurrentTurn
+;	CALL GivePlayerMainChoice 
+;	CALL PrintNewLine	 
+;	; Give Player 2 Choice	 
+;	CALL UpdateCurrentTurn	
+;	CALL GivePlayerMainChoice
+;	CALL PrintNewLine
+;	; Give Player 3 Choice	 
+;	CALL UpdateCurrentTurn
+;	CALL GivePlayerMainChoice 
+;	CALL PrintNewLine  
+;	; Give Player 4 Choice	 
+;	CALL UpdateCurrentTurn
+;	CALL GivePlayerMainChoice
+;	CALL UpdateCurrentTurn
+;	CALL EvaluateAttack        
+
+    CALL ApplyDOT
+    MOV AL, Player1Stats
 	         
                    
     MOV AH, 4Ch        ; DOS function to terminate program
