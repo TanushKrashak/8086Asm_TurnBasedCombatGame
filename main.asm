@@ -329,7 +329,52 @@ code SEGMENT
     	     CALL DoDamage
     	     JMP FinishAttack      	         	               
         P2Ultimate:
+        ; P3 Attacks	      
         P3LightAttack:
+        	TEST Player3Status, 00000100B ; Check if Light Attack 
+        	JZ P3HeavyAttack        	
+        	CALL LoadPStats       	
+        	MOV AL, [DI+2]  ; light atk dmg   
+        	MOV AH, 0 
+        	MOV DamageToBeDealt, AX
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting             
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
+        	AND BL, 00000000B  ; Remove redundant bits
+        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
+        	JE P3StoreLightAtkDmgForP1
+        	     MOV CurrentTurn, 0 ; Attacking P1 
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID  
+        	P3StoreLightAtkDmgForP1:        	
+        	     MOV CurrentTurn, 1 ; Attacking P2 
+        	     MOV EnemyIdentifier, 1 ; Store enemy ID  
+        	     CALL LoadPStats
+        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
+        	     CALL DoDamage       	     
+        	     JMP FinishAttack	       
+        P3HeavyAttack:  
+        	TEST Player3Status, 00000010B ; Check if Heavy Attack 
+			JZ P3Ultimate        	
+        	CALL LoadPStats         	      
+        	MOV AL, [DI+3] ; heavy atk dmg     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
+        	AND BL, 00000000B  ; Remove redundant bits
+        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
+        	JE P3StoreHeavyAtkDmgForP1
+        	     MOV CurrentTurn, 0 ; Attacking P1 
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID  
+        	P3StoreHeavyAtkDmgForP1:        	
+        	     MOV CurrentTurn, 1 ; Attacking P2 
+        	     MOV EnemyIdentifier, 1 ; Store enemy ID  
+        	     CALL LoadPStats
+        	     MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
+        	     CALL DoDamage       	     
+        	     JMP FinishAttack     	         	               
+        P3Ultimate:
         P4LightAttack:
         ; Finish Attack, used for Resetting some Variables	    
         FinishAttack:
