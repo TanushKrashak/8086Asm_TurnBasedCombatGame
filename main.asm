@@ -78,7 +78,8 @@ data SEGMENT
     YouCheckIfText              DB 'You Selected Class ', '$' 
     StatsText                   DB 'Stats:', '$'   
     TurnText                    DB 'Turn ', '$'
-    FightText                   DB ' - Fight!',0Dh,0Ah,'$'
+    FightText                   DB ' - Fight!',0Dh,0Ah,'$' 
+    ReplayText                  DB 0Dh,0Ah, 'Replay?',0Dh,0Ah,'$'
     
     ; Stat Printing Texts
     HealthText                  DB 0DH, 0AH, 'Health: ', '$' 
@@ -1625,7 +1626,29 @@ main:
     	JMP EndGame       	   
     Team2Victory:  
     	MOV DX, OFFSET Team2Won
-		CALL PrintLine  
+		CALL PrintLine
+	AskReplay:
+	    MOV DX, OFFSET ReplayText 
+	    CALL PrintLine
+	    CALL TakeCharInput
+	    CMP AL, '1'
+	    JNE EndGame
+	    
+	    ; Resetting all game data
+	    MOV Player1Status, 00000000B  
+	    MOV Player2Status, 00000000B
+	    MOV Player3Status, 00000000B
+	    MOV Player4Status, 00000000B
+        
+        MOV CurrentTurn, 0
+        MOV AliveAndHealStatus, 11110000B
+        MOV CurrentTurnStats, 00000000B
+        MOV CurrentlyTargeting, 00000000B
+        MOV Team1Classes, 00000000B 
+        MOV Team2Classes, 00000000B  
+        MOV MatchTurn, 0
+        MOV TeamSynergies, 00000000B    
+        JMP main 
     EndGame:
 		MOV AH, 4Ch        ; DOS function to terminate program
 		INT 21h            ; Exit program
