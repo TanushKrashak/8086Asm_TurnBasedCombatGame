@@ -110,7 +110,7 @@ data ENDS
       
 code SEGMENT
 ;==================================================================================
-; FUNCTIONS
+; I/O FUNCTIONS
 ;==================================================================================    
 	; Function For Printing A Line
 	PrintLine:
@@ -136,8 +136,165 @@ code SEGMENT
 	TakeCharInput:
 		MOV AH, 01h        ; DOS function to read a character 
 	    INT 21h            ; Input from user
-	    RET
-	 
+	    RET    
+
+	; Load system time into CX and DX (CH: Hour, CL: Minute, DH: Second, DL: 1/100th of a second)
+	GetTime:
+        MOV AH, 2CH
+        INT 21H  
+        RET
+   
+   	; Generic random function, expects chance in AL. Result in CF
+	GetChance:
+	    CALL GetTime   ; Load Counter and Data registers with time data
+        MOV BL, TotalStats    ; Load length of array for based offset later   
+        MOV BH, 0   ;Ensure BX is same as BL in terms of actual value
+        CMP AL, DL      ; DL has hundredth of a second
+        RET  
+   
+	; This function converts an Integer in AL to a String and then prints it
+	; Each digit in the int has to be scanned individually and then 
+ 	; you have to add '0' to convert it to a Character 
+	PrintInt:	 
+		MOV AH, 00h	   
+	    MOV BX, 10         ; Divisor
+	    MOV CX, 0	   		
+	    ; Basically just pushes remainder to stack
+	    ; and then once all of the digits are done being pushed, it 
+	    ; starts popping from the stack and prints them 1 at a time    	 
+		ExtractDigitsFromInt:
+		    MOV DX, 0h          ; Clear DX 
+		    DIV BX              ; AX / 10 -> Quotient in AX, Remainder in DX
+		    ADD DL, '0'         ; Convert remainder to ASCII  	
+		    INC CX              ; keep track of digits count
+		    PUSH DX		    
+		    CMP AX, 0000h         ; Check if all digits extracted
+		    JNZ ExtractDigitsFromInt ; If not, continue loop  		            
+		PopFromStack:
+			POP DX
+			CALL PrintChar 
+			MOV AH, 0h
+			LOOP PopFromStack     ; keep going till CX becomes 0
+   		RET
+
+ 	; Prints the player stats
+	PrintPlayerStats:
+ 	    ; Print Player Num Stats: 
+ 	    CALL PrintPlayerName
+		MOV DX, OFFSET StatsText		 	     	 
+    	CALL PrintLine    	     	        	
+ 		; Print Health	
+ 		MOV DX, OFFSET HealthText
+ 		CALL PrintLine	   			 
+ 		MOV AL, [SI]       
+ 		CALL PrintInt 	
+ 		; Print Max Health	
+ 		MOV DX, OFFSET MaxHealthText
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+1]       
+ 		CALL PrintInt 	 
+ 		; Print Light Atk Damage	
+ 		MOV DX, OFFSET LightAttackDamageText
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+2]       
+ 		CALL PrintInt 		              
+ 		; Print Heavy Atk Damage
+ 		MOV DX, OFFSET HeavyAttackDamageText
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+3]       
+ 		CALL PrintInt 
+ 		; Print Defense	
+ 		MOV DX, OFFSET DefenseText
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+4]
+ 		CALL PrintInt 
+ 		 ; Print Critical Chance	
+ 		MOV DX, OFFSET CriticalChanceText     
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+5]       
+ 		CALL PrintInt    
+ 		; Print Player Stamina
+ 		 MOV DX, OFFSET StaminaText     
+ 		CALL PrintLine	 
+ 		MOV DH,0h   
+ 		; Player 1 Stamina
+		CMP CurrentTurn, 0
+ 		JNE P2StaminaPrintCheck
+ 		MOV AL, [PlayersStamina+0] 
+ 		JMP StaminaPrintCheckFinish 	
+ 		; Player 2 Stamina
+ 		P2StaminaPrintCheck:     
+ 			CMP CurrentTurn, 1 
+ 			JNE P3StaminaPrintCheck
+ 			MOV AL, [PlayersStamina+1]  
+ 			JMP StaminaPrintCheckFinish 
+ 		; Player 3 Stamina
+ 		P3StaminaPrintCheck:   
+ 		 	CMP CurrentTurn, 2 
+ 			JNE P4StaminaPrintCheck
+ 			MOV AL, [PlayersStamina+2] 
+ 			JMP StaminaPrintCheckFinish 
+ 		 ; Player 3 Stamina
+ 		P4StaminaPrintCheck:  		 	 			
+ 			MOV AL, [PlayersStamina+3]
+ 		StaminaPrintCheckFinish:  
+ 			CALL PrintInt	
+ 		MOV DX, OFFSET UltimateCDText     
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+6]       
+ 		CALL PrintInt 
+ 		RET  
+ 	
+	; Prints the current turn's player name, can be used to be print
+	; all of the player names    	
+	PrintPlayerName:      	
+		; print "Player"    		
+	    MOV DX, OFFSET PlayerText    
+	    CALL PrintLine  
+	    ; Check Turn 0 (Player 1)  
+		CMP CurrentTurn, 0
+		JNE CheckForOneTurn
+		MOV DX, '1'		
+		JMP EndPrintPlayerName
+		CheckForOneTurn:
+		    ; Check Turn 1 (Player 2)  
+			CMP CurrentTurn, 1
+			JNE CheckForTwoTurn
+			MOV DX, '2'		
+			JMP EndPrintPlayerName
+		CheckForTwoTurn:
+		    ; Check Turn 2 (Player 3)  
+			CMP CurrentTurn, 2
+			JNE CheckForThreeTurn
+			MOV DX, '3'		
+			JMP EndPrintPlayerName
+		CheckForThreeTurn:
+			; Turn 3 (Player 4)	
+			MOV DX, '4'	  
+			JMP EndPrintPlayerName
+		EndPrintPlayerName:	    
+			CALL PrintChar
+			MOV DX, ' '
+			CALL PrintChar			  			
+			RET     
+	
+	; Prints match turn and update its value		
+	PrintMatchTurn:   
+		CALL PrintNewLine           
+		INC MatchTurn
+		MOV DX, OFFSET TurnText
+		CALL PrintLine
+		MOV AH, 0
+		MOV AL, MatchTurn
+		CALL PrintInt
+		MOV DX, OFFSET FightText
+		CALL PrintLine 
+		CALL PrintNewLine
+		RET	 
+			          	    
+;==================================================================================
+; COMBAT FUNCTIONS
+;==================================================================================  	 
     ; Restore Stamina of each player after every turn by STGainPerTurn. Increases stamina of a dead player too, as it doesn't matter since they can't act and upon revival, stamina is restored to 100 regardless
     RecoverStamina:
         MOV AL, STGainPerTurn
@@ -275,7 +432,7 @@ code SEGMENT
         P1LightAttack:
         	TEST Player1Status, 00000100B ; Check if Light Attack 
         	JZ P1HeavyAttack        	
-        	CALL LoadPStats       	
+        	CALL LoadPlayerStatsInDI       	
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
         	MOV DamageToBeDealt, AX
@@ -295,7 +452,7 @@ code SEGMENT
         P1HeavyAttack:  
         	TEST Player1Status, 00000010B ; Check if Heavy Attack 
 			JZ P1Ultimate        	
-        	CALL LoadPStats         	      
+        	CALL LoadPlayerStatsInDI         	      
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
@@ -317,7 +474,7 @@ code SEGMENT
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
         	JZ P2HeavyAttack        	
-        	CALL LoadPStats       	
+        	CALL LoadPlayerStatsInDI       	
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
         	MOV DamageToBeDealt, AX
@@ -337,7 +494,7 @@ code SEGMENT
         P2HeavyAttack:  
         	TEST Player2Status, 00000010B ; Check if Heavy Attack 
 			JZ P2Ultimate        	
-        	CALL LoadPStats         	      
+        	CALL LoadPlayerStatsInDI         	      
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
@@ -359,7 +516,7 @@ code SEGMENT
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
         	JZ P3HeavyAttack        	
-        	CALL LoadPStats       	
+        	CALL LoadPlayerStatsInDI       	
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
         	MOV DamageToBeDealt, AX
@@ -379,7 +536,7 @@ code SEGMENT
         P3HeavyAttack:  
         	TEST Player3Status, 00000010B ; Check if Heavy Attack 
 			JZ P3Ultimate        	
-        	CALL LoadPStats         	      
+        	CALL LoadPlayerStatsInDI         	      
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
@@ -401,7 +558,7 @@ code SEGMENT
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
         	JZ P4HeavyAttack        	
-        	CALL LoadPStats       	
+        	CALL LoadPlayerStatsInDI       	
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
         	MOV DamageToBeDealt, AX
@@ -421,7 +578,7 @@ code SEGMENT
         P4HeavyAttack:  
         	TEST Player4Status, 00000010B ; Check if Heavy Attack 
 			JZ P4Ultimate        	
-        	CALL LoadPStats         	      
+        	CALL LoadPlayerStatsInDI         	      
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
@@ -442,7 +599,7 @@ code SEGMENT
         	     
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
-			CALL LoadPStats
+			CALL LoadPlayerStatsInDI
 			MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
 			CALL DoDamage
 		EvalAttack_CheckNextAttacker:	
@@ -507,10 +664,7 @@ code SEGMENT
 	    	MOV DX, OFFSET LeftText
 	    	CALL PrintLine
 	   	RET                        	  
-	         
-    ; Deals DPS damage to players with poison/burn statuses
-    DealDOT:
-        
+       
     ; Set block bit in CurrentTurnStatus for player with current turn.
     ; Must be called after AlternateTurn, as this function does NOT check the AliveAndHealStatus block
     SetBlock:
@@ -563,8 +717,7 @@ code SEGMENT
         UpdateStatusOnDeath_Final:
             MOV AliveAndHealStatus, AL  ;Update AliveAndHealStatus finally   
             RET    
-                                                     
-                                                     
+                                                                                                         
     ; Generic function to clamp value between 0 and 100, expects target value in SI
     ; Must always be called immediately after subtraction to prevent against the SF being overwritten later 
     ClampThatMf:
@@ -682,14 +835,9 @@ code SEGMENT
         ApplyDOT_Final:
             CALL ClampThatMf                            ; Clamp P4's health if needed
             RET    
-	; Load system time into CX and DX (CH: Hour, CL: Minute, DH: Second, DL: 1/100th of a second)
-	GetTime:
-        MOV AH, 2CH
-        INT 21H  
-        RET
         
     ; Loads current player's stats into DI
-    LoadPStats:
+    LoadPlayerStatsInDI:
 	    ; Check Turn 0 (Player 1)  
 		CMP CurrentTurn, 0
 		JNE LCheckForOneTurn
@@ -712,21 +860,13 @@ code SEGMENT
 			MOV DI, OFFSET Player4Stats		  
 			JMP LEndPrintPlayerName
 		LEndPrintPlayerName:    		  			
-			RET 
-                 
-	; Generic random function, expects chance in AL. Result in CF
-	GetChance:
-	    CALL GetTime   ; Load Counter and Data registers with time data
-        MOV BL, TotalStats    ; Load length of array for based offset later   
-        MOV BH, 0   ;Ensure BX is same as BL in terms of actual value
-        CMP AL, DL      ; DL has hundredth of a second
-        RET          
+			RET                        
         
     ; Updates critical bit in CurrentTurnStatus for players 
     ; USES DX, AH and AL
     UpdateCrit:
         ; Determine current player
-        CALL LoadPStats                  
+        CALL LoadPlayerStatsInDI                  
         MOV AL, [DI+5]  ;Load chance to be compared into AL       
         CALL GetChance 
         JNC GoodLuck ;If current 1/100 of second is less than crit chance, we have critical hit >:)    
@@ -828,100 +968,7 @@ code SEGMENT
 	        MOV DX, OFFSET AllPlayersDiedText
 	        CALL PrintLine
 	        CALL PrintNewLine
-        RET     
-        
- 	; This function converts an Integer in AL to a String and then prints it
- 	; Each digit in the int has to be scanned individually and then 
- 	; you have to add '0' to convert it to a Character 
-	PrintInt:	 
-		MOV AH, 00h	   
-	    MOV BX, 10         ; Divisor
-	    MOV CX, 0	   		
-	    ; Basically just pushes remainder to stack
-	    ; and then once all of the digits are done being pushed, it 
-	    ; starts popping from the stack and prints them 1 at a time    	 
-		ExtractDigitsFromInt:
-		    MOV DX, 0h          ; Clear DX 
-		    DIV BX              ; AX / 10 -> Quotient in AX, Remainder in DX
-		    ADD DL, '0'         ; Convert remainder to ASCII  	
-		    INC CX              ; keep track of digits count
-		    PUSH DX		    
-		    CMP AX, 0000h         ; Check if all digits extracted
-		    JNZ ExtractDigitsFromInt ; If not, continue loop  		            
-		PopFromStack:
-			POP DX
-			CALL PrintChar 
-			MOV AH, 0h
-			LOOP PopFromStack     ; keep going till CX becomes 0
-   		RET
-
- 	; Prints the player stats
-	PrintPlayerStats:
- 	    ; Print Player Num Stats: 
- 	    CALL PrintPlayerName
-		MOV DX, OFFSET StatsText		 	     	 
-    	CALL PrintLine    	     	        	
- 		; Print Health	
- 		MOV DX, OFFSET HealthText
- 		CALL PrintLine	   			 
- 		MOV AL, [SI]       
- 		CALL PrintInt 	
- 		; Print Max Health	
- 		MOV DX, OFFSET MaxHealthText
- 		CALL PrintLine	  		 	
- 		MOV AL, [SI+1]       
- 		CALL PrintInt 	 
- 		; Print Light Atk Damage	
- 		MOV DX, OFFSET LightAttackDamageText
- 		CALL PrintLine	  		 	
- 		MOV AL, [SI+2]       
- 		CALL PrintInt 		              
- 		; Print Heavy Atk Damage
- 		MOV DX, OFFSET HeavyAttackDamageText
- 		CALL PrintLine	  		 	
- 		MOV AL, [SI+3]       
- 		CALL PrintInt 
- 		; Print Defense	
- 		MOV DX, OFFSET DefenseText
- 		CALL PrintLine	  		 	
- 		MOV AL, [SI+4]
- 		CALL PrintInt 
- 		 ; Print Critical Chance	
- 		MOV DX, OFFSET CriticalChanceText     
- 		CALL PrintLine	  		 	
- 		MOV AL, [SI+5]       
- 		CALL PrintInt    
- 		; Print Player Stamina
- 		 MOV DX, OFFSET StaminaText     
- 		CALL PrintLine	 
- 		MOV DH,0h   
- 		; Player 1 Stamina
-		CMP CurrentTurn, 0
- 		JNE P2StaminaPrintCheck
- 		MOV AL, [PlayersStamina+0] 
- 		JMP StaminaPrintCheckFinish 	
- 		; Player 2 Stamina
- 		P2StaminaPrintCheck:     
- 			CMP CurrentTurn, 1 
- 			JNE P3StaminaPrintCheck
- 			MOV AL, [PlayersStamina+1]  
- 			JMP StaminaPrintCheckFinish 
- 		; Player 3 Stamina
- 		P3StaminaPrintCheck:   
- 		 	CMP CurrentTurn, 2 
- 			JNE P4StaminaPrintCheck
- 			MOV AL, [PlayersStamina+2] 
- 			JMP StaminaPrintCheckFinish 
- 		 ; Player 3 Stamina
- 		P4StaminaPrintCheck:  		 	 			
- 			MOV AL, [PlayersStamina+3]
- 		StaminaPrintCheckFinish:  
- 			CALL PrintInt	
- 		MOV DX, OFFSET UltimateCDText     
- 		CALL PrintLine	  		 	
- 		MOV AL, [SI+6]       
- 		CALL PrintInt 
- 		RET  
+        RET             
      
 	; Function to get the player's class, stores result
 	; in the BL Register     
@@ -1076,14 +1123,14 @@ code SEGMENT
 	 
 	; Loads Player Stats based on the DI Value
 	; Player Has To Be Loaded inside SI	
-    LoadPlayerStats:           
+    InitializePlayerStats:           
         MOV CX, 7                    ; Loop counter (7 elements)        
-	    LoadPlayerStatsLoop:
+	    InitializePlayerStatsLoop:
 	        MOV AL, [DI]    
 	        MOV [SI], AL    
 	        INC SI          
 	        INC DI          
-	        LOOP LoadPlayerStatsLoop  ; Repeat until CX = 0
+	        LOOP InitializePlayerStatsLoop  ; Repeat until CX = 0
 	    RET      
 	    
 	; Give Player choice for in Combat, Loads Choice in AL    
@@ -1254,52 +1301,7 @@ code SEGMENT
     	    CALL PrintLine
     	    JMP GivePlayerMainChoice   
     	RET
-    	
-	; Prints the current turn's player name, can be used to be print
-	; all of the player names    	
-	PrintPlayerName:      	
-		; print "Player"    		
-	    MOV DX, OFFSET PlayerText    
-	    CALL PrintLine  
-	    ; Check Turn 0 (Player 1)  
-		CMP CurrentTurn, 0
-		JNE CheckForOneTurn
-		MOV DX, '1'		
-		JMP EndPrintPlayerName
-		CheckForOneTurn:
-		    ; Check Turn 1 (Player 2)  
-			CMP CurrentTurn, 1
-			JNE CheckForTwoTurn
-			MOV DX, '2'		
-			JMP EndPrintPlayerName
-		CheckForTwoTurn:
-		    ; Check Turn 2 (Player 3)  
-			CMP CurrentTurn, 2
-			JNE CheckForThreeTurn
-			MOV DX, '3'		
-			JMP EndPrintPlayerName
-		CheckForThreeTurn:
-			; Turn 3 (Player 4)	
-			MOV DX, '4'	  
-			JMP EndPrintPlayerName
-		EndPrintPlayerName:	    
-			CALL PrintChar
-			MOV DX, ' '
-			CALL PrintChar			  			
-			RET     
-	
-	; Prints match's current turn and update turn		
-	PrintMatchTurn:              
-		INC MatchTurn
-		MOV DX, OFFSET TurnText
-		CALL PrintLine
-		MOV DH, 0
-		MOV DL, MatchTurn
-		CALL PrintInt
-		MOV DX, OFFSET FightText
-		CALL PrintLine
-		RET	                                                                             
-	    	    
+    	                                                                            	    	   
 main:
 ;==================================================================================
 ; MAIN FUNCTION
@@ -1321,7 +1323,7 @@ main:
 ;    	CMP BL, 'X'
 ;    	JE MainP1ClassSelection  
 ;        MOV SI, OFFSET Player1Stats
-;       	CALL LoadPlayerStats    
+;       	CALL InitializePlayerStats    
 ;       	; Print Stats
 ;       	MOV SI, OFFSET Player1Stats
 ;        CALL PrintPlayerStats      
@@ -1340,7 +1342,7 @@ main:
 ;    	CMP BL, 'X'
 ;    	JE MainP2ClassSelection 
 ;        MOV SI, OFFSET Player2Stats
-;       	CALL LoadPlayerStats    
+;       	CALL InitializePlayerStats    
 ;    	; Print Stats 
 ;    	MOV SI, OFFSET Player2Stats
 ;        CALL PrintPlayerStats    
@@ -1359,7 +1361,7 @@ main:
 ;    	CMP BL, 'X'
 ;    	JE MainP3ClassSelection 
 ;        MOV SI, OFFSET Player3Stats
-;       	CALL LoadPlayerStats    
+;       	CALL InitializePlayerStats    
 ;    	; Print Stats 
 ;    	MOV SI, OFFSET Player3Stats
 ;        CALL PrintPlayerStats    
@@ -1378,7 +1380,7 @@ main:
 ;    	CMP BL, 'X'
 ;    	JE MainP4ClassSelection
 ;        MOV SI, OFFSET Player4Stats
-;       	CALL LoadPlayerStats    
+;       	CALL InitializePlayerStats    
 ;    	; Print Stats 
 ;    	MOV SI, OFFSET Player4Stats
 ;        CALL PrintPlayerStats    
@@ -1389,22 +1391,22 @@ main:
 	; p1 	
 	MOV DI, OFFSET VampireStats
 	MOV SI, OFFSET Player1Stats
-	CALL LoadPlayerStats
+	CALL InitializePlayerStats
 		; p2
 	CALL UpdateCurrentTurn
 	MOV DI, OFFSET AssassinStats
 	MOV SI, OFFSET Player2Stats
-	CALL LoadPlayerStats                        
+	CALL InitializePlayerStats                        
     CALL UpdateCurrentTurn   
     ; p3
 	MOV DI, OFFSET AssassinStats
 	MOV SI, OFFSET Player3Stats
-	CALL LoadPlayerStats                        
+	CALL InitializePlayerStats                        
     CALL UpdateCurrentTurn  
         ; p4
 	MOV DI, OFFSET AssassinStats 	
 	MOV SI, OFFSET Player4Stats
-	CALL LoadPlayerStats                        
+	CALL InitializePlayerStats                        
     CALL UpdateCurrentTurn 
     
     GameLoop:              
