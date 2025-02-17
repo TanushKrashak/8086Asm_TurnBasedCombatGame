@@ -46,12 +46,12 @@ data SEGMENT
     EnemyIdentifier DB 0;
 
 	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
-	KnightStats    	DB  85,  85,  20,  35,  60,  30,  3 ; Balanced, high defense
-	AssassinStats  	DB  60,  60,  30,  40,  20,  50,  4 ; Lower health, high crit chance
-	PyromancerStats	DB  50,  50,  20,  30,  40,  30,  4 ; Lower stats overall, but compensated by burn passive
-	HealerStats    	DB  70 , 70,  15,  30,  30,  30,  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
-	VanguardStats  	DB  100, 100, 10,  35,  100, 0,   4  ; Max HP and Def, very low crit
-	VampireStats   	DB  70,  70,  15,  25,  30,  99,  4  ; High health, low attack to account for 50% heal chance
+	KnightStats    	DB  85,  85,  20,  35,  30,  30,  3 ; Balanced, high defense
+	AssassinStats  	DB  60,  60,  30,  40,  10,  50,  4 ; Lower health, high crit chance
+	PyromancerStats	DB  50,  50,  20,  30,  20,  30,  4 ; Lower stats overall, but compensated by burn passive
+	HealerStats    	DB  70 , 70,  15,  30,  15,  30,  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
+	VanguardStats  	DB  100, 100, 10,  35,  50, 0,   4  ; Max HP and Def, very low crit
+	VampireStats   	DB  70,  70,  15,  25,  15,  99,  4  ; High health, low attack to account for 50% heal chance
 		         
 ;==================================================================================
 ; STRINGS
