@@ -625,18 +625,35 @@ code SEGMENT
     	; CurrentTurn AND CurrentTurnStats For P1  
     	CMP CurrentTurn, 0
 	    JNE DoDamage_CheckP2Crit
-	    TEST CurrentTurnStats, 00010000B
+	    TEST CurrentTurnStats, 00010000B      ; check crit
 	    JZ DoDamage_CheckP2Crit	    
 	    JMP DoDamage_PlayerHasCrit  
 	    ; CurrentTurn AND CurrentTurnStats For P2
     	DoDamage_CheckP2Crit:
-    			
+		    CMP CurrentTurn, 1        
+    		JNE DoDamage_CheckP3Crit
+		    TEST CurrentTurnStats, 00100000B   ; check crit
+		    JZ DoDamage_CheckP3Crit	    
+		    JMP DoDamage_PlayerHasCrit             
+		; CurrentTurn AND CurrentTurnStats For P3
+		DoDamage_CheckP3Crit:
+		    CMP CurrentTurn, 2
+    		JNE DoDamage_CheckP4Crit
+		    TEST CurrentTurnStats, 01000000B  ; check crit
+		    JZ DoDamage_CheckP4Crit	    
+		    JMP DoDamage_PlayerHasCrit	
+		; P4 Crit Check
+		DoDamage_CheckP4Crit:
+			TEST CurrentTurnStats, 10000000B  ; check crit
+		    JNZ DoDamage_PlayerHasCrit
+		    JMP	DoDamage_PlayerDidNotCrit	
     	DoDamage_PlayerHasCrit:
     		; Double Damage
     		MOV AX, DamageToBeDealt
     		MOV BL, 2 ; For Doubling Damage
     		MUL BL
-    		MOV DamageToBeDealt, AX
+    		MOV DamageToBeDealt, AX 
+    	DoDamage_PlayerDidNotCrit:
     	; Defending Logic
     	MOV AL, [SI+4]	
     	MOV BL, 2  ; For Doubling Defense for block
