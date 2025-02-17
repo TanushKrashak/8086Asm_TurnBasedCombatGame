@@ -47,12 +47,12 @@ data SEGMENT
     DamageToBeDealt DW 0 ; used for the damage function, prevents value being discarded from GPRs
     EnemyIdentifier DB 0;
 
-	; Class Stats (HP, MaxHP, LDmg, HDmg, Def, CC, UltC)
+	; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,  CC,UltC)
 	KnightStats    	DB  85,  85,  20,  35,  30,  30,  3 ; Balanced, high defense
 	AssassinStats  	DB  60,  60,  30,  40,  10,  50,  4 ; Lower health, high crit chance
 	PyromancerStats	DB  50,  50,  20,  30,  20,  30,  4 ; Lower stats overall, but compensated by burn passive
 	HealerStats    	DB  70 , 70,  15,  30,  15,  30,  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
-	VanguardStats  	DB  100, 100, 10,  35,  50, 0,   4  ; Max HP and Def, very low crit
+	VanguardStats  	DB  100, 100, 10,  35,  50,   0,  4  ; Max HP and Def, very low crit
 	VampireStats   	DB  70,  70,  15,  25,  15,  99,  4  ; High health, low attack to account for 50% heal chance
 		         
 ;==================================================================================
@@ -619,28 +619,50 @@ code SEGMENT
     ; Enemy Stats should be Loaded on DI      
     ; Enemy Number should be Loaded on BH
     DoDamage:     	                	
-    	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI      	
+    	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI    	      
     	CALL UpdateCrit               	    	   
     	; Crits Calc    	
-    	; CurrentTurn AND CurrentTurnStats For P1
+    	; CurrentTurn AND CurrentTurnStats For P1  
+    	CMP CurrentTurn, 0
+	    JNE DoDamage_CheckP2Crit
 	    TEST CurrentTurnStats, 00010000B
-	    JZ DoDamage_CheckP2Crit
-	    CMP CurrentTurn, 0
-	    JNZ DoDamage_CheckP2Crit
+	    JZ DoDamage_CheckP2Crit	    
 	    JMP DoDamage_PlayerHasCrit  
 	    ; CurrentTurn AND CurrentTurnStats For P2
     	DoDamage_CheckP2Crit:
-    		
+    			
     	DoDamage_PlayerHasCrit:
     		; Double Damage
     		MOV AX, DamageToBeDealt
     		MOV BL, 2 ; For Doubling Damage
     		MUL BL
-    		MOV DamageToBeDealt, AX    	
-    	MOV AX, DamageToBeDealt
-		SUB [SI], AL   		
-		JNC DoDamage_NoClamp
-		MOV [SI], 0
+    		MOV DamageToBeDealt, AX
+    	; Defending Logic
+    	MOV AL, [SI+4]	
+    	MOV BL, 2  ; For Doubling Defense for block
+    	CMP BH, 2
+    	JNE DoDamage_CheckIfEnemyP4
+    	TEST CurrentTurnStats, 00000100B   ; Check If P3 Blocking
+	    	JZ DoDamage_EnemyIsNotBlocking
+    		MUL BL ; Double Defense cuz Blocking 
+    	DoDamage_CheckIfEnemyP4:
+    		
+    	DoDamage_EnemyIsNotBlocking: 
+			MOV DH, AL ; Store Final Def in DH
+	    	MOV AX, DamageToBeDealt        
+	    	SUB AL, DH  ; Damage Shred cuz of Def    	
+	    	JC DoDamage_SetLowestDmgValue  ; negative dmg not allowed  
+	    	CMP AL, 5
+	    	JC DoDamage_SetLowestDmgValue  ; dmg < 5 not allowed
+	    	JMP DoDamage_DoDamage
+    	DoDamage_SetLowestDmgValue:
+ 			MOV AL, 5   ; Lowest possible dmg value     				 	
+    	DoDamage_DoDamage:  	
+			SUB [SI], AL
+			MOV AH, 0
+			MOV DamageToBeDealt, AX			   	
+			JNC DoDamage_NoClamp
+			MOV [SI], 0
 		DoDamage_NoClamp: 			
 			; Print Damage Value	
 	        MOV DX, OFFSET DamagedText
