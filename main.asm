@@ -24,7 +24,7 @@ data SEGMENT
 	Player3Stats  	DB 50,50,0,0,0,0,0
 	Player4Stats  	DB 0,0,0,0,0,0,0   
 	PlayersStamina	DB 100,100,100,100     ; All players' stamina stored here
-	PlayersCooldown DB 0,0,0,0         ; All players' ultimate cooldown, wraps after their class' UltC   
+	PlayersUltCooldown DB 0,0,0,0         ; All players' ultimate cooldown, wraps after their class' UltC   
 	
 	; Player Statuses
 	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
@@ -32,7 +32,8 @@ data SEGMENT
 	Player2Status  DB 11000000B
 	Player3Status  DB 11000000B
 	Player4Status  DB 11000000B
-
+    
+    ; Game Helpers
     PlayerCount        DB 4	; Number of players
     CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
     AliveAndHealStatus DB 11110000B	; p4_alive, p3_alive, p2_alive, p1_alive, p4_heal,p3_heal,p2_heal,p1_heal
@@ -40,6 +41,7 @@ data SEGMENT
     CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target                 
     Team1Classes       DB 00000000B ; Higher nibble for P1 class, lower nibble for P2 class
     Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class     
+    MatchTurn 		   DB 0 ; Shows the Turn of the Game
     
     ; Temporary Values
     DamageToBeDealt DW 0 ; used for the damage function, prevents value being discarded from GPRs
@@ -72,7 +74,9 @@ data SEGMENT
     ChooseYourMoveText DB 'Make Your Choice!',0Dh,0Ah, '$'
     MoveChoicesText DB '[1]-Light Attack',0Dh,0Ah, '[2]-Heavy Attack',0Dh,0Ah, '[3]-Defend',0Dh,0Ah, '[4]-Heal',0Dh,0Ah, '[5]-Ultimate',0Dh,0Ah, '$'
     YouCheckIfText DB 'You Selected Class ', '$' 
-    StatsText DB 'Stats:', '$'      
+    StatsText DB 'Stats:', '$'   
+    TurnText DB 'Turn ', '$'
+    FightText DB ' - Fight!',0Dh,0Ah,'$'
     
     ; Stat Printing Texts
     HealthText DB 0DH, 0AH, 'Health: ', '$' 
@@ -1282,7 +1286,19 @@ code SEGMENT
 			CALL PrintChar
 			MOV DX, ' '
 			CALL PrintChar			  			
-			RET                                                                                   
+			RET     
+	
+	; Prints match's current turn and update turn		
+	PrintMatchTurn:              
+		INC MatchTurn
+		MOV DX, OFFSET TurnText
+		CALL PrintLine
+		MOV DH, 0
+		MOV DL, MatchTurn
+		CALL PrintInt
+		MOV DX, OFFSET FightText
+		CALL PrintLine
+		RET	                                                                             
 	    	    
 main:
 ;==================================================================================
@@ -1393,7 +1409,8 @@ main:
     
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
-    	; Give Player 1 Choice 
+    	; Give Player 1 Choice        	
+    	CALL PrintMatchTurn
     	CMP CurrentTurn, 0
     	JNE P2GameChoice
     	CALL GivePlayerMainChoice 
