@@ -37,7 +37,7 @@ data SEGMENT
     CurrentTurn        DB 0	; Indicate which player's turn it is, takes values between 0-3 inclusive
     AliveAndHealStatus DB 11110000B	; p4_alive, p3_alive, p2_alive, p1_alive, p4_heal,p3_heal,p2_heal,p1_heal
     CurrentTurnStats   DB 00000000B ; p4_crit, p3_crit, p2_crit, p1_crit, p4_block, p3_block, p2_block, p1_block  
-    CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target       
+    CurrentlyTargeting DB 00000000B ; p1_target, p2_target, p3_target, p4_target                 
     Team1Classes       DB 00000000B ; Higher nibble for P1 class, lower nibble for P2 class
     Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class     
     
@@ -219,24 +219,54 @@ code SEGMENT
                         RET
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack
-    EvaluateAttack:             
-    	; Check P1 Status       
-        TEST AliveAndHealStatus, 00010000B ; P1 Alive
-        JZ EvaluateAttack_P2Alive 
-        TEST AliveAndHealStatus, 00000001B ; P1 Healing
-        JZ P1LightAttack          
-        ; Check P2 Status
-        EvaluateAttack_P2Alive:
-            TEST AliveAndHealStatus, 00100000B ; P2 Alive
-	        JZ EvaluateAttack_P3Alive 
-	        TEST AliveAndHealStatus, 00000010B ; P2 Healing
-	        JZ P2LightAttack 
- 		; Check P3 Status
-        EvaluateAttack_P3Alive:
-            TEST AliveAndHealStatus, 01000000B ; P3 Alive
-	        JZ P4LightAttack 
-	        TEST AliveAndHealStatus, 00000100B ; P3 Healing
-	        JZ P3LightAttack	    
+    EvaluateAttack:   
+    	;INT 20h 
+    	; Is P1
+    	CMP CurrentTurn, 0   		 
+    	JNE EvalAttack_P2   	          
+	    	; Check P1 Status       
+	        TEST AliveAndHealStatus, 00010000B ; P1 Alive
+	        JZ EvaluateAttack_P2Alive 
+	        TEST AliveAndHealStatus, 00000001B ; P1 Healing
+	        JNZ EvalAttack_CheckNextAttacker 
+	        TEST CurrentTurnStats, 00000001B ; P1 Defending
+	        JNZ EvalAttack_CheckNextAttacker
+	        JMP P1LightAttack  
+	    ; Is P2
+        EvalAttack_P2: 
+	        CMP CurrentTurn, 1
+	        JNE EvalAttack_P3
+	        ; Check P2 Status
+	        EvaluateAttack_P2Alive:
+	            TEST AliveAndHealStatus, 00100000B ; P2 Alive
+		        JZ EvaluateAttack_P3Alive 
+		        TEST AliveAndHealStatus, 00000010B ; P2 Healing
+    	        JNZ EvalAttack_CheckNextAttacker
+		        TEST CurrentTurnStats, 00000010B ; P2 Defending
+		        JNZ EvalAttack_CheckNextAttacker    	        
+				JMP P2LightAttack 
+		; Is P3          
+		EvalAttack_P3:   
+	        CMP CurrentTurn, 2
+    		JNE EvalAttack_P4   
+	 		; Check P3 Status
+	        EvaluateAttack_P3Alive:
+	            TEST AliveAndHealStatus, 01000000B ; P3 Alive
+		        JZ EvalAttack_P4 
+		        TEST AliveAndHealStatus, 00000100B ; P3 Healing
+    	        JNZ EvalAttack_CheckNextAttacker
+		        TEST CurrentTurnStats, 00000100B ; P3 Defending
+		        JNZ EvalAttack_CheckNextAttacker    	        
+				JMP P3LightAttack 
+		; Is P4    
+		EvalAttack_P4: 		
+            TEST AliveAndHealStatus, 10000000B ; P4 Alive
+			JNZ EvalAttack_CheckNextAttacker 
+	        TEST AliveAndHealStatus, 00001000B ; P4 Healing
+	        JNZ EvalAttack_CheckNextAttacker
+	        TEST CurrentTurnStats, 00001000B ; P4 Defending
+	        JNZ EvalAttack_CheckNextAttacker    	        			
+			JMP P4LightAttack	    
 	    ; P1 Attacks	      
         P1LightAttack:
         	TEST Player1Status, 00000100B ; Check if Light Attack 
@@ -406,13 +436,22 @@ code SEGMENT
         	     JMP FinishAttack 
         P4Ultimate:
         	     
-        ; Finish Attack, used for Finishing Attack Logic and Reseting Vars	    
+        ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
 			CALL LoadPStats
 			MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
-			CALL DoDamage   
+			CALL DoDamage
+		EvalAttack_CheckNextAttacker:	
+			INC CurrentTurn    
+			CMP CurrentTurn, 4 ; Check if all attacks have been done   			
+			JE EndAttackCycle          
+			JMP EvaluateAttack
+			RET   
+		; Reset Attack Variables
+		EndAttackCycle:
 	        MOV CurrentlyTargeting, 0B         ; reset targetting
-	        AND AliveAndHealStatus, 11110000B  ; reset healing
+    		AND AliveAndHealStatus, 11110000B  ; reset healing
+    		MOV CurrentTurn, 0	
         RET
     
     ; Func to deal damage, needs Damage to be moved to DamageToBeDealt    
@@ -445,8 +484,7 @@ code SEGMENT
 			; Print Damage Value	
 	        MOV DX, OFFSET DamagedText
 	        CALL PrintLine        
-	        ; Temp Change CurrentTurn
-	        INT 20H	           
+	        ; Temp Change CurrentTurn	                
 	        MOV BL, CurrentTurn
 	        MOV BH, EnemyIdentifier 	
 	        MOV CurrentTurn, BH        
@@ -746,10 +784,11 @@ code SEGMENT
 	
 	; Progress player turns
 	 AlternateTurn:
-        ; Each recursive call increments DH by 1. At DH = 4 (0->1->2->3-->4), we know that 4 recursions were already made. In this case, all players are dead
-        INC DH
-        CMP DH, 4
-        JE AllDead  ; Jump to AllDead to prevent infinite recursion
+	 	; REVISE THIS DH LOGIC!
+;        ; Each recursive call increments DH by 1. At DH = 4 (0->1->2->3-->4), we know that 4 recursions were already made. In this case, all players are dead
+;        INC DH
+;        CMP DH, 4
+;        JE AllDead  ; Jump to AllDead to prevent infinite recursion
         MOV AL, CurrentTurn
         CALL UpdateCurrentTurn   ; Increment AL, wrap if necessary
         MOV DL, AliveAndHealStatus    ; Load AliveAndHealStatus byte into DL to check if the current player is dead or not
