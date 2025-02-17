@@ -42,6 +42,8 @@ data SEGMENT
     Team1Classes       DB 00000000B ; Higher nibble for P1 class, lower nibble for P2 class
     Team2Classes       DB 00000000B ; Higher nibble for P3 class, lower nibble for P4 class     
     MatchTurn 		   DB 0 ; Shows the Turn of the Game
+    TeamSynergies      DB 00000000B ; Higher nibble for team 1, lower nibble for team 2.
+    ; Synergy indices: 1) Nobles Oblige, 2) Great Wall, 3) Assassin's Creed, 4) Scorched Earth, 5) Count's Generosity, 6) Holy Empire
     
     ; Temporary Values
     DamageToBeDealt DW 0 ; used for the damage function, prevents value being discarded from GPRs
@@ -1358,6 +1360,90 @@ code SEGMENT
     	    CALL PrintLine
     	    JMP GivePlayerMainChoice   
     	RET
+    
+    ; Set synergies for both teams. Must be called at the end of each team's class selection phase. Relies on Team1Classes and Team2Classes to be properly masked	
+    UpdateSynergy:
+        CMP CurrentTurn, 3
+        JNC LoadTeam2Classes 
+        MOV BL, Team1Classes
+        MOV SI, OFFSET Player1Stats
+        MOV DI, OFFSET Player2Stats 
+        LoadTeam2Classes: 
+            MOV BL, Team2Classes
+            MOV SI, OFFSET Player3Stats
+            MOV DI, OFFSET Player4Stats
+        ; Nobles Oblige, both knights
+        TEST BL, 11111111B 
+        JNZ CheckGreatWall
+        ; Increase LDmg and HDmg of both knights by 10
+        ADD [SI+2], 10
+        ADD [SI+3], 10
+        ADD [DI+2], 10
+        ADD [DI+3], 10
+        OR TeamSynergies, 00000001B     ; Update TeamSynergies
+        JMP UpdateSynergy_Final
+        CheckGreatWall:            ; Healer (0011) + Vanguard (0100)
+            CMP BL, 00110100B
+            JE GreatWall_FirstHealer   
+            CMP BL, 01000011B
+            JE GreatWall_FirstVanguard
+            JMP CheckScorchedEarth
+            GreatWall_FirstHealer:
+                ADD [SI+4], 10
+                ADD [DI+1], 30
+                ADD [DI+2], 30
+                OR TeamSynergies, 00000010B
+                JMP UpdateSynergy_Final
+            GreatWall_FirstVanguard:
+                ADD [DI+4], 10
+                ADD [SI+1], 30
+                ADD [SI+2], 30
+                OR TeamSynergies, 00000010B 
+                JMP UpdateSynergy_Final 
+        CheckScorchedEarth:         ; Both Pyromancers (00100010)
+            CMP BL, 00100010B
+            JNE CheckAssassinCreed
+            OR TeamSynergies, 00000100B
+            JMP UpdateSynergy_Final
+        CheckAssassinCreed:        ; Both Assassins (00010001)
+            CMP BL, 00010001B  
+            JNE CheckCountsGenerosity
+            OR TeamSynergies, 00000011B
+            ; Decrease HP and MaxHP by 10 for both assassins
+            SUB [SI], 10
+            SUB [SI+1], 10
+            SUB [DI], 10
+            SUB [DI+1], 10
+            ; Decrease Ultimate cooldown by 1 for both assassins
+            SUB [SI+6], 1
+            SUB [DI+6], 1
+            JMP UpdateSynergy_Final
+        CheckCountsGenerosity:      ; Vampire (0101) + Vanguard (0100)
+            CMP BL, 01010100B
+            JE CountsGenerosity
+            CMP BL, 01000101B 
+            JE CountsGenerosity
+            JMP CheckHolyEmpire
+            CountsGenerosity:                        
+                OR TeamSynergies, 00000101B
+                JMP UpdateSynergy_Final
+        CheckHolyEmpire:            ; Healer (0011) + Knight (0000)
+            CMP BL, 00110000B
+            JE HolyEmpire
+            CMP Team1Classes, 00000011B
+            JE HolyEmpire
+            JMP UpdateSynergy_Final
+            HolyEmpire:
+                OR TeamSynergies, 00000110B
+        UpdateSynergy_Final:
+            CMP CurrentTurn, 3
+            JC ShiftSynergyLeft
+            RET
+            ShiftSynergyLeft:
+                MOV CL, 4
+                SHL TeamSynergies, CL
+                RET
+            
     	                                                                            	    	   
 main:
 ;==================================================================================
@@ -1370,102 +1456,109 @@ main:
 					;====; 
 					; COMMENTED OUT FOR DEBUGGING, NO NEED TO KEEP ON SELECTING CLASSES OVER AND OVER!!!!!
 					;====;
-;    MainP1ClassSelection:          
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine   		          
-;        MOV DX, OFFSET PrintPlayerStatsText  
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass  
-;    	CMP BL, 'X'
-;    	JE MainP1ClassSelection  
-;        MOV SI, OFFSET Player1Stats
-;       	CALL InitializePlayerStats    
-;       	; Print Stats
-;       	MOV SI, OFFSET Player1Stats
-;        CALL PrintPlayerStats      
-;        CALL PrintNewLine 
-;        CALL PrintNewLine   
-;    
-;    ; Print P2 MSG  
-;    MainP2ClassSelection:
-;        CALL UpdateCurrentTurn
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine      	
-;        MOV DX, OFFSET PrintPlayerStatsText
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass	 
-;    	CMP BL, 'X'
-;    	JE MainP2ClassSelection 
-;        MOV SI, OFFSET Player2Stats
-;       	CALL InitializePlayerStats    
-;    	; Print Stats 
-;    	MOV SI, OFFSET Player2Stats
-;        CALL PrintPlayerStats    
-;        CALL PrintNewLine 
-;        CALL PrintNewLine   
-;       
-; 	; Print P3 MSG
-; 	MainP3ClassSelection:
-;        CALL UpdateCurrentTurn
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine      	
-;        MOV DX, OFFSET PrintPlayerStatsText
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass	   
-;    	CMP BL, 'X'
-;    	JE MainP3ClassSelection 
-;        MOV SI, OFFSET Player3Stats
-;       	CALL InitializePlayerStats    
-;    	; Print Stats 
-;    	MOV SI, OFFSET Player3Stats
-;        CALL PrintPlayerStats    
-;        CALL PrintNewLine 
-;        CALL PrintNewLine 
-;    
-; 	; Print P4 MSG    
-; 	MainP4ClassSelection:
-;        CALL UpdateCurrentTurn
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine      	
-;        MOV DX, OFFSET PrintPlayerStatsText
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass	
-;    	CMP BL, 'X'
-;    	JE MainP4ClassSelection
-;        MOV SI, OFFSET Player4Stats
-;       	CALL InitializePlayerStats    
-;    	; Print Stats 
-;    	MOV SI, OFFSET Player4Stats
-;        CALL PrintPlayerStats    
-;        CALL PrintNewLine 
-;        CALL PrintNewLine
-                        
-	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
-	; p1 	
-	MOV DI, OFFSET VampireStats
-	MOV SI, OFFSET Player1Stats
-	CALL InitializePlayerStats
-		; p2
-	CALL UpdateCurrentTurn
-	MOV DI, OFFSET AssassinStats
-	MOV SI, OFFSET Player2Stats
-	CALL InitializePlayerStats                        
-    CALL UpdateCurrentTurn   
-    ; p3
-	MOV DI, OFFSET AssassinStats
-	MOV SI, OFFSET Player3Stats
-	CALL InitializePlayerStats                        
-    CALL UpdateCurrentTurn  
-        ; p4
-	MOV DI, OFFSET AssassinStats 	
-	MOV SI, OFFSET Player4Stats
-	CALL InitializePlayerStats                        
-    CALL UpdateCurrentTurn 
+    MainP1ClassSelection:          
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine   		          
+        MOV DX, OFFSET PrintPlayerStatsText  
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass  
+    	CMP BL, 'X'
+    	JE MainP1ClassSelection  
+        MOV SI, OFFSET Player1Stats
+       	CALL InitializePlayerStats    
+       	; Print Stats
+       	MOV SI, OFFSET Player1Stats
+        CALL PrintPlayerStats      
+        CALL PrintNewLine 
+        CALL PrintNewLine   
     
+    ; Print P2 MSG  
+    MainP2ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	 
+    	CMP BL, 'X'
+    	JE MainP2ClassSelection 
+        MOV SI, OFFSET Player2Stats
+       	CALL InitializePlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player2Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine
+    
+    CALL UpdateSynergy   
+       
+ 	; Print P3 MSG
+ 	MainP3ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	   
+    	CMP BL, 'X'
+    	JE MainP3ClassSelection 
+        MOV SI, OFFSET Player3Stats
+       	CALL InitializePlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player3Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine 
+    
+ 	; Print P4 MSG    
+ 	MainP4ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	
+    	CMP BL, 'X'
+    	JE MainP4ClassSelection
+        MOV SI, OFFSET Player4Stats
+       	CALL InitializePlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player4Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine
+
+    CALL UpdateSynergy
+                        
+;	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
+;	; p1 	
+;	MOV DI, OFFSET VampireStats
+;	MOV SI, OFFSET Player1Stats
+;	CALL InitializePlayerStats
+;		; p2
+;	CALL UpdateCurrentTurn
+;	MOV DI, OFFSET AssassinStats
+;	MOV SI, OFFSET Player2Stats
+;	CALL InitializePlayerStats                        
+;    CALL UpdateCurrentTurn
+;    
+;    CALL UpdateSynergy   
+;    ; p3
+;	MOV DI, OFFSET AssassinStats
+;	MOV SI, OFFSET Player3Stats
+;	CALL InitializePlayerStats                        
+;    CALL UpdateCurrentTurn  
+;        ; p4
+;	MOV DI, OFFSET AssassinStats 	
+;	MOV SI, OFFSET Player4Stats
+;	CALL InitializePlayerStats                        
+;    CALL UpdateCurrentTurn 
+;    CALL UpdateSynergy 
+;    
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
