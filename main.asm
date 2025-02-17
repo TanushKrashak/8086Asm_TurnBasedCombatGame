@@ -1,7 +1,7 @@
 .model small
 .stack 100h
 
-data SEGMENT     
+data SEGMENT                                                                          	
 ;==================================================================================
 ; PROPERTIES & VARIABLES
 ;==================================================================================    	
@@ -640,13 +640,31 @@ code SEGMENT
     	; Defending Logic
     	MOV AL, [SI+4]	
     	MOV BL, 2  ; For Doubling Defense for block
-    	CMP BH, 2
+    	; Check if Enemy P3
+    	CMP BH, 2      	
     	JNE DoDamage_CheckIfEnemyP4
     	TEST CurrentTurnStats, 00000100B   ; Check If P3 Blocking
 	    	JZ DoDamage_EnemyIsNotBlocking
     		MUL BL ; Double Defense cuz Blocking 
+    	; Check if Enemy P4
     	DoDamage_CheckIfEnemyP4:
-    		
+    		CMP BH, 3  
+    		JNE DoDamage_CheckIfEnemyP1  
+    		TEST CurrentTurnStats, 00001000B   ; Check If P4 Blocking    
+    		JZ DoDamage_EnemyIsNotBlocking
+    		MUL BL     
+    	; Check if Enemy P1
+    	DoDamage_CheckIfEnemyP1:
+    		CMP BH, 0  
+			JNE DoDamage_CheckIfEnemyP2  
+    		TEST CurrentTurnStats, 00000001B   ; Check If P1 Blocking    
+    		JZ DoDamage_EnemyIsNotBlocking
+    		MUL BL
+    	; Check if Enemy P1  
+    	DoDamage_CheckIfEnemyP2:
+    		TEST CurrentTurnStats, 00000010B   ; Check If P2 Blocking  
+    		JZ DoDamage_EnemyIsNotBlocking
+			MUL BL   
     	DoDamage_EnemyIsNotBlocking: 
 			MOV DH, AL ; Store Final Def in DH
 	    	MOV AX, DamageToBeDealt        
