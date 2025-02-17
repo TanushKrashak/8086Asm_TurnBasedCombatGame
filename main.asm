@@ -61,52 +61,61 @@ data SEGMENT
 ; STRINGS
 ;==================================================================================  
 	; Player Names
-    PlayerText DB 'Player ', '$'           
+    PlayerText  DB 'Player ', '$'           
     
     ; Class Names
-    Knight DB 'Knight', '$'     
-    Assassin DB 'Assassin', '$'
-    Pyromancer DB 'Pyromancer', '$'
-    Healer DB 'Healer', '$'
-    Vanguard DB 'Vanguard', '$'
-    Vampire DB 'Vampire', '$'      
+    Knight      DB 'Knight', '$'     
+    Assassin    DB 'Assassin', '$'
+    Pyromancer  DB 'Pyromancer', '$'
+    Healer      DB 'Healer', '$'
+    Vanguard    DB 'Vanguard', '$'
+    Vampire     DB 'Vampire', '$'      
     
     ; Game Option Texts    
-    PrintPlayerStatsText DB 'Choose Your Class!',0Dh,0Ah, '[1]-Knight',0Dh,0Ah, '[2]-Assassin',0Dh,0Ah, '[3]-Pyromancer',0Dh,0Ah, '[4]-Healer',0Dh,0Ah, '[5]-Vanguard',0Dh,0Ah, '[6]-Vampire ',0Dh,0Ah, '$'
-    ChooseYourMoveText DB 'Make Your Choice!',0Dh,0Ah, '$'
-    MoveChoicesText DB '[1]-Light Attack',0Dh,0Ah, '[2]-Heavy Attack',0Dh,0Ah, '[3]-Defend',0Dh,0Ah, '[4]-Heal',0Dh,0Ah, '[5]-Ultimate',0Dh,0Ah, '$'
-    YouCheckIfText DB 'You Selected Class ', '$' 
-    StatsText DB 'Stats:', '$'   
-    TurnText DB 'Turn ', '$'
-    FightText DB ' - Fight!',0Dh,0Ah,'$'
+    PrintPlayerStatsText        DB 'Choose Your Class!',0Dh,0Ah, '[1]-Knight',0Dh,0Ah, '[2]-Assassin',0Dh,0Ah, '[3]-Pyromancer',0Dh,0Ah, '[4]-Healer',0Dh,0Ah, '[5]-Vanguard',0Dh,0Ah, '[6]-Vampire ',0Dh,0Ah, '$'
+    ChooseYourMoveText          DB 'Make Your Choice!',0Dh,0Ah, '$'
+    MoveChoicesText             DB '[1]-Light Attack',0Dh,0Ah, '[2]-Heavy Attack',0Dh,0Ah, '[3]-Defend',0Dh,0Ah, '[4]-Heal',0Dh,0Ah, '[5]-Ultimate',0Dh,0Ah, '$'
+    YouCheckIfText              DB 'You Selected Class ', '$' 
+    StatsText                   DB 'Stats:', '$'   
+    TurnText                    DB 'Turn ', '$'
+    FightText                   DB ' - Fight!',0Dh,0Ah,'$'
     
     ; Stat Printing Texts
-    HealthText DB 0DH, 0AH, 'Health: ', '$' 
-    MaxHealthText DB 0DH, 0AH, 'MaxHealth: ', '$'
-    LightAttackDamageText DB 0DH, 0AH, 'Light Attack Damage: ', '$'
-    HeavyAttackDamageText DB 0DH, 0AH, 'Heavy Attack Damage: ', '$'
-    DefenseText DB 0DH, 0AH, 'Defense: ', '$'
-    CriticalChanceText DB 0DH, 0AH, 'Critical Chance: ', '$' 
-    StaminaText DB 0DH, 0AH, 'Stamina: ', '$' 
-    UltimateCDText DB 0DH, 0AH,  'Ultimate Cooldown: ', '$'
+    HealthText                  DB 0DH, 0AH, 'Health: ', '$' 
+    MaxHealthText               DB 0DH, 0AH, 'MaxHealth: ', '$'
+    LightAttackDamageText       DB 0DH, 0AH, 'Light Attack Damage: ', '$'
+    HeavyAttackDamageText       DB 0DH, 0AH, 'Heavy Attack Damage: ', '$'
+    DefenseText                 DB 0DH, 0AH, 'Defense: ', '$'
+    CriticalChanceText          DB 0DH, 0AH, 'Critical Chance: ', '$' 
+    StaminaText                 DB 0DH, 0AH, 'Stamina: ', '$' 
+    UltimateCDText              DB 0DH, 0AH,  'Ultimate Cooldown: ', '$'
 
 	; In-Combat Texts
-	CriticalHitText DB 'Critical Hit!',0DH, 0AH, '$'
-    NormalHitText DB 'Normal Hit!',0DH, 0AH,'$'    
-    DamagedText DB 'Damaged ', '$'       
-    ShowEnemyHPText DB 'Enemy Currently Has ', '$'   
-    LeftText DB 'HP Left!',0DH, 0AH, '$'
-    ForText DB 'For ', '$'
-    AllPlayersDiedText DB 'All players are dead!', '$'
-    SelectTeam1TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
-    SelectTeam2TargetText DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
-    InvalidInputText DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
-    NotEnoughStaminaText DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$' 
-    SelfHealText DB 'Health restored by 5', 0Dh, 0Ah, '$'   
-    BurnDamageText DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
-    PoisonDamageText DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'      
-    Team1Won DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
-    Team2Won DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$'
+	CriticalHitText             DB 'Critical Hit!',0DH, 0AH, '$'
+    NormalHitText               DB 'Normal Hit!',0DH, 0AH,'$'    
+    DamagedText                 DB 'Damaged ', '$'       
+    ShowEnemyHPText             DB 'Enemy Currently Has ', '$'   
+    LeftText                    DB 'HP Left!',0DH, 0AH, '$'
+    ForText                     DB 'For ', '$'
+    AllPlayersDiedText          DB 'All players are dead!', '$'
+    SelectTeam1TargetText       DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
+    SelectTeam2TargetText       DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
+    InvalidInputText            DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
+    NotEnoughStaminaText        DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$' 
+    SelfHealText                DB 'Health restored by 5', 0Dh, 0Ah, '$'   
+    BurnDamageText              DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
+    PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'      
+    Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
+    Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
+    
+    ; Synergy texts
+    NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
+    GreatWallText               DB 0Dh, 0Ah, 'Unleashed Synergy: Great Wall! Your party`s Vanguard has received an additonal 30 HP, and your party`s Healer has received a defence buff',0Dh,0Ah,'$'
+    AssassinsCreedText          DB 0Dh, 0Ah, 'Unleashed Synergy: Assassin`s Creed! Both Assassins can now perform their ultimate attack after only 3 turns, at the cost of 10 HP', 0Dh, 0Ah, '$'  
+    ScorchedEarthText           DB 0Dh, 0Ah, 'Unleashed Synergy: Scorched Earth! Enemy players will be burnt for 1 additional turn!', 0Dh, 0Ah, '$'
+    CountsGenerosityText        DB 0Dh, 0Ah, 'Unleashed Synergy: Count`s Generosity! Absorbed health will now be shared with your party`s Vanguard!',0Dh,0Ah,'$'
+    HolyEmpireText              DB 0Dh, 0Ah, 'Unleashed Synergy: Holy Empire! Your party`s Knight will now receive an additonal 5 HP for every heal action!',0Dh,0Ah,'$'
+    
 data ENDS
       
       
@@ -1380,7 +1389,9 @@ code SEGMENT
         ADD [SI+3], 10
         ADD [DI+2], 10
         ADD [DI+3], 10
-        OR TeamSynergies, 00000001B     ; Update TeamSynergies
+        OR TeamSynergies, 00000001B     ; Update TeamSynergies 
+        MOV DX, OFFSET NoblesObligeText
+        CALL PrintLine
         JMP UpdateSynergy_Final
         CheckGreatWall:            ; Healer (0011) + Vanguard (0100)
             CMP BL, 00110100B
@@ -1388,6 +1399,8 @@ code SEGMENT
             CMP BL, 01000011B
             JE GreatWall_FirstVanguard
             JMP CheckScorchedEarth
+            MOV DX, OFFSET GreatWallText
+            CALL PrintLine
             GreatWall_FirstHealer:
                 ADD [SI+4], 10
                 ADD [DI+1], 30
@@ -1403,11 +1416,15 @@ code SEGMENT
         CheckScorchedEarth:         ; Both Pyromancers (00100010)
             CMP BL, 00100010B
             JNE CheckAssassinCreed
+            MOV DX, OFFSET ScorchedEarthText
+            CALL PrintLine
             OR TeamSynergies, 00000100B
             JMP UpdateSynergy_Final
         CheckAssassinCreed:        ; Both Assassins (00010001)
             CMP BL, 00010001B  
             JNE CheckCountsGenerosity
+            MOV DX, OFFSET AssassinsCreedText
+            CALL PrintLine
             OR TeamSynergies, 00000011B
             ; Decrease HP and MaxHP by 10 for both assassins
             SUB [SI], 10
@@ -1424,7 +1441,9 @@ code SEGMENT
             CMP BL, 01000101B 
             JE CountsGenerosity
             JMP CheckHolyEmpire
-            CountsGenerosity:                        
+            CountsGenerosity:
+                MOV DX, OFFSET CountsGenerosityText
+                CALL PrintLine                     
                 OR TeamSynergies, 00000101B
                 JMP UpdateSynergy_Final
         CheckHolyEmpire:            ; Healer (0011) + Knight (0000)
@@ -1434,6 +1453,8 @@ code SEGMENT
             JE HolyEmpire
             JMP UpdateSynergy_Final
             HolyEmpire:
+                MOV DX, OFFSET CountsGenerosityText
+                CALL PrintLine   
                 OR TeamSynergies, 00000110B
         UpdateSynergy_Final:
             CMP CurrentTurn, 3
