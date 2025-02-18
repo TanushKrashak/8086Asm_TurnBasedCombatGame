@@ -108,7 +108,7 @@ data SEGMENT
     PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'      
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
-    HolyEmpireHealText          DB 0Dh, 0Ah, ' healed an additional 5 HP!', 0Dh, 0Ah, '$'
+    HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'
     
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
@@ -1322,17 +1322,15 @@ code SEGMENT
     	    JNE HealMChoice_1
     	    MOV SI, OFFSET Player1Stats   
     	    OR AliveAndHealStatus, 00000001B
-	        CMP TeamSynergies, 01100000B        ; Check Team 1 for Holy Empire
+    	    MOV BL, TeamSynergies
+    	    AND BL, 11110000B
+	        CMP BL, 01100000B        ; Check Team 1 for Holy Empire
     	    JE CheckKnight_P1
     	    JMP HealFinal    
     	    CheckKnight_P1:
     	        TEST Team1Classes, 11110000B
     	        JNZ HealFinal                   ; P1 not a Knight, won't benefit from Holy Empire
     	        ADD [SI], 5                     ; Heal P1 for an additional 5 HP
-	            MOV DX, OFFSET PlayerText
-                CALL PrintLine
-                MOV DL, '1'
-                CALL PrintChar
                 MOV DX, OFFSET HolyEmpireHealText
                 CALL PrintLine
     	        JMP HealFinal
@@ -1349,10 +1347,6 @@ code SEGMENT
         	        TEST Team1Classes, 00001111B
         	        JNZ HealFinal                   ; P2 not a Knight, won't benefit from Holy Empire
         	        ADD [SI], 5                     ; Heal P2 for an additional 5 HP
-                    MOV DX, OFFSET PlayerText
-                    CALL PrintLine
-                    MOV DL, '2'
-                    CALL PrintChar
                     MOV DX, OFFSET HolyEmpireHealText
                     CALL PrintLine
         	        JMP HealFinal
@@ -1361,17 +1355,15 @@ code SEGMENT
                 JNE HealMChoice_3
                 OR AliveAndHealStatus, 00000100B; 
         	    MOV SI, OFFSET Player3Stats
-        	    CMP TeamSynergies, 00000110B        ; Check for Holy Empire
+        	    MOV BL, TeamSynergies
+        	    AND BL, 00001111B
+    	        CMP BL, 00000110B                   ; Check Team 2 for Holy Empire
         	    JE CheckKnight_P3
                 JMP HealFinal
                 CheckKnight_P3:
                     TEST Team2Classes, 11110000B    ; Check if P3 is Knight
                     JNZ HealFinal
                     ADD [SI], 5                     ; Heal P3 for an additonal 5 HP
-                    MOV DX, OFFSET PlayerText
-                    CALL PrintLine
-                    MOV DL, '3'
-                    CALL PrintChar
                     MOV DX, OFFSET HolyEmpireHealText
                     CALL PrintLine
                     JMP HealFinal
@@ -1385,10 +1377,6 @@ code SEGMENT
                     TEST Team2Classes, 00001111B    ; Check if P4 is Knight
                     JNZ HealFinal
                     ADD [SI], 5                     ; Heal P4 for an additonal 5 HP
-                    MOV DX, OFFSET PlayerText
-                    CALL PrintLine
-                    MOV DL, '4'
-                    CALL PrintChar
                     MOV DX, OFFSET HolyEmpireHealText
                     CALL PrintLine
                     JMP HealFinal
@@ -1535,109 +1523,109 @@ main:
 					;====; 
 					; COMMENTED OUT FOR DEBUGGING, NO NEED TO KEEP ON SELECTING CLASSES OVER AND OVER!!!!!
 					;====;  
-    MainP1ClassSelection:          
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine   		          
-        MOV DX, OFFSET PrintPlayerStatsText  
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass  
-    	CMP BL, 'X'
-    	JE MainP1ClassSelection  
-        MOV SI, OFFSET Player1Stats
-       	CALL InitializePlayerStats    
-       	; Print Stats
-       	MOV SI, OFFSET Player1Stats
-        CALL PrintPlayerStats      
-        CALL PrintNewLine 
-        CALL PrintNewLine   
-    
-    ; Print P2 MSG  
-    MainP2ClassSelection:
-        CALL UpdateCurrentTurn
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine      	
-        MOV DX, OFFSET PrintPlayerStatsText
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass	 
-    	CMP BL, 'X'
-    	JE MainP2ClassSelection 
-        MOV SI, OFFSET Player2Stats
-       	CALL InitializePlayerStats    
-    	; Print Stats 
-    	MOV SI, OFFSET Player2Stats
-        CALL PrintPlayerStats    
-        CALL PrintNewLine 
-        CALL PrintNewLine
-    
-    CALL UpdateSynergy   
-       
- 	; Print P3 MSG
- 	MainP3ClassSelection:
-        CALL UpdateCurrentTurn
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine      	
-        MOV DX, OFFSET PrintPlayerStatsText
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass	   
-    	CMP BL, 'X'
-    	JE MainP3ClassSelection 
-        MOV SI, OFFSET Player3Stats
-       	CALL InitializePlayerStats    
-    	; Print Stats 
-    	MOV SI, OFFSET Player3Stats
-        CALL PrintPlayerStats    
-        CALL PrintNewLine 
-        CALL PrintNewLine 
-    
- 	; Print P4 MSG    
- 	MainP4ClassSelection:
-        CALL UpdateCurrentTurn
-    	CALL PrintPlayerName    
-    	CALL PrintNewLine      	
-        MOV DX, OFFSET PrintPlayerStatsText
-    	CALL PrintLine        
-    	; Class Selection
-    	CALL SelectPlayerClass	
-    	CMP BL, 'X'
-    	JE MainP4ClassSelection
-        MOV SI, OFFSET Player4Stats
-       	CALL InitializePlayerStats    
-    	; Print Stats 
-    	MOV SI, OFFSET Player4Stats
-        CALL PrintPlayerStats    
-        CALL PrintNewLine 
-        CALL PrintNewLine
-
-    CALL UpdateSynergy
-                        
-;	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
-;	; p1 	
-;	MOV DI, OFFSET VampireStats
-;	MOV SI, OFFSET Player1Stats
-;	CALL InitializePlayerStats
-;		; p2
-;	CALL UpdateCurrentTurn
-;	MOV DI, OFFSET AssassinStats
-;	MOV SI, OFFSET Player2Stats
-;	CALL InitializePlayerStats                        
-;    CALL UpdateCurrentTurn
+;    MainP1ClassSelection:          
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine   		          
+;        MOV DX, OFFSET PrintPlayerStatsText  
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass  
+;    	CMP BL, 'X'
+;    	JE MainP1ClassSelection  
+;        MOV SI, OFFSET Player1Stats
+;       	CALL InitializePlayerStats    
+;       	; Print Stats
+;       	MOV SI, OFFSET Player1Stats
+;        CALL PrintPlayerStats      
+;        CALL PrintNewLine 
+;        CALL PrintNewLine   
+;    
+;    ; Print P2 MSG  
+;    MainP2ClassSelection:
+;        CALL UpdateCurrentTurn
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine      	
+;        MOV DX, OFFSET PrintPlayerStatsText
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass	 
+;    	CMP BL, 'X'
+;    	JE MainP2ClassSelection 
+;        MOV SI, OFFSET Player2Stats
+;       	CALL InitializePlayerStats    
+;    	; Print Stats 
+;    	MOV SI, OFFSET Player2Stats
+;        CALL PrintPlayerStats    
+;        CALL PrintNewLine 
+;        CALL PrintNewLine
 ;    
 ;    CALL UpdateSynergy   
-;    ; p3
-;	MOV DI, OFFSET AssassinStats
-;	MOV SI, OFFSET Player3Stats
-;	CALL InitializePlayerStats                        
-;    CALL UpdateCurrentTurn  
-;        ; p4
-;	MOV DI, OFFSET AssassinStats 	
-;	MOV SI, OFFSET Player4Stats
-;	CALL InitializePlayerStats                        
-;    CALL UpdateCurrentTurn 
-;    CALL UpdateSynergy 
+;       
+; 	; Print P3 MSG
+; 	MainP3ClassSelection:
+;        CALL UpdateCurrentTurn
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine      	
+;        MOV DX, OFFSET PrintPlayerStatsText
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass	   
+;    	CMP BL, 'X'
+;    	JE MainP3ClassSelection 
+;        MOV SI, OFFSET Player3Stats
+;       	CALL InitializePlayerStats    
+;    	; Print Stats 
+;    	MOV SI, OFFSET Player3Stats
+;        CALL PrintPlayerStats    
+;        CALL PrintNewLine 
+;        CALL PrintNewLine 
 ;    
+; 	; Print P4 MSG    
+; 	MainP4ClassSelection:
+;        CALL UpdateCurrentTurn
+;    	CALL PrintPlayerName    
+;    	CALL PrintNewLine      	
+;        MOV DX, OFFSET PrintPlayerStatsText
+;    	CALL PrintLine        
+;    	; Class Selection
+;    	CALL SelectPlayerClass	
+;    	CMP BL, 'X'
+;    	JE MainP4ClassSelection
+;        MOV SI, OFFSET Player4Stats
+;       	CALL InitializePlayerStats    
+;    	; Print Stats 
+;    	MOV SI, OFFSET Player4Stats
+;        CALL PrintPlayerStats    
+;        CALL PrintNewLine 
+;        CALL PrintNewLine
+;
+;    CALL UpdateSynergy
+                        
+	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
+	; p1 	
+	MOV DI, OFFSET VampireStats
+	MOV SI, OFFSET Player1Stats
+	CALL InitializePlayerStats
+		; p2
+	CALL UpdateCurrentTurn
+	MOV DI, OFFSET AssassinStats
+	MOV SI, OFFSET Player2Stats
+	CALL InitializePlayerStats                        
+    CALL UpdateCurrentTurn 
+    
+    CALL UpdateSynergy   
+    ; p3
+	MOV DI, OFFSET AssassinStats
+	MOV SI, OFFSET Player3Stats
+	CALL InitializePlayerStats                        
+    CALL UpdateCurrentTurn  
+        ; p4
+	MOV DI, OFFSET AssassinStats 	
+	MOV SI, OFFSET Player4Stats
+	CALL InitializePlayerStats                        
+    CALL UpdateCurrentTurn 
+    CALL UpdateSynergy 
+    
     MOV CurrentTurn, 0
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
