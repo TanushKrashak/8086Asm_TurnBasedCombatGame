@@ -644,7 +644,7 @@ code SEGMENT
 		EvalAttack_CheckNextAttacker:	
 			INC CurrentTurn    
 			CMP CurrentTurn, 4 ; Check if all attacks have been done   			
-			JE EndAttackCycle          
+			JGE EndAttackCycle          
 			JMP EvaluateAttack
 			RET   
 		; Reset Attack Variables
@@ -1016,7 +1016,7 @@ code SEGMENT
      UpdateCurrentTurn:
         INC CurrentTurn
         CMP CurrentTurn, 4
-        JE WrappedIs4
+        JGE WrappedIs4
         RET
         WrappedIs4: 
             MOV CurrentTurn, 0
@@ -1028,8 +1028,7 @@ code SEGMENT
 ;        ; Each recursive call increments DH by 1. At DH = 4 (0->1->2->3-->4), we know that 4 recursions were already made. In this case, all players are dead
 ;        INC DH
 ;        CMP DH, 4
-;        JE AllDead  ; Jump to AllDead to prevent infinite recursion
-        MOV AL, CurrentTurn
+;        JE AllDead  ; Jump to AllDead to prevent infinite recursion        
         CALL UpdateCurrentTurn   ; Increment AL, wrap if necessary
         MOV DL, AliveAndHealStatus    ; Load AliveAndHealStatus byte into DL to check if the current player is dead or not
         ; AH holds current turn
