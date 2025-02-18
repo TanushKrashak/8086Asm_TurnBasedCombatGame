@@ -28,10 +28,10 @@ data SEGMENT
 	
 	; Player Statuses
 	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
-	Player1Status  DB 11000000B
-	Player2Status  DB 11000000B
-	Player3Status  DB 11000000B
-	Player4Status  DB 11000000B
+	Player1Status  DB 11100000B
+	Player2Status  DB 11100000B
+	Player3Status  DB 11100000B
+	Player4Status  DB 11100000B
     
     ; Game Helpers
     PlayerCount        DB 4	; Number of players
@@ -105,7 +105,8 @@ data SEGMENT
     NotEnoughStaminaText        DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$' 
     SelfHealText                DB 'Health restored by 5', 0Dh, 0Ah, '$'   
     BurnDamageText              DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
-    PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'      
+    PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'    
+    ParalysisText               DB ' is paralyzed and couldn`t move!', 0Dh, 0Ah, '$'  
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
     HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'
@@ -1633,25 +1634,71 @@ main:
     	CALL PrintMatchTurn
     	CMP CurrentTurn, 0
     	JNE P2GameChoice
-    	CALL GivePlayerMainChoice 
+    	TEST Player1Status, 00100000B
+        JNZ P1Paralysed   	 
+    	CALL GivePlayerMainChoice  
     	CALL PrintNewLine	 
     	; Give Player 2 Choice	 
-    	CALL AlternateTurn	
+    	CALL AlternateTurn
+    	P1Paralysed:             
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '1'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET ParalysisText	
+    	    CALL PrintLine  
+    	    AND Player1Status, 11011111B
+    	    CALL AlternateTurn
     	P2GameChoice:
     	    CMP CurrentTurn, 1
-    	    JNE P3GameChoice
+    	    JNE P3GameChoice   
+    	    TEST Player2Status, 00100000B
+    	    JNZ P2Paralysed
         	CALL GivePlayerMainChoice
         	CALL PrintNewLine    	
-    		CALL AlternateTurn  
+    		CALL AlternateTurn
+            P2Paralysed:             
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '2'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET ParalysisText	
+        	    CALL PrintLine  
+        	    AND Player2Status, 11011111B
+        	    CALL AlternateTurn  
     	; Give Player 3 Choice	
-    	P3GameChoice:
+    	P3GameChoice:   
+    	    CMP CurrentTurn, 2
+    	    JNE P4GameChoice
+    	    TEST Player3Status, 00100000B
+    	    JNZ P3Paralysed
         	CALL GivePlayerMainChoice 
         	CALL PrintNewLine   
-        	CALL AlternateTurn 
+        	CALL AlternateTurn
+        	P3Paralysed:
+                MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '3'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET ParalysisText	
+        	    CALL PrintLine  
+        	    AND Player3Status, 11011111B
+        	    CALL AlternateTurn  
     	; Give Player 4 Choice	     		
-    	P4GameChoice:
+    	P4GameChoice:  
+    	    TEST Player4Status, 00100000B
+    	    JNZ P4Paralysed
         	CALL GivePlayerMainChoice
-        	CALL AlternateTurn 
+        	CALL AlternateTurn
+        	P4Paralysed:
+                MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '4'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET ParalysisText	
+        	    CALL PrintLine  
+        	    AND Player4Status, 11011111B
+        	    CALL AlternateTurn  
         ; All alive players have chosen their moves, begin evaluation         
     	CALL EvaluateAttack        
         
