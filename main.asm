@@ -52,7 +52,7 @@ data SEGMENT
 
 	; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,  CC,UltC)
 	KnightStats    	DB  85,  85,  20,  35,  30,  30,  3 ; Balanced, high defense
-	AssassinStats  	DB  60,  60,  30,  40,  10,  50,  4 ; Lower health, high crit chance
+	AssassinStats  	DB  30,  60,  30,  40,  10,  50,  4 ; Lower health, high crit chance
 	PyromancerStats	DB  50,  50,  20,  30,  20,  30,  4 ; Lower stats overall, but compensated by burn passive
 	HealerStats    	DB  70 , 70,  15,  30,  15,  30,  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
 	VanguardStats  	DB  100, 100, 10,  35,  50,   0,  4  ; Max HP and Def, very low crit
@@ -110,7 +110,8 @@ data SEGMENT
     ParalysisText               DB ' is paralyzed and couldn`t move!', 0Dh, 0Ah, '$'  
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
-    HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'
+    HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'  
+    HealerHeavyText				DB 0Dh, 0Ah, ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'  
     
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
@@ -322,7 +323,7 @@ code SEGMENT
             JNZ P1RecoveryFinal
             ADD [SI], AH
             P1RecoveryFinal:
-                CALL ClampThatMF
+                CALL ClampStatInSI
         Player2RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -331,7 +332,7 @@ code SEGMENT
             JNZ P2RecoveryFinal
             ADD [SI], AH
             P2RecoveryFinal:
-                CALL ClampThatMF
+                CALL ClampStatInSI
         Player3RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -340,7 +341,7 @@ code SEGMENT
             JNZ P3RecoveryFinal
             ADD [SI], AH
             P3RecoveryFinal:
-                CALL ClampThatMF
+                CALL ClampStatInSI
         Player4RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -349,10 +350,11 @@ code SEGMENT
             JNZ P4RecoveryFinal
             ADD [SI], AH
             P4RecoveryFinal:
-                CALL ClampThatMF
+                CALL ClampStatInSI
         RET                      
 
-    ; Target an enemy player
+    ; Target an enemy player       
+    ; Uses registers DX, AL 
     TargetEnemy:
         CMP CurrentTurn, 2
         JNC Team2Selection:
@@ -416,7 +418,8 @@ code SEGMENT
                     SetP3TargetP2:
                         OR CurrentlyTargeting, 00000000B    ; P3 selected P1
                     Team2Selection_Final:
-                        RET
+                        RET 
+                        
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack
     EvaluateAttack:   
@@ -816,7 +819,7 @@ code SEGMENT
                                                                                                          
     ; Generic function to clamp value between 0 and 100, expects target value in SI
     ; Must always be called immediately after subtraction to prevent against the SF being overwritten later 
-    ClampThatMf:
+    ClampStatInSI:
         LAHF
         TEST AH, 10000000B          ; Test whether sign flag is set
         JZ TestOver100
@@ -824,10 +827,10 @@ code SEGMENT
         RET
         TestOver100:  
             CMP [SI], 100
-            JNC ClampThatMf_End
+            JNC ClampStatInSI_End
             MOV [SI], 100
             RET                
-        ClampThatMf_End:
+        ClampStatInSI_End:
             RET
 
     ; Apply Burn and Poison effects after every turn 
@@ -857,7 +860,7 @@ code SEGMENT
             MOV DX, OFFSET PoisonDamageText
             CALL PrintLine      
         ApplyDOTP2:       
-            CALL ClampThatMf                            ; Clamp P1's health if needed                                 
+            CALL ClampStatInSI                            ; Clamp P1's health if needed                                 
             TEST AliveAndHealStatus, 00100000B          ; Test whether P2 is alive
             JZ ApplyDOTP3
             MOV SI, OFFSET Player2Stats                 ; Load P2 health into SI
@@ -881,7 +884,7 @@ code SEGMENT
                 MOV DX, OFFSET PoisonDamageText
                 CALL PrintLine                    
         ApplyDOTP3:
-            CALL ClampThatMf                          ; Clamp P2's health if needed
+            CALL ClampStatInSI                          ; Clamp P2's health if needed
             TEST AliveAndHealStatus, 01000000B        ; Test whether P3 is alive
             JZ ApplyDOTP4
             MOV SI, OFFSET Player3Stats               ; Load P3 health into SI
@@ -905,7 +908,7 @@ code SEGMENT
                 MOV DX, OFFSET PoisonDamageText
                 CALL PrintLine
         ApplyDOTP4:   
-            CALL ClampThatMf                          ; Clamp P3's health if needed
+            CALL ClampStatInSI                          ; Clamp P3's health if needed
             TEST AliveAndHealStatus, 10000000B        ; Test whether P4 is alive
             JZ ApplyDOT_Final
             MOV SI, OFFSET Player4Stats               ; Load P4 health into SI
@@ -929,7 +932,7 @@ code SEGMENT
                 MOV DX, OFFSET PoisonDamageText
                 CALL PrintLine
         ApplyDOT_Final:
-            CALL ClampThatMf                            ; Clamp P4's health if needed
+            CALL ClampStatInSI                            ; Clamp P4's health if needed
             RET    
         
     ; Loads current player's stats into DI
@@ -1298,7 +1301,12 @@ code SEGMENT
     	    CMP [PlayersStamina+0], DH ; Check if has 30 stamina
     	    JC NotEnoughStamina 	 
     	    SUB [PlayersStamina+0], DH ; Deduct Stamina   
-    	    OR Player1Status, 00000010B
+    	    INT 20h
+    	    OR Player1Status, 00000010B  ; Set Heavy Atk    	    
+    	    MOV BH, Team1Classes     ; Heavy is done by healer logic
+    	    AND BH, 00110000B 
+    	    CMP BH, 00110000B
+    	    JE P1HeavyHeal         	 ; Called if healer  
     	    JMP AttackFinal
     	    HeavyMChoice_1:
         	    CMP CurrentTurn, 1
@@ -1306,7 +1314,7 @@ code SEGMENT
         	    CMP [PlayersStamina+1], DH ; Check if has 30 stamina
 				JC NotEnoughStamina         
 				SUB [PlayersStamina+1], DH ; Deduct Stamina   
-        	    OR Player2Status, 00000010B
+        	    OR Player2Status, 00000010B               	            	    
         	    JMP AttackFinal
             HeavyMChoice_2:
                 CMP CurrentTurn, 2
@@ -1320,8 +1328,26 @@ code SEGMENT
         	    CMP [PlayersStamina+3], DH ; Check if has 30 stamina
 				JC NotEnoughStamina 
 				SUB [PlayersStamina+3], DH ; Deduct Stamina       	    
-        	    OR Player4Status, 00000011B
-        	    JMP AttackFinal
+        	    OR Player4Status, 00000010B
+        	    JMP AttackFinal  
+        	; Checks if p2 alive and heals them, if they are not
+        	; then heals self
+        	P1HeavyHeal:
+        		TEST AliveAndHealStatus, 00100000B
+        		JZ P1HeavyHeal_P2IsDead
+        		MOV BH, CurrentTurn ; Temp Store 
+        		MOV CurrentTurn, 1  ; Set Current Turn to P2    
+        		P1HeavyHeal_P2IsDead:
+					CALL LoadPlayerStatsInDI 
+	        		CALL PrintPlayerName
+	        		MOV DX, OFFSET HealerHeavyText
+	        		CALL PrintLine      
+	        		MOV CurrentTurn, BH  ; Revert Current Turn
+	        		MOV SI, DI ; Put the stats into SI so that it can be clamped
+	        		ADD [SI], 15 	        		
+        			CALL ClampStatInSI          			        			
+        		RET	
+        			         			        			
         ; Defend	    	    
     	Defend:
     	    CMP CurrentTurn, 0
@@ -1423,7 +1449,7 @@ code SEGMENT
     	        JMP PrintHealText 
     	; Attack Chosen, In case some common finishing
     	; logic is required         
-    	AttackFinal: 
+    	AttackFinal:       		
     		CALL TargetEnemy
     		CALL PrintNewLine 
     	    RET      
@@ -1628,30 +1654,28 @@ main:
                         
 	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
 	; p1 	
-	MOV DI, OFFSET VampireStats
+	MOV DI, OFFSET HealerStats
 	MOV SI, OFFSET Player1Stats
 	CALL InitializePlayerStats
 		; p2
 	CALL UpdateCurrentTurn
 	MOV DI, OFFSET AssassinStats
 	MOV SI, OFFSET Player2Stats
-	CALL InitializePlayerStats                        
+	CALL InitializePlayerStats                             
+    CALL UpdateSynergy                                 
+    ; p3                
     CALL UpdateCurrentTurn 
-    
-    CALL UpdateSynergy   
-    ; p3
 	MOV DI, OFFSET AssassinStats
 	MOV SI, OFFSET Player3Stats
-	CALL InitializePlayerStats                        
-    CALL UpdateCurrentTurn  
-        ; p4
+	CALL InitializePlayerStats                             
+        ; p4                                       
+	CALL UpdateCurrentTurn                
 	MOV DI, OFFSET AssassinStats 	
 	MOV SI, OFFSET Player4Stats
 	CALL InitializePlayerStats                        
     CALL UpdateCurrentTurn 
     CALL UpdateSynergy 
-    
-    MOV CurrentTurn, 0
+        
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
@@ -1755,8 +1779,7 @@ main:
 	    MOV Player1Status, 00000000B  
 	    MOV Player2Status, 00000000B
 	    MOV Player3Status, 00000000B
-	    MOV Player4Status, 00000000B
-        
+	    MOV Player4Status, 00000000B       
         MOV CurrentTurn, 0
         MOV AliveAndHealStatus, 11110000B
         MOV CurrentTurnStats, 00000000B
@@ -1765,7 +1788,9 @@ main:
         MOV Team2Classes, 00000000B  
         MOV MatchTurn, 0
         MOV TeamSynergies, 00000000B    
-        JMP main 
+        JMP main   
+        
+        
     EndGame:
 		MOV AH, 4Ch        ; DOS function to terminate program
 		INT 21h            ; Exit program
