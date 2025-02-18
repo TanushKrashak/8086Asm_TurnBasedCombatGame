@@ -108,6 +108,7 @@ data SEGMENT
     PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'      
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
+    HolyEmpireHealText          DB 0Dh, 0Ah, ' healed an additional 5 HP!', 0Dh, 0Ah, '$'
     
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
@@ -1320,23 +1321,77 @@ code SEGMENT
             CMP CurrentTurn, 0
     	    JNE HealMChoice_1
     	    MOV SI, OFFSET Player1Stats   
-    	    OR AliveAndHealStatus, 00000001B;
+    	    OR AliveAndHealStatus, 00000001B
+	        CMP TeamSynergies, 01100000B        ; Check Team 1 for Holy Empire
+    	    JE CheckKnight_P1
+    	    JMP HealFinal    
+    	    CheckKnight_P1:
+    	        TEST Team1Classes, 11110000B
+    	        JNZ HealFinal                   ; P1 not a Knight, won't benefit from Holy Empire
+    	        ADD [SI], 5                     ; Heal P1 for an additional 5 HP
+	            MOV DX, OFFSET PlayerText
+                CALL PrintLine
+                MOV DL, '1'
+                CALL PrintChar
+                MOV DX, OFFSET HolyEmpireHealText
+                CALL PrintLine
+    	        JMP HealFinal
     	    JMP HealFinal
     	    HealMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE HealMChoice_2
         	    MOV SI, OFFSET Player2Stats 
-        	    OR AliveAndHealStatus, 00000010B;
-        	    JMP HealFinal
+        	    OR AliveAndHealStatus, 00000010B
+        	    CMP TeamSynergies, 01100000B        ; Check Team 1 for Holy Empire
+        	    JE CheckKnight_P2
+        	    JMP HealFinal    
+        	    CheckKnight_P2:
+        	        TEST Team1Classes, 00001111B
+        	        JNZ HealFinal                   ; P2 not a Knight, won't benefit from Holy Empire
+        	        ADD [SI], 5                     ; Heal P2 for an additional 5 HP
+                    MOV DX, OFFSET PlayerText
+                    CALL PrintLine
+                    MOV DL, '2'
+                    CALL PrintChar
+                    MOV DX, OFFSET HolyEmpireHealText
+                    CALL PrintLine
+        	        JMP HealFinal
             HealMChoice_2:
                 CMP CurrentTurn, 2
                 JNE HealMChoice_3
+                OR AliveAndHealStatus, 00000100B; 
         	    MOV SI, OFFSET Player3Stats
-        	    OR AliveAndHealStatus, 00000100B; 
+        	    CMP TeamSynergies, 00000110B        ; Check for Holy Empire
+        	    JE CheckKnight_P3
                 JMP HealFinal
+                CheckKnight_P3:
+                    TEST Team2Classes, 11110000B    ; Check if P3 is Knight
+                    JNZ HealFinal
+                    ADD [SI], 5                     ; Heal P3 for an additonal 5 HP
+                    MOV DX, OFFSET PlayerText
+                    CALL PrintLine
+                    MOV DL, '3'
+                    CALL PrintChar
+                    MOV DX, OFFSET HolyEmpireHealText
+                    CALL PrintLine
+                    JMP HealFinal
             HealMChoice_3:
         	    MOV SI, OFFSET Player4Stats 
-        	    OR AliveAndHealStatus, 00001000B;
+        	    OR AliveAndHealStatus, 00001000B
+        	    CMP TeamSynergies, 00000110B        ; Check for Holy Empire
+        	    JE CheckKnight_P4
+                JMP HealFinal
+                CheckKnight_P4:
+                    TEST Team2Classes, 00001111B    ; Check if P4 is Knight
+                    JNZ HealFinal
+                    ADD [SI], 5                     ; Heal P4 for an additonal 5 HP
+                    MOV DX, OFFSET PlayerText
+                    CALL PrintLine
+                    MOV DL, '4'
+                    CALL PrintChar
+                    MOV DX, OFFSET HolyEmpireHealText
+                    CALL PrintLine
+                    JMP HealFinal
         	    JMP HealFinal             
         ClampHP:      
             MOV [SI], 100
@@ -1372,17 +1427,19 @@ code SEGMENT
     	RET
     
     ; Set synergies for both teams. Must be called at the end of each team's class selection phase. Relies on Team1Classes and Team2Classes to be properly masked	
-    UpdateSynergy:
+    UpdateSynergy:  
         CMP CurrentTurn, 3
         JNC LoadTeam2Classes 
         MOV BL, Team1Classes
         MOV SI, OFFSET Player1Stats
-        MOV DI, OFFSET Player2Stats 
+        MOV DI, OFFSET Player2Stats
+        JMP UpdateSynergy_BeginChecks 
         LoadTeam2Classes: 
             MOV BL, Team2Classes
             MOV SI, OFFSET Player3Stats
-            MOV DI, OFFSET Player4Stats
-        ; Nobles Oblige, both knights
+            MOV DI, OFFSET Player4Stats 
+        UpdateSynergy_BeginChecks:
+        ; Nobles Oblige, both knights 
         TEST BL, 11111111B 
         JNZ CheckGreatWall
         ; Increase LDmg and HDmg of both knights by 10
@@ -1450,11 +1507,11 @@ code SEGMENT
         CheckHolyEmpire:            ; Healer (0011) + Knight (0000)
             CMP BL, 00110000B
             JE HolyEmpire
-            CMP Team1Classes, 00000011B
+            CMP BL, 00000011B
             JE HolyEmpire
             JMP UpdateSynergy_Final
-            HolyEmpire:
-                MOV DX, OFFSET CountsGenerosityText
+            HolyEmpire: 
+                MOV DX, OFFSET HolyEmpireText
                 CALL PrintLine   
                 OR TeamSynergies, 00000110B
         UpdateSynergy_Final:
@@ -1477,7 +1534,7 @@ main:
     ; Print P1 MSG     
 					;====; 
 					; COMMENTED OUT FOR DEBUGGING, NO NEED TO KEEP ON SELECTING CLASSES OVER AND OVER!!!!!
-					;====;
+					;====;  
     MainP1ClassSelection:          
     	CALL PrintPlayerName    
     	CALL PrintNewLine   		          
@@ -1581,6 +1638,7 @@ main:
 ;    CALL UpdateCurrentTurn 
 ;    CALL UpdateSynergy 
 ;    
+    MOV CurrentTurn, 0
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
