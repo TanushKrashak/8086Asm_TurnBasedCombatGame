@@ -6,17 +6,18 @@ data SEGMENT
 ; PROPERTIES & VARIABLES
 ;==================================================================================    	
 	; Game Stats
-	TotalStats   DB 6 
-	MaxStamina   DB 100
-	LightAttackStaminaCost DB 15
-	HeavyAttackStaminaCost DB 30
-	DefendStaminaCost DB 5 
-	HPGainPerTurn DB 5
-	STGainPerTurn DB 10  
-	BurnDamage      DB 10
-	BurnDuration    DB 2
-	PoisonDamage    DB 5
-	PoisonDuration  DB 4
+	TotalStats              DB 6 
+	MaxStamina              DB 100
+	LightAttackStaminaCost  DB 15
+	HeavyAttackStaminaCost  DB 30
+	DefendStaminaCost       DB 5 
+	HPGainPerTurn           DB 5
+	STGainPerTurn           DB 10
+	KnightExtraSTGain       DB 5  
+	BurnDamage              DB 10
+	BurnDuration            DB 2
+	PoisonDamage            DB 5
+	PoisonDuration          DB 4
 	
 	; Player Stats
 	Player1Stats  	DB 0,0,0,0,0,0,0	
@@ -312,21 +313,45 @@ code SEGMENT
     ; Restore Stamina of each player after every turn by STGainPerTurn. Increases stamina of a dead player too, as it doesn't matter since they can't act and upon revival, stamina is restored to 100 regardless
     RecoverStamina:
         MOV AL, STGainPerTurn
+        MOV AH, KnightExtraSTGain
         MOV SI, OFFSET PlayersStamina
-        MOV CX, 4
-        StaminaRecoveryLoop: 
-            MOV AH, [SI]
+        Player1RecoverST:
+            MOV AH, [SI]                 
             ADD AH, AL
-            CMP AH, 100
-            JNC NoClamp
-            MOV AH, 100             ; Current Player's stamina is above 100, clamp that mf
-            NoClamp:
-                MOV [SI], AH        ; Since SI holds address of current player's stamina, store updated stamina value back into it
-            PDead:                  
-                INC SI              ; Move to the next player
-                LOOP StaminaRecoveryLoop
-        RET
-    
+            TEST Team1Classes, 11110000B
+            JNZ P1RecoveryFinal
+            ADD [SI], AH
+            P1RecoveryFinal:
+                CALL ClampThatMF
+        Player2RecoverST:
+            INC SI
+            MOV AH, [SI]                 
+            ADD AH, AL
+            TEST Team1Classes, 00001111B
+            JNZ P2RecoveryFinal
+            ADD [SI], AH
+            P2RecoveryFinal:
+                CALL ClampThatMF
+        Player3RecoverST:
+            INC SI
+            MOV AH, [SI]                 
+            ADD AH, AL
+            TEST Team2Classes, 11110000B
+            JNZ P3RecoveryFinal
+            ADD [SI], AH
+            P3RecoveryFinal:
+                CALL ClampThatMF
+        Player4RecoverST:
+            INC SI
+            MOV AH, [SI]                 
+            ADD AH, AL
+            TEST Team2Classes, 00001111B
+            JNZ P4RecoveryFinal
+            ADD [SI], AH
+            P4RecoveryFinal:
+                CALL ClampThatMF
+        RET                      
+
     ; Target an enemy player
     TargetEnemy:
         CMP CurrentTurn, 2
