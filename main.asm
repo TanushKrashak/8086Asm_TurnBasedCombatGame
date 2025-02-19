@@ -29,10 +29,10 @@ data SEGMENT
 	
 	; Player Statuses
 	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
-	Player1Status  DB 11100000B
-	Player2Status  DB 11100000B
-	Player3Status  DB 11100000B
-	Player4Status  DB 11100000B
+	Player1Status  DB 11000000B
+	Player2Status  DB 11000000B
+	Player3Status  DB 11000000B
+	Player4Status  DB 11000000B
     
     ; Game Helpers
     PlayerCount        DB 4	; Number of players
