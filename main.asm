@@ -1229,8 +1229,28 @@ code SEGMENT
 	        INC SI          
 	        INC DI          
 	        LOOP InitializePlayerStatsLoop  ; Repeat until CX = 0
-	    RET      
-	    
+	    RET
+	          
+	; Apply Vanguard's passive (+5 Def)  to teammates
+	ApplyVanguardPassive:
+	    TEST Team1Classes, 01000000B    ; Check if P1 is Vanguard
+	    JZ ApplyP2Vanguard
+	    ADD [Player2Stats+4], 5
+	    ApplyP2Vanguard:
+	        TEST Team1Classes, 00000100B    ; Check if P2 is Vanguard
+	        JZ ApplyP3Vanguard
+	        ADD [Player2Stats+4], 5
+	    ApplyP3Vanguard:
+	        TEST Team2Classes, 01000000B    ; Check if P3 is Vanguard
+	        JZ ApplyP4Vanguard
+	        ADD [Player4Stats+4], 5
+	    ApplyP4Vanguard:
+	        TEST Team2Classes, 00000100B    ; Check if P4 is Vanguard
+	        JZ ApplyVanguardPassive_Final
+	        ADD [Player3Stats+4], 5
+	    ApplyVanguardPassive_Final:
+	        RET  
+	        
 	; Give Player choice for in Combat, Loads Choice in AL    
 	GivePlayerMainChoice:
 		CALL PrintPlayerName
@@ -1574,107 +1594,109 @@ main:
 					;====; 
 					; COMMENTED OUT FOR DEBUGGING, NO NEED TO KEEP ON SELECTING CLASSES OVER AND OVER!!!!!
 					;====;  
-;    MainP1ClassSelection:          
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine   		          
-;        MOV DX, OFFSET PrintPlayerStatsText  
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass  
-;    	CMP BL, 'X'
-;    	JE MainP1ClassSelection  
-;        MOV SI, OFFSET Player1Stats
-;       	CALL InitializePlayerStats    
-;       	; Print Stats
-;       	MOV SI, OFFSET Player1Stats
-;        CALL PrintPlayerStats      
-;        CALL PrintNewLine 
-;        CALL PrintNewLine   
-;    
-;    ; Print P2 MSG  
-;    MainP2ClassSelection:
-;        CALL UpdateCurrentTurn
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine      	
-;        MOV DX, OFFSET PrintPlayerStatsText
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass	 
-;    	CMP BL, 'X'
-;    	JE MainP2ClassSelection 
-;        MOV SI, OFFSET Player2Stats
-;       	CALL InitializePlayerStats    
-;    	; Print Stats 
-;    	MOV SI, OFFSET Player2Stats
-;        CALL PrintPlayerStats    
-;        CALL PrintNewLine 
-;        CALL PrintNewLine
-;    
-;    CALL UpdateSynergy   
-;       
-; 	; Print P3 MSG
-; 	MainP3ClassSelection:
-;        CALL UpdateCurrentTurn
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine      	
-;        MOV DX, OFFSET PrintPlayerStatsText
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass	   
-;    	CMP BL, 'X'
-;    	JE MainP3ClassSelection 
-;        MOV SI, OFFSET Player3Stats
-;       	CALL InitializePlayerStats    
-;    	; Print Stats 
-;    	MOV SI, OFFSET Player3Stats
-;        CALL PrintPlayerStats    
-;        CALL PrintNewLine 
-;        CALL PrintNewLine 
-;    
-; 	; Print P4 MSG    
-; 	MainP4ClassSelection:
-;        CALL UpdateCurrentTurn
-;    	CALL PrintPlayerName    
-;    	CALL PrintNewLine      	
-;        MOV DX, OFFSET PrintPlayerStatsText
-;    	CALL PrintLine        
-;    	; Class Selection
-;    	CALL SelectPlayerClass	
-;    	CMP BL, 'X'
-;    	JE MainP4ClassSelection
-;        MOV SI, OFFSET Player4Stats
-;       	CALL InitializePlayerStats    
-;    	; Print Stats 
-;    	MOV SI, OFFSET Player4Stats
-;        CALL PrintPlayerStats    
-;        CALL PrintNewLine 
-;        CALL PrintNewLine
-;
-;    CALL UpdateSynergy
-                        
+    MainP1ClassSelection:          
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine   		          
+        MOV DX, OFFSET PrintPlayerStatsText  
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass  
+    	CMP BL, 'X'
+    	JE MainP1ClassSelection  
+        MOV SI, OFFSET Player1Stats
+       	CALL InitializePlayerStats    
+       	; Print Stats
+       	MOV SI, OFFSET Player1Stats
+        CALL PrintPlayerStats      
+        CALL PrintNewLine 
+        CALL PrintNewLine   
+    
+    ; Print P2 MSG  
+    MainP2ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	 
+    	CMP BL, 'X'
+    	JE MainP2ClassSelection 
+        MOV SI, OFFSET Player2Stats
+       	CALL InitializePlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player2Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine
+    
+    CALL UpdateSynergy
+    INT 20H  
+       
+ 	; Print P3 MSG
+ 	MainP3ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	   
+    	CMP BL, 'X'
+    	JE MainP3ClassSelection 
+        MOV SI, OFFSET Player3Stats
+       	CALL InitializePlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player3Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine 
+    
+ 	; Print P4 MSG    
+ 	MainP4ClassSelection:
+        CALL UpdateCurrentTurn
+    	CALL PrintPlayerName    
+    	CALL PrintNewLine      	
+        MOV DX, OFFSET PrintPlayerStatsText
+    	CALL PrintLine        
+    	; Class Selection
+    	CALL SelectPlayerClass	
+    	CMP BL, 'X'
+    	JE MainP4ClassSelection
+        MOV SI, OFFSET Player4Stats
+       	CALL InitializePlayerStats    
+    	; Print Stats 
+    	MOV SI, OFFSET Player4Stats
+        CALL PrintPlayerStats    
+        CALL PrintNewLine 
+        CALL PrintNewLine
+
+    CALL UpdateSynergy
+    CALL ApplyVanguardPassive
+;                        
 	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
 	; p1 	
-	MOV DI, OFFSET HealerStats
-	MOV SI, OFFSET Player1Stats
-	CALL InitializePlayerStats
-		; p2
-	CALL UpdateCurrentTurn
-	MOV DI, OFFSET AssassinStats
-	MOV SI, OFFSET Player2Stats
-	CALL InitializePlayerStats                             
-    CALL UpdateSynergy                                 
-    ; p3                
-    CALL UpdateCurrentTurn 
-	MOV DI, OFFSET AssassinStats
-	MOV SI, OFFSET Player3Stats
-	CALL InitializePlayerStats                             
-        ; p4                                       
-	CALL UpdateCurrentTurn                
-	MOV DI, OFFSET AssassinStats 	
-	MOV SI, OFFSET Player4Stats
-	CALL InitializePlayerStats                        
-    CALL UpdateCurrentTurn 
-    CALL UpdateSynergy 
+;	MOV DI, OFFSET HealerStats
+;	MOV SI, OFFSET Player1Stats
+;	CALL InitializePlayerStats
+;		; p2
+;	CALL UpdateCurrentTurn
+;	MOV DI, OFFSET AssassinStats
+;	MOV SI, OFFSET Player2Stats
+;	CALL InitializePlayerStats                             
+;    CALL UpdateSynergy                                 
+;    ; p3                
+;    CALL UpdateCurrentTurn 
+;	MOV DI, OFFSET AssassinStats
+;	MOV SI, OFFSET Player3Stats
+;	CALL InitializePlayerStats                             
+;        ; p4                                       
+;	CALL UpdateCurrentTurn                
+;	MOV DI, OFFSET AssassinStats 	
+;	MOV SI, OFFSET Player4Stats
+;	CALL InitializePlayerStats                        
+;    CALL UpdateCurrentTurn 
+;    CALL UpdateSynergy 
         
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
