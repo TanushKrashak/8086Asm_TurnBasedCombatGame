@@ -869,30 +869,60 @@ code SEGMENT
     	    JNE DoDamage_NotVampireOrHeavy        	            	        	
     		TEST Player1Status, 00000010B
     		JNZ HeavyVampHealLogic    		    		
-    		JMP DoDamage_NotVampireOrHeavy 
-    		; Vamp check Ends  
-    		HeavyVampHealLogic:
-    			MOV AX, DamageToBeDealt
-    			CALL LoadPlayerStatsInDI 
-    			; Print Vampire Heal Text
-        		CALL PrintPlayerName
-        		MOV DX, OFFSET VampHealHeavyText
-        		CALL PrintLine 
-        		MOV DL, AL      	        	
-        		CALL PrintInt
-        		MOV DX, OFFSET HPText
-        		CALL PrintLine   
-        		; Heal
-        		MOV SI, DI ; Put the stats into SI so that it can be clamped
-        		ADD [SI], AL	        		
-    			CALL ClampStatInSI    			        			        		
-        		RET	      	    	    
-    	    CheckIfP2IsVamp: 
-    	    
-    	   	DoDamage_NotVampireOrHeavy:	
-    	   		MOV DamageToBeDealt, AX					  
-				JNC DoDamage_NoClamp
-				MOV [SI], 0
+    		JMP DoDamage_NotVampireOrHeavy       	    	    
+    	    CheckIfP2IsVamp:  
+				; P2 Heavy is done by Vamp Heal logic
+				CMP CurrentTurn, 1   
+				JNE CheckIfP3IsVamp						
+	    	    MOV BH, Team1Classes     
+	    	    AND BH, 00000100B 
+	    	    CMP BH, 00000100B
+	    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+	    		TEST Player2Status, 00000010B
+	    		JNZ HeavyVampHealLogic    		    		
+	    		JMP DoDamage_NotVampireOrHeavy  
+    	    CheckIfP3IsVamp:  
+				; P3 Heavy is done by Vamp Heal logic
+				CMP CurrentTurn, 2   
+				JNE CheckIfP4IsVamp						
+	    	    MOV BH, Team2Classes     
+	    	    AND BH, 01000000B 
+	    	    CMP BH, 01000000B
+	    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+	    		TEST Player3Status, 00000010B
+	    		JNZ HeavyVampHealLogic    		    		
+	    		JMP DoDamage_NotVampireOrHeavy 	
+    	    CheckIfP4IsVamp:  
+				; P3 Heavy is done by Vamp Heal logic
+				CMP CurrentTurn, 3   
+				JNE DoDamage_NotVampireOrHeavy						
+	    	    MOV BH, Team2Classes     
+	    	    AND BH, 00000100B 
+	    	    CMP BH, 00000100B
+	    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+	    		TEST Player4Status, 00000010B
+	    		JNZ HeavyVampHealLogic    		    		
+	    		JMP DoDamage_NotVampireOrHeavy 	    		    		    	    	
+			; Vamp check Ends  
+			HeavyVampHealLogic:
+				MOV AX, DamageToBeDealt
+				CALL LoadPlayerStatsInDI 
+				; Print Vampire Heal Text
+	    		CALL PrintPlayerName
+	    		MOV DX, OFFSET VampHealHeavyText
+	    		CALL PrintLine 
+	    		MOV DL, AL      	        	
+	    		CALL PrintInt
+	    		MOV DX, OFFSET HPText
+	    		CALL PrintLine   
+	    		; Heal
+	    		MOV SI, DI ; Put the stats into SI so that it can be clamped
+	    		ADD [SI], AL	        		
+				CALL ClampStatInSI    			        			        		    		    	  
+	   	DoDamage_NotVampireOrHeavy:	
+	   		MOV DamageToBeDealt, AX					  
+			JNC DoDamage_NoClamp
+			MOV [SI], 0
 		DoDamage_NoClamp: 			
 			; Print Damage Value	
 	        MOV DX, OFFSET DamagedText
