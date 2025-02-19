@@ -106,7 +106,8 @@ data SEGMENT
     NotEnoughStaminaText        DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$' 
     SelfHealText                DB 'Health restored by 5', 0Dh, 0Ah, '$'   
     BurnDamageText              DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
-    PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'    
+    PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$' 
+    ParalysisWarning            DB ' has been inflicted with vampiric cum, and will be paralyzed for the next turn!', 0Dh, 0Ah, '$'   
     ParalysisText               DB ' is paralyzed and couldn`t move!', 0Dh, 0Ah, '$'  
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
@@ -425,6 +426,7 @@ code SEGMENT
     EvaluateAttack:   
     	;INT 20h 
     	; Is P1
+    	
     	CMP CurrentTurn, 0   		 
     	JNE EvalAttack_P2   	          
 	    	; Check P1 Status       
@@ -511,7 +513,36 @@ code SEGMENT
 			    MOV CurrentTurn, 3 ; Attacking P3    	      
 				MOV EnemyIdentifier, 3; Store enemy ID  			
     	     	JMP FinishAttack      	         	               
-        P1Ultimate:       
+        P1Ultimate:
+            CMP Team1Classes, 01010000B     ; Check if vampire
+            JNZ FinishAttack       
+            ; If Vampire, paralyze the target
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
+        	AND BL, 11000000B  ; Remove redundant bits
+        	CMP BL, 11000000B  ; Check if Atking P4         	   	         
+        	JE P1ParalysesP4
+    	    MOV CurrentTurn, 2 ; Attacking P3    	      
+    	    OR Player3Status, 00100000B     ; Paralyze P3 
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '3'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET ParalysisWarning
+    	    CALL PrintLine
+    	    CALL PrintNewLine
+    	    RET   	     
+    	    P1ParalysesP4: 
+			    MOV CurrentTurn, 3              ; Attacking P4    	      
+        	    OR Player4Status, 00100000B     ; Paralyze P4 
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '4'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET ParalysisWarning
+        	    CALL PrintLine
+        	    CALL PrintNewLine
+        	    RET          
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
@@ -554,6 +585,34 @@ code SEGMENT
 				MOV EnemyIdentifier, 3; Store enemy ID  
     	    	JMP FinishAttack      	         	               
         P2Ultimate:
+            ; If Vampire, paralyze the target
+            CMP Team1Classes, 00000101B
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
+        	AND BL, 11000000B  ; Remove redundant bits
+        	CMP BL, 11000000B  ; Check if Atking P4         	   	         
+        	JE P2ParalysesP4
+    	    MOV CurrentTurn, 2 ; Attacking P3    	      
+    	    OR Player3Status, 00100000B     ; Paralyze P3 
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '3'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET ParalysisWarning
+    	    CALL PrintLine
+    	    CALL PrintNewLine
+    	    RET   	     
+    	    P2ParalysesP4: 
+			    MOV CurrentTurn, 3              ; Attacking P4    	      
+        	    OR Player4Status, 00100000B     ; Paralyze P4 
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '4'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET ParalysisWarning
+        	    CALL PrintLine
+        	    CALL PrintNewLine 
+        	    RET  
         ; P3 Attacks	      
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
@@ -596,6 +655,33 @@ code SEGMENT
         	     MOV EnemyIdentifier, 0 ; Store enemy ID      	     
         	     JMP FinishAttack     	         	               
         P3Ultimate:
+            ; If Vampire, paralyze the target
+            CMP Team2Classes, 01010000B
+            JNE FinishAttack
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn
+        	AND BL, 00000000B  ; Remove redundant bits
+        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
+        	JE P3ParalysesP2  	      
+    	    OR Player1Status, 00100000B     ; Paralyze P1
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '1'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET ParalysisWarning
+    	    CALL PrintLine
+    	    CALL PrintNewLine 
+    	    RET  	     
+    	    P3ParalysesP2: 	      
+        	    OR Player2Status, 00100000B     ; Paralyze P2 
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '2'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET ParalysisWarning
+        	    CALL PrintLine
+        	    CALL PrintNewLine
+        	    RET
         ; P4 Attacks	      
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
@@ -638,7 +724,33 @@ code SEGMENT
         	     MOV EnemyIdentifier, 1 ; Store enemy ID     	     
         	     JMP FinishAttack 
         P4Ultimate:
-        	     
+            ; If Vampire, paralyze the target
+            CMP Team2Classes, 00000101B
+            JNE FinishAttack
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn
+        	AND BL, 00000000B  ; Remove redundant bits
+        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
+        	JE P4ParalysesP2  	      
+    	    OR Player1Status, 00100000B     ; Paralyze P1
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '1'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET ParalysisWarning
+    	    CALL PrintLine
+    	    CALL PrintNewLine
+    	    RET   	     
+    	    P4ParalysesP2: 	      
+        	    OR Player2Status, 00100000B     ; Paralyze P2 
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '2'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET ParalysisWarning
+        	    CALL PrintLine
+        	    CALL PrintNewLine
+        	    RET	     
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
 			CALL LoadPlayerStatsInDI
@@ -1273,7 +1385,8 @@ code SEGMENT
     	CMP AL, '4'
     	JE Heal
     	CMP AL, '5'
-    	JNE GivePlayerMainChoice_InvalidInput    	
+    	JE UltimateAttack
+    	JMP GivePlayerMainChoice_InvalidInput    	
     	RET  
     	; Light Attack 	   
     	LightAttack:    	   
@@ -1467,6 +1580,25 @@ code SEGMENT
     	    ClampSection:
     	        CALL ClampHP 
     	        JMP PrintHealText 
+        UltimateAttack:    
+            CMP CurrentTurn, 0
+            JNE UltimateMChoice_1
+            OR Player1Status, 00000001B 
+            JMP AttackFinal
+            UltimateMChoice_1:
+                CMP CurrentTurn, 1
+                JNE UltimateMChoice_2
+                OR Player2Status, 00000001B
+                JMP AttackFinal
+            UltimateMChoice_2:
+                CMP CurrentTurn, 2
+                JNE UltimateMChoice_3
+                OR Player3Status, 00000001B
+                JMP AttackFinal
+            UltimateMChoice_3:
+                OR Player4Status, 00000001B
+                JMP AttackFinal
+            
     	; Attack Chosen, In case some common finishing
     	; logic is required         
     	AttackFinal:       		
@@ -1697,7 +1829,7 @@ main:
 ;	CALL InitializePlayerStats                        
 ;    CALL UpdateCurrentTurn 
 ;    CALL UpdateSynergy 
-        
+    MOV CurrentTurn, 0   
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
@@ -1707,9 +1839,10 @@ main:
     	TEST Player1Status, 00100000B
         JNZ P1Paralysed   	 
     	CALL GivePlayerMainChoice  
-    	CALL PrintNewLine	 
+    	CALL PrintNewLine 
     	; Give Player 2 Choice	 
     	CALL AlternateTurn
+    	JMP P2GameChoice
     	P1Paralysed:             
     	    MOV DX, OFFSET PlayerText
     	    CALL PrintLine
@@ -1725,8 +1858,9 @@ main:
     	    TEST Player2Status, 00100000B
     	    JNZ P2Paralysed
         	CALL GivePlayerMainChoice
-        	CALL PrintNewLine    	
+        	CALL PrintNewLine  	
     		CALL AlternateTurn
+            JMP P3GameChoice
             P2Paralysed:             
         	    MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -1743,8 +1877,9 @@ main:
     	    TEST Player3Status, 00100000B
     	    JNZ P3Paralysed
         	CALL GivePlayerMainChoice 
-        	CALL PrintNewLine   
+        	CALL PrintNewLine  
         	CALL AlternateTurn
+            JMP P4GameChoice
         	P3Paralysed:
                 MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -1760,6 +1895,7 @@ main:
     	    JNZ P4Paralysed
         	CALL GivePlayerMainChoice
         	CALL AlternateTurn
+        	JMP LoopFinalBlock
         	P4Paralysed:
                 MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -1769,13 +1905,12 @@ main:
         	    CALL PrintLine  
         	    AND Player4Status, 11011111B
         	    CALL AlternateTurn  
-        ; All alive players have chosen their moves, begin evaluation         
-    	CALL EvaluateAttack        
+ 
         
 ;        ; Apply DOT, update AliveAndHealStatus if any player is dead
 ;        CALL ApplyDOT 
 ;        CALL UpdateStatusOnDeath
-        
+        LoopFinalBlock:
         ; Check if either team is dead
         TEST AliveAndHealStatus, 11000000B
         JZ Team2Victory
