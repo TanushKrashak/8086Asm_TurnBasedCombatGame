@@ -29,10 +29,19 @@ data SEGMENT
 	
 	; Player Statuses
 	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
-	Player1Status  DB 11000000B
-	Player2Status  DB 11000000B
-	Player3Status  DB 11000000B
-	Player4Status  DB 11000000B
+	Player1Status   DB 11000000B
+	Player2Status   DB 11000000B
+	Player3Status   DB 11000000B
+	Player4Status   DB 11000000B
+	
+	P1BurnCounter       DB 1
+	P2BurnCounter       DB 1
+	P3BurnCounter       DB 1
+	P4BurnCounter       DB 1
+	P1PoisonCounter     DB 1
+	P2PoisonCounter     DB 1
+	P3PoisonCounter     DB 1
+	P4PoisonCounter     DB 1	
     
     ; Game Helpers
     PlayerCount        DB 4	; Number of players
@@ -945,7 +954,7 @@ code SEGMENT
         ClampStatInSI_End:
             RET
 
-    ; Apply Burn and Poison effects after every turn 
+    ; Apply Burn and Poison effects after every turn, update burn and poison counters accordingly 
     ApplyDOT:  
         MOV BL, BurnDamage
         MOV BH, PoisonDamage
@@ -955,22 +964,34 @@ code SEGMENT
         TEST Player1Status, 10000000B           ; Test P1 burn bit
         JZ PoisonCheckP1         
         SUB [SI], BL                            ; Apply burn damage to P1 
-        MOV DX, OFFSET PlayerText
-        CALL PrintLine
-        MOV DL, '1'
-        CALL PrintChar
-        MOV DX, OFFSET BurnDamageText
-        CALL PrintLine
-        PoisonCheckP1:    
-            TEST Player1Status, 01000000B               ; Test P1 poison bit
-            JZ ApplyDOTP2
-            SUB [SI], BH                                ; Apply poison damage to P1
+        DEC P1BurnCounter
+        CMP P1BurnCounter, 0
+        JNE P1BurnPrint
+        MOV P1BurnCounter, 0
+        AND Player1Status, 01111111B
+        P1BurnPrint:
             MOV DX, OFFSET PlayerText
             CALL PrintLine
             MOV DL, '1'
             CALL PrintChar
-            MOV DX, OFFSET PoisonDamageText
-            CALL PrintLine      
+            MOV DX, OFFSET BurnDamageText
+            CALL PrintLine
+        PoisonCheckP1:    
+            TEST Player1Status, 01000000B               ; Test P1 poison bit
+            JZ ApplyDOTP2
+            SUB [SI], BH                                ; Apply poison damage to P1
+            DEC P1PoisonCounter
+            CMP P1PoisonCounter, 0
+            JNE P1PoisonPrint                   ; Reset Poison counter and bit for P2
+            MOV P1PoisonCounter, 0
+            AND Player1Status, 10111111B
+            P1PoisonPrint:  
+                MOV DX, OFFSET PlayerText
+                CALL PrintLine
+                MOV DL, '1'
+                CALL PrintChar
+                MOV DX, OFFSET PoisonDamageText
+                CALL PrintLine      
         ApplyDOTP2:       
             CALL ClampStatInSI                            ; Clamp P1's health if needed                                 
             TEST AliveAndHealStatus, 00100000B          ; Test whether P2 is alive
@@ -978,23 +999,35 @@ code SEGMENT
             MOV SI, OFFSET Player2Stats                 ; Load P2 health into SI
             TEST Player2Status, 10000000B               ; Test P2 burn bit
             JZ PoisonCheckP2
-            SUB [SI], BL                                ; Apply burn damage to P2   
-            MOV DX, OFFSET PlayerText
-            CALL PrintLine
-            MOV DL, '2'
-            CALL PrintChar
-            MOV DX, OFFSET BurnDamageText
-            CALL PrintLine
-            PoisonCheckP2:
-                TEST Player2Status, 01000000B       ; Check P2 poison bit
-                JZ ApplyDOTP3
-                SUB [SI], BH                        ; Apply poison damage to P2
+            SUB [SI], BL                                ; Apply burn damage to P2
+            DEC P2BurnCounter
+            CMP P2BurnCounter, 0
+            JNE P2BurnPrint
+            MOV P2BurnCounter, 0
+            AND Player2Status, 01111111B
+            P2BurnPrint:   
                 MOV DX, OFFSET PlayerText
                 CALL PrintLine
                 MOV DL, '2'
                 CALL PrintChar
-                MOV DX, OFFSET PoisonDamageText
-                CALL PrintLine                    
+                MOV DX, OFFSET BurnDamageText
+                CALL PrintLine
+            PoisonCheckP2:
+                TEST Player2Status, 01000000B       ; Check P2 poison bit
+                JZ ApplyDOTP3
+                SUB [SI], BH                        ; Apply poison damage to P2
+                DEC P2PoisonCounter
+                CMP P2PoisonCounter, 0
+                JNE P2PoisonPrint                   ; Reset Poison counter and bit for P2
+                MOV P2PoisonCounter, 0
+                AND Player2Status, 10111111B
+                P2PoisonPrint: 
+                    MOV DX, OFFSET PlayerText
+                    CALL PrintLine
+                    MOV DL, '2'
+                    CALL PrintChar
+                    MOV DX, OFFSET PoisonDamageText
+                    CALL PrintLine                    
         ApplyDOTP3:
             CALL ClampStatInSI                          ; Clamp P2's health if needed
             TEST AliveAndHealStatus, 01000000B        ; Test whether P3 is alive
@@ -1002,17 +1035,29 @@ code SEGMENT
             MOV SI, OFFSET Player3Stats               ; Load P3 health into SI
             TEST Player3Status, 10000000B             ; Test P3 burn bit
             JZ PoisonCheckP3
-            SUB [SI], BL                              ; Apply burn damage to P3 
-            MOV DX, OFFSET PlayerText
-            CALL PrintLine
-            MOV DL, '3'
-            CALL PrintChar
-            MOV DX, OFFSET BurnDamageText
-            CALL PrintLine
+            SUB [SI], BL                              ; Apply burn damage to P3
+            DEC P3BurnCounter
+            CMP P3BurnCounter, 0
+            JNE P3BurnPrint
+            MOV P3BurnCounter, 0
+            AND Player3Status, 01111111B
+            P3BurnPrint:   
+                MOV DX, OFFSET PlayerText
+                CALL PrintLine
+                MOV DL, '3'
+                CALL PrintChar
+                MOV DX, OFFSET BurnDamageText
+                CALL PrintLine
             PoisonCheckP3:
                 TEST Player3Status, 01000000B       ; Check P3 poison bit
                 JZ ApplyDOTP4
                 SUB [SI], BH                        ; Apply poison damage to P3
+                DEC P3PoisonCounter
+                CMP P3PoisonCounter, 0
+                JNE P3PoisonPrint                   ; Reset Poison counter and bit for P3
+                MOV P3PoisonCounter, 0
+                AND Player3Status, 10111111B
+            P3PoisonPrint: 
                 MOV DX, OFFSET PlayerText
                 CALL PrintLine
                 MOV DL, '3'
@@ -1026,23 +1071,35 @@ code SEGMENT
             MOV SI, OFFSET Player4Stats               ; Load P4 health into SI
             TEST Player4Status, 10000000B             ; Test P4 burn bit
             JZ PoisonCheckP4
-            SUB [SI], BL                              ; Apply burn damage to P4 
-            MOV DX, OFFSET PlayerText
-            CALL PrintLine
-            MOV DL, '4'
-            CALL PrintChar
-            MOV DX, OFFSET BurnDamageText
-            CALL PrintLine            
-            PoisonCheckP4:
-                TEST Player4Status, 01000000B           ; Check P4 poison bit
-                JZ ApplyDOT_Final
-                SUB [SI], BH                            ; Apply poison damage to P4  
+            SUB [SI], BL                              ; Apply burn damage to P4
+            DEC P4BurnCounter
+            CMP P4BurnCounter, 0
+            JNE P4BurnPrint
+            MOV P4BurnCounter, 0                    ; Reset burn effect
+            AND Player4Status, 01111111B
+            P4BurnPrint:  
                 MOV DX, OFFSET PlayerText
                 CALL PrintLine
                 MOV DL, '4'
                 CALL PrintChar
-                MOV DX, OFFSET PoisonDamageText
-                CALL PrintLine
+                MOV DX, OFFSET BurnDamageText
+                CALL PrintLine            
+            PoisonCheckP4:
+                TEST Player4Status, 01000000B           ; Check P4 poison bit
+                JZ ApplyDOT_Final
+                SUB [SI], BH                            ; Apply poison damage to P4
+                DEC P4PoisonCounter
+                CMP P4PoisonCounter, 0
+                JNE P4PoisonPrint                   ; Reset Poison counter and bit for P4
+                MOV P4PoisonCounter, 0
+                AND Player4Status, 10111111B
+                P4PoisonPrint:  
+                    MOV DX, OFFSET PlayerText
+                    CALL PrintLine
+                    MOV DL, '4'
+                    CALL PrintChar
+                    MOV DX, OFFSET PoisonDamageText
+                    CALL PrintLine
         ApplyDOT_Final:
             CALL ClampStatInSI                            ; Clamp P4's health if needed
             RET    
@@ -1763,7 +1820,6 @@ main:
         CALL PrintNewLine
     
     CALL UpdateSynergy
-    INT 20H  
        
  	; Print P3 MSG
  	MainP3ClassSelection:
@@ -1908,9 +1964,9 @@ main:
  
         
 ;        ; Apply DOT, update AliveAndHealStatus if any player is dead
-;        CALL ApplyDOT 
 ;        CALL UpdateStatusOnDeath
         LoopFinalBlock:
+        CALL ApplyDOT 
         ; Check if either team is dead
         TEST AliveAndHealStatus, 11000000B
         JZ Team2Victory
