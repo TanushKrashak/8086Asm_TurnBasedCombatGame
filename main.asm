@@ -33,7 +33,8 @@ data SEGMENT
 	Player2Status   DB 11000000B
 	Player3Status   DB 11000000B
 	Player4Status   DB 11000000B
-	
+	      
+	; Debuff Countdowns
 	P1BurnCounter       DB 1
 	P2BurnCounter       DB 1
 	P3BurnCounter       DB 1
@@ -121,7 +122,9 @@ data SEGMENT
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
     HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'  
-    HealerHeavyText				DB 0Dh, 0Ah, ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'  
+    HealerHeavyText				DB 0Dh, 0Ah, ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'   
+    VampHealHeavyText         	DB 0Dh, 0Ah, ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$'
+	HPText						DB 'HP!', 0Dh, 0Ah, '$'
     
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
@@ -432,10 +435,8 @@ code SEGMENT
                         
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack
-    EvaluateAttack:   
-    	;INT 20h 
-    	; Is P1
-    	
+    EvaluateAttack:       	
+    	; Is P1                 	
     	CMP CurrentTurn, 0   		 
     	JNE EvalAttack_P2   	          
 	    	; Check P1 Status       
@@ -858,9 +859,40 @@ code SEGMENT
     	DoDamage_DoDamage:  	
 			SUB [SI], AL
 			MOV AH, 0
-			MOV DamageToBeDealt, AX			   	
-			JNC DoDamage_NoClamp
-			MOV [SI], 0
+			MOV DamageToBeDealt, AX	
+			; P1 Heavy is done by Vamp Heal logic
+			CMP CurrentTurn, 0   
+			JNE CheckIfP2IsVamp						
+    	    MOV BH, Team1Classes     
+    	    AND BH, 01000000B 
+    	    CMP BH, 01000000B
+    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+    		TEST Player1Status, 00000010B
+    		JNZ HeavyVampHealLogic    		    		
+    		JMP DoDamage_NotVampireOrHeavy 
+    		; Vamp check Ends  
+    		HeavyVampHealLogic:
+    			MOV AX, DamageToBeDealt
+    			CALL LoadPlayerStatsInDI 
+    			; Print Vampire Heal Text
+        		CALL PrintPlayerName
+        		MOV DX, OFFSET VampHealHeavyText
+        		CALL PrintLine 
+        		MOV DL, AL      	        	
+        		CALL PrintInt
+        		MOV DX, OFFSET HPText
+        		CALL PrintLine   
+        		; Heal
+        		MOV SI, DI ; Put the stats into SI so that it can be clamped
+        		ADD [SI], AL	        		
+    			CALL ClampStatInSI    			        			        		
+        		RET	      	    	    
+    	    CheckIfP2IsVamp: 
+    	    
+    	   	DoDamage_NotVampireOrHeavy:	
+    	   		MOV DamageToBeDealt, AX					  
+				JNC DoDamage_NoClamp
+				MOV [SI], 0
 		DoDamage_NoClamp: 			
 			; Print Damage Value	
 	        MOV DX, OFFSET DamagedText
@@ -1693,8 +1725,7 @@ code SEGMENT
                 JMP AttackFinal
             UltimateMChoice_3:
                 OR Player4Status, 00000001B
-                JMP AttackFinal
-            
+                JMP AttackFinal           
     	; Attack Chosen, In case some common finishing
     	; logic is required         
     	AttackFinal:       		
@@ -2000,12 +2031,11 @@ main:
         	    MOV DX, OFFSET ParalysisText	
         	    CALL PrintLine  
         	    AND Player4Status, 11011111B
-        	    CALL AlternateTurn  
- 
-        
+        	    CALL AlternateTurn    		         
 ;        ; Apply DOT, update AliveAndHealStatus if any player is dead
 ;        CALL UpdateStatusOnDeath
         LoopFinalBlock:
+        CALL EvaluateAttack
         CALL ApplyDOT 
         ; Check if either team is dead
         TEST AliveAndHealStatus, 11000000B
