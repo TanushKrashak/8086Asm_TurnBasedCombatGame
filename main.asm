@@ -948,9 +948,8 @@ code SEGMENT
         RET
         TestOver100:  
             CMP [SI], 100
-            JNC ClampStatInSI_End
-            MOV [SI], 100
-            RET                
+            JLE ClampStatInSI_End
+            MOV [SI], 100                          
         ClampStatInSI_End:
             RET
 
