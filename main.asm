@@ -1524,10 +1524,10 @@ code SEGMENT
         	; then heals self
         	P1HeavyHeal:
         		TEST AliveAndHealStatus, 00100000B
-        		JZ P1HeavyHeal_P2IsDead
+        		JZ HeavyHealLogic
         		MOV BH, CurrentTurn ; Temp Store 
         		MOV CurrentTurn, 1  ; Set Current Turn to P2    
-        		P1HeavyHeal_P2IsDead:
+        		HeavyHealLogic:
 					CALL LoadPlayerStatsInDI 
 	        		CALL PrintPlayerName
 	        		MOV DX, OFFSET HealerHeavyText
@@ -1857,14 +1857,15 @@ main:
     	MOV SI, OFFSET Player4Stats
         CALL PrintPlayerStats    
         CALL PrintNewLine 
-        CALL PrintNewLine
+        CALL PrintNewLine  
+        CALL UpdateCurrentTurn
 
     CALL UpdateSynergy
     CALL ApplyVanguardPassive
 ;                        
 	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
 	; p1 	
-;	MOV DI, OFFSET HealerStats
+;	CALL SelectPlayerClass
 ;	MOV SI, OFFSET Player1Stats
 ;	CALL InitializePlayerStats
 ;		; p2
@@ -1885,7 +1886,7 @@ main:
 ;	CALL InitializePlayerStats                        
 ;    CALL UpdateCurrentTurn 
 ;    CALL UpdateSynergy 
-    MOV CurrentTurn, 0   
+;    MOV CurrentTurn, 0   
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
