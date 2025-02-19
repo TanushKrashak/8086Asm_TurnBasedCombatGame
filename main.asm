@@ -1489,13 +1489,14 @@ code SEGMENT
     	    JNE HeavyMChoice_1   
     	    CMP [PlayersStamina+0], DH ; Check if has 30 stamina
     	    JC NotEnoughStamina 	 
-    	    SUB [PlayersStamina+0], DH ; Deduct Stamina   
-    	    INT 20h
+    	    SUB [PlayersStamina+0], DH ; Deduct Stamina       	    
     	    OR Player1Status, 00000010B  ; Set Heavy Atk    	    
-    	    MOV BH, Team1Classes     ; Heavy is done by healer logic
+    	    ; Heavy is done by healer logic
+    	    MOV BH, Team1Classes     
     	    AND BH, 00110000B 
     	    CMP BH, 00110000B
-    	    JE P1HeavyHeal         	 ; Called if healer  
+    	    JE P1HeavyHeal 
+    	    ; Healer check Ends        	 
     	    JMP AttackFinal
     	    HeavyMChoice_1:
         	    CMP CurrentTurn, 1
@@ -1503,7 +1504,13 @@ code SEGMENT
         	    CMP [PlayersStamina+1], DH ; Check if has 30 stamina
 				JC NotEnoughStamina         
 				SUB [PlayersStamina+1], DH ; Deduct Stamina   
-        	    OR Player2Status, 00000010B               	            	    
+        	    OR Player2Status, 00000010B        
+	    	    ; Heavy is done by healer logic
+	    	    MOV BH, Team1Classes     
+	    	    AND BH, 00000011B 
+	    	    CMP BH, 00000011B
+	    	    JE P2HeavyHeal   
+	    	    ; Healer check Ends      	           	            	    
         	    JMP AttackFinal
             HeavyMChoice_2:
                 CMP CurrentTurn, 2
@@ -1511,30 +1518,63 @@ code SEGMENT
         	    CMP [PlayersStamina+2], DH ; Check if has 30 stamina
 				JC NotEnoughStamina  
 				SUB [PlayersStamina+2], DH ; Deduct Stamina                  
-        	    OR Player3Status, 00000010B 
+        	    OR Player3Status, 00000010B    
+	    	    ; Heavy is done by healer logic
+	    	    MOV BH, Team2Classes     
+	    	    AND BH, 00110000B 
+	    	    CMP BH, 00110000B
+	    	    JE P3HeavyHeal   
+	    	    ; Healer check Ends          	    
                 JMP AttackFinal
             HeavyMChoice_3:    
         	    CMP [PlayersStamina+3], DH ; Check if has 30 stamina
 				JC NotEnoughStamina 
 				SUB [PlayersStamina+3], DH ; Deduct Stamina       	    
-        	    OR Player4Status, 00000010B
+        	    OR Player4Status, 00000010B  
+	    	    ; Heavy is done by healer logic
+	    	    MOV BH, Team2Classes     
+	    	    AND BH, 00000011B 
+	    	    CMP BH, 00000011B
+	    	    JE P4HeavyHeal   
+	    	    ; Healer check Ends         	    
         	    JMP AttackFinal  
-        	; Checks if p2 alive and heals them, if they are not
-        	; then heals self
+        	; Checks if p2 alive and heals them, else heals self
         	P1HeavyHeal:
         		TEST AliveAndHealStatus, 00100000B
         		JZ HeavyHealLogic
         		MOV BH, CurrentTurn ; Temp Store 
-        		MOV CurrentTurn, 1  ; Set Current Turn to P2    
-        		HeavyHealLogic:
-					CALL LoadPlayerStatsInDI 
-	        		CALL PrintPlayerName
-	        		MOV DX, OFFSET HealerHeavyText
-	        		CALL PrintLine      
-	        		MOV CurrentTurn, BH  ; Revert Current Turn
-	        		MOV SI, DI ; Put the stats into SI so that it can be clamped
-	        		ADD [SI], 15 	        		
-        			CALL ClampStatInSI          			        			
+        		MOV CurrentTurn, 1  ; Set Current Turn to P2  
+        		JMP HeavyHealLogic
+        	; Checks if p1 alive and heals them, else heals self
+        	P2HeavyHeal:
+        		TEST AliveAndHealStatus, 00010000B
+        		JZ HeavyHealLogic
+        		MOV BH, CurrentTurn ; Temp Store 
+        		MOV CurrentTurn, 0  ; Set Current Turn to P1  
+        		JMP HeavyHealLogic  
+        	; Checks if p4 alive and heals them, else heals self
+        	P3HeavyHeal:
+        		TEST AliveAndHealStatus, 10000000B
+        		JZ HeavyHealLogic
+        		MOV BH, CurrentTurn ; Temp Store 
+        		MOV CurrentTurn, 3  ; Set Current Turn to P4   
+        		JMP HeavyHealLogic
+        	; Checks if p3 alive and heals them, else heals self
+        	P4HeavyHeal:
+        		TEST AliveAndHealStatus, 01000000B
+        		JZ HeavyHealLogic
+        		MOV BH, CurrentTurn ; Temp Store 
+        		MOV CurrentTurn, 2  ; Set Current Turn to P3   	      		  
+        		JMP HeavyHealLogic
+    		HeavyHealLogic:
+				CALL LoadPlayerStatsInDI 
+        		CALL PrintPlayerName
+        		MOV DX, OFFSET HealerHeavyText
+        		CALL PrintLine      
+        		MOV CurrentTurn, BH  ; Revert Current Turn
+        		MOV SI, DI ; Put the stats into SI so that it can be clamped
+        		ADD [SI], 15 	        		
+    			CALL ClampStatInSI          			        			
         		RET	
         			         			        			
         ; Defend	    	    
