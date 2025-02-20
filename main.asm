@@ -583,7 +583,7 @@ code SEGMENT
         P1PyroCheck: 
             ; Check if P2 is Pyromancer
             CMP AL, 00100000B
-            JNE FinishAttack
+            JNE P1AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
             OR Player3Status, 10000000B
             MOV P3BurnCounter, 4
@@ -595,7 +595,30 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            JNE FinishAttack
+            JMP FinishAttack
+        P1AssassinCheck:
+            CMP AL, 00010000B       ; Check if P1 is assassin
+            JNE FinishAttack     	      
+        	MOV AL, 200 ; instakill     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
+        	; If only one enemy alive, pick them
+        	TEST AliveAndHealStatus, 01000000B
+        	JZ P1AssassinatesP4                 ; P3 dead, target P4
+        	TEST AliveAndHealStatus, 10000000B  
+        	JZ P1AssassinatesP3                 ; P4 dead, target P3
+        	; Both alive, randomly select any one
+        	CALL GetChance
+        	CMP DL, 50
+        	JLE P1AssassinatesP3
+    	    P1AssassinatesP4:
+        	    MOV CurrentTurn, 3 ; Attacking P4
+        	    MOV EnemyIdentifier, 3 ; Store enemy ID
+        	    JMP FinishAttack   
+        	P1AssassinatesP3:        	
+        	     MOV CurrentTurn, 2 ; Attacking P3 
+        	     MOV EnemyIdentifier, 2 ; Store enemy ID      	    
+        	     JMP FinishAttack            
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
@@ -671,7 +694,7 @@ code SEGMENT
         P2PyroCheck:
          ; Check if P2 is Pyromancer
             CMP AL, 00000010B
-            JNE FinishAttack
+            JNE P2AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
             OR Player3Status, 10000000B
             MOV P3BurnCounter, 4
@@ -683,7 +706,30 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            JNE FinishAttack  
+            RET
+        P2AssassinCheck:
+            CMP AL, 00000001B       ; Check if P2 is assassin
+            JNE FinishAttack     	      
+        	MOV AL, 200 ; instakill     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
+        	; If only one enemy alive, pick them
+        	TEST AliveAndHealStatus, 01000000B
+        	JZ P2AssassinatesP4                 ; P3 dead, target P4
+        	TEST AliveAndHealStatus, 10000000B  
+        	JZ P2AssassinatesP3                 ; P4 dead, target P3
+        	; Both alive, randomly select any one
+        	CALL GetChance
+        	CMP DL, 50
+        	JLE P2AssassinatesP3
+    	    P2AssassinatesP4:
+        	    MOV CurrentTurn, 3 ; Attacking P4
+        	    MOV EnemyIdentifier, 3 ; Store enemy ID
+        	    JMP FinishAttack   
+        	P2AssassinatesP3:        	
+        	     MOV CurrentTurn, 2 ; Attacking P3 
+        	     MOV EnemyIdentifier, 2 ; Store enemy ID      	    
+        	     JMP FinishAttack	  
         ; P3 Attacks	      
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
@@ -757,7 +803,7 @@ code SEGMENT
         ; Pyromancer Ultimate
         P3PyroCheck:         
             CMP AL, 00100000B     ; Check if P3 is Pyromancer
-            JNE FinishAttack
+            JNE P3AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
             OR Player1Status, 10000000B
             MOV P1BurnCounter, 4
@@ -769,7 +815,29 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            JNE FinishAttack  
+            RET
+            P3AssassinCheck:
+                CMP AL, 00010000B       ; Check if P3 is assassin       	      
+            	MOV AL, 200 ; instakill     
+            	MOV AH, 0
+            	MOV DamageToBeDealt, AX
+            	; If only one enemy alive, pick them
+            	TEST AliveAndHealStatus, 00010000B
+            	JZ P3AssassinatesP2                 ; P1 dead, target P2
+            	TEST AliveAndHealStatus, 00100000B  
+            	JZ P3AssassinatesP1                 ; P2 dead, target P1
+            	; Both alive, randomly select any one
+            	CALL GetChance
+            	CMP DL, 50
+            	JLE P3AssassinatesP1
+        	    P3AssassinatesP2:
+            	    MOV CurrentTurn, 1 ; Attacking P2
+            	    MOV EnemyIdentifier, 1 ; Store enemy ID
+            	    JMP FinishAttack   
+            	P3AssassinatesP1:        	
+            	     MOV CurrentTurn, 0 ; Attacking P1 
+            	     MOV EnemyIdentifier, 0 ; Store enemy ID      	    
+            	     JMP FinishAttack	  
         ; P4 Attacks	      
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
@@ -844,7 +912,7 @@ code SEGMENT
         ; Pyromancer Ultimate
         P4PyroCheck:         
             CMP AL, 00000010B     ; Check if P4 is Pyromancer
-            JNE FinishAttack
+            JNE P4AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
             OR Player1Status, 10000000B
             MOV P1BurnCounter, 4
@@ -856,7 +924,35 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            JNE FinishAttack      
+            RET
+        P4AssassinCheck:
+            CMP AL, 00000001B       ; Check if P4 is Assassin      	      
+        	MOV AL, 200 ; instakill     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
+        	; If only one enemy alive, pick them
+        	TEST AliveAndHealStatus, 00010000B
+        	JZ P4AssassinatesP2                 ; P1 dead, target P2
+        	TEST AliveAndHealStatus, 00100000B  
+        	JZ P4AssassinatesP1                 ; P2 dead, target P1
+        	; Both alive, randomly select any one
+        	CALL GetChance
+        	CMP DL, 50
+        	JLE P4AssassinatesP1
+    	    P4AssassinatesP2:
+        	    MOV CurrentTurn, 1 ; Attacking P2
+        	    MOV EnemyIdentifier, 1 ; Store enemy ID
+        	    JMP FinishAttack   
+        	P4AssassinatesP1:        	
+        	     MOV CurrentTurn, 0 ; Attacking P1 
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID      	    
+        	     JMP FinishAttack	
+        	; Extract Enemy Number from Currently Targetting
+        	MOV BL, CurrentlyTargeting                     
+        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
+        	AND BL, 00000000B  ; Remove redundant bits
+        	CMP BL, 00000000B  ; Check if Atking P1        
+                  
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
 			CALL LoadPlayerStatsInDI
@@ -1837,36 +1933,51 @@ code SEGMENT
         UltimateAttack:   
             CMP CurrentTurn, 0
             JNE UltimateMChoice_1
-            OR Player1Status, 00000001B 
+            OR Player1Status, 00000001B
+            MOV AL, Team1Classes    ; Load Team1Classes into AL
+            AND AL, 11110000B       ; Remove P2's class info
             ; Pyromancer ultimate targets both enemies, no need to give target choice
-            MOV AL, Team1Classes
-            AND AL, 11110000B
             CMP AL, 00100000B
+            JE AttackFinalNoChoice
+            ; Assassin ultimate is random, no need to give target choice
+            CMP AL, 00010000B
             JE AttackFinalNoChoice
             JMP AttackFinal
             UltimateMChoice_1:
                 CMP CurrentTurn, 1
                 JNE UltimateMChoice_2
                 OR Player2Status, 00000001B
-                MOV AL, Team1Classes
-                AND AL, 00001111B
-                CMP Team1Classes, 00000010B
+                MOV AL, Team1Classes            ; Load Team1Classes into AL
+                AND AL, 00001111B               ; Remove P1's class info
+                ; Pyromancer ultimate targets both enemies, no need to give target choice 
+                CMP AL, 00000010B
+                JE AttackFinalNoChoice
+                ; Assassin ultimate is random, no need to give target choice
+                CMP AL, 00000001B
                 JE AttackFinalNoChoice
                 JMP AttackFinal
             UltimateMChoice_2:
                 CMP CurrentTurn, 2
                 JNE UltimateMChoice_3
                 OR Player3Status, 00000001B
-                MOV AL, Team2Classes
-                AND AL, 11110000B
+                MOV AL, Team2Classes    ; Load Team2Classes into AL
+                AND AL, 11110000B       ; Remove P4's class info
+                ; Pyromancer ultimate targets both enemies, no need to give target choice
                 CMP Team2Classes, 00100000B
+                JE AttackFinalNoChoice
+                ; Assassin ultimate is random, no need to give target choice
+                CMP AL, 00010000B
                 JE AttackFinalNoChoice
                 JMP AttackFinal
             UltimateMChoice_3:
                 OR Player4Status, 00000001B
                 MOV AL, Team2Classes
                 AND AL, 00001111B
+                ; Pyromancer ultimate targets both enemies, no need to give target choice
                 CMP Team2Classes, 00000010B
+                JE AttackFinalNoChoice
+                ; Assassin ultimate is random, no need to give target choice
+                CMP Team2Classes, 00000001B
                 JE AttackFinalNoChoice
                 JMP AttackFinal           
     	; Attack Chosen, In case some common finishing
