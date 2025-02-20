@@ -43,6 +43,10 @@ data SEGMENT
 	P2PoisonCounter     DB 1
 	P3PoisonCounter     DB 1
 	P4PoisonCounter     DB 1	
+	
+	; Buff Countdowns
+	Team1Vitality 	DB 0
+	Team2Vitality 	DB 0
     
     ; Game Helpers
     PlayerCount        DB 4	; Number of players
@@ -61,7 +65,7 @@ data SEGMENT
     EnemyIdentifier DB 0;
 
 	; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,  CC,UltC)
-	KnightStats    	DB  85,  85,  20,  35,  30,  30,  3 ; Balanced, high defense
+	KnightStats    	DB  85,  85,  20,  35,  30,  30,  1 ; Balanced, high defense
 	AssassinStats  	DB  30,  60,  30,  40,  10,  50,  4 ; Lower health, high crit chance
 	PyromancerStats	DB  50,  50,  20,  30,  20,  30,  4 ; Lower stats overall, but compensated by burn passive
 	HealerStats    	DB  70 , 70,  15,  30,  15,  30,  4  ; LDmg deals actual damage to enemy, HDmg heals teammate
@@ -126,7 +130,9 @@ data SEGMENT
     HealerHeavyText				DB ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'
     BurnUltimateText            DB ' has been engulfed in flames, and will burn for the next 4 turns!', 0Dh, 0Ah, '$'   
     VampHealHeavyText         	DB ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$'
-	HPText						DB 'HP!', 0Dh, 0Ah, '$'
+	HPText						DB 'HP!', 0Dh, 0Ah, '$'                                                   
+	KnightUltimateText 			DB "The Knight's Valor Shone Bright, Shielding All From Fatigue, Granting ", '$'
+	KnightUltimateRemText		DB ' Unyielding Endurance For 2 Turns.',0Dh,0Ah, '$'
     
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
@@ -598,7 +604,7 @@ code SEGMENT
             JMP FinishAttack
         P1AssassinCheck:
             CMP AL, 00010000B       ; Check if P1 is assassin
-            JNE FinishAttack     	      
+            JNE P1KnightCheck     	      
         	MOV AL, 200 ; instakill     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
@@ -618,7 +624,25 @@ code SEGMENT
         	P1AssassinatesP3:        	
         	     MOV CurrentTurn, 2 ; Attacking P3 
         	     MOV EnemyIdentifier, 2 ; Store enemy ID      	    
-        	     JMP FinishAttack            
+        	     JMP FinishAttack      
+		; Knight Ultimate  
+        P1KnightCheck:             
+            CMP AL, 00000000B  ; Check if Knight
+            JNE FinishAttack
+            ; Set Vitality bit, and update vitality counters for team
+            OR Player1Status, 00010000B
+            MOV Team1Vitality, 2
+            OR Player2Status, 00010000B            
+            MOV DX, OFFSET KnightUltimateText
+            CALL PrintLine  
+            ; Print team  
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '1'
+            CALL PrintChar 
+             MOV DX, OFFSET KnightUltimateRemText  
+             CALL PrintLine
+            JMP FinishAttack        	           
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
@@ -2000,8 +2024,7 @@ code SEGMENT
     	RET
     
     ; Set synergies for both teams. Must be called at the end of each team's class selection phase. Relies on Team1Classes and Team2Classes to be properly masked	
-    UpdateSynergy: 
-    INT 20h 
+    UpdateSynergy:     
         CMP CurrentTurn, 2
         JNC LoadTeam2Classes 
         MOV BL, Team1Classes
