@@ -733,7 +733,7 @@ code SEGMENT
             RET
         P2AssassinCheck:
             CMP AL, 00000001B       ; Check if P2 is assassin
-            JNE FinishAttack     	      
+            JNE P2KnightCheck     	      
         	MOV AL, 200 ; instakill     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
@@ -754,6 +754,24 @@ code SEGMENT
         	     MOV CurrentTurn, 2 ; Attacking P3 
         	     MOV EnemyIdentifier, 2 ; Store enemy ID      	    
         	     JMP FinishAttack	  
+		; Knight Ultimate  
+        P2KnightCheck:             
+            CMP AL, 00000000B  ; Check if Knight
+            JNE FinishAttack
+            ; Set Vitality bit, and update vitality counters for team
+            OR Player1Status, 00010000B
+            MOV Team1Vitality, 2
+            OR Player2Status, 00010000B            
+            MOV DX, OFFSET KnightUltimateText
+            CALL PrintLine  
+            ; Print team  
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '1'
+            CALL PrintChar 
+             MOV DX, OFFSET KnightUltimateRemText  
+             CALL PrintLine
+            JMP FinishAttack        	     
         ; P3 Attacks	      
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
@@ -840,28 +858,47 @@ code SEGMENT
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
             RET
-            P3AssassinCheck:
-                CMP AL, 00010000B       ; Check if P3 is assassin       	      
-            	MOV AL, 200 ; instakill     
-            	MOV AH, 0
-            	MOV DamageToBeDealt, AX
-            	; If only one enemy alive, pick them
-            	TEST AliveAndHealStatus, 00010000B
-            	JZ P3AssassinatesP2                 ; P1 dead, target P2
-            	TEST AliveAndHealStatus, 00100000B  
-            	JZ P3AssassinatesP1                 ; P2 dead, target P1
-            	; Both alive, randomly select any one
-            	CALL GetChance
-            	CMP DL, 50
-            	JLE P3AssassinatesP1
-        	    P3AssassinatesP2:
-            	    MOV CurrentTurn, 1 ; Attacking P2
-            	    MOV EnemyIdentifier, 1 ; Store enemy ID
-            	    JMP FinishAttack   
-            	P3AssassinatesP1:        	
-            	     MOV CurrentTurn, 0 ; Attacking P1 
-            	     MOV EnemyIdentifier, 0 ; Store enemy ID      	    
-            	     JMP FinishAttack	  
+        P3AssassinCheck:
+            CMP AL, 00010000B       ; Check if P3 is assassin    
+            JNE P3KnightCheck  	      
+        	MOV AL, 200 ; instakill     
+        	MOV AH, 0
+        	MOV DamageToBeDealt, AX
+        	; If only one enemy alive, pick them
+        	TEST AliveAndHealStatus, 00010000B
+        	JZ P3AssassinatesP2                 ; P1 dead, target P2
+        	TEST AliveAndHealStatus, 00100000B  
+        	JZ P3AssassinatesP1                 ; P2 dead, target P1
+        	; Both alive, randomly select any one
+        	CALL GetChance
+        	CMP DL, 50
+        	JLE P3AssassinatesP1
+    	    P3AssassinatesP2:
+        	    MOV CurrentTurn, 1 ; Attacking P2
+        	    MOV EnemyIdentifier, 1 ; Store enemy ID
+        	    JMP FinishAttack   
+        	P3AssassinatesP1:        	
+        	     MOV CurrentTurn, 0 ; Attacking P1 
+        	     MOV EnemyIdentifier, 0 ; Store enemy ID      	    
+        	     JMP FinishAttack	         
+        ; Knight Ultimate  
+        P3KnightCheck:             
+            CMP AL, 00000000B  ; Check if Knight
+            JNE FinishAttack
+            ; Set Vitality bit, and update vitality counters for team
+            OR Player3Status, 00010000B
+            MOV Team2Vitality, 2
+            OR Player4Status, 00010000B            
+            MOV DX, OFFSET KnightUltimateText
+            CALL PrintLine  
+            ; Print team  
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '1'
+            CALL PrintChar 
+             MOV DX, OFFSET KnightUltimateRemText  
+             CALL PrintLine
+            JMP FinishAttack 	     
         ; P4 Attacks	      
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
@@ -950,7 +987,8 @@ code SEGMENT
             CALL PrintLine
             RET
         P4AssassinCheck:
-            CMP AL, 00000001B       ; Check if P4 is Assassin      	      
+            CMP AL, 00000001B       ; Check if P4 is Assassin  
+            JNE P4KnightCheck    	      
         	MOV AL, 200 ; instakill     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
@@ -975,8 +1013,25 @@ code SEGMENT
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
         	AND BL, 00000000B  ; Remove redundant bits
-        	CMP BL, 00000000B  ; Check if Atking P1        
-                  
+        	CMP BL, 00000000B  ; Check if Atking P1 
+		; Knight Ultimate  
+        P4KnightCheck:             
+            CMP AL, 00000000B  ; Check if Knight
+            JNE FinishAttack
+            ; Set Vitality bit, and update vitality counters for team
+            OR Player3Status, 00010000B
+            MOV Team2Vitality, 2
+            OR Player4Status, 00010000B            
+            MOV DX, OFFSET KnightUltimateText
+            CALL PrintLine  
+            ; Print team  
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '1'
+            CALL PrintChar 
+             MOV DX, OFFSET KnightUltimateRemText  
+             CALL PrintLine
+            JMP FinishAttack         	                        
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
 			CALL LoadPlayerStatsInDI
@@ -1729,34 +1784,46 @@ code SEGMENT
 			; was chosen by the player, it is done by updating
     	    ; the 3rd last bit on the PlayerXStatus vars
     	    CMP CurrentTurn, 0
-    	    JNE LightMChoice_1        	    
+    	    JNE LightMChoice_1   
+    	    CMP Team1Vitality, 0        ; Check if under vitality
+    	    JG Light_P1SkipStaminaCheck     	    
     	    CMP [PlayersStamina+0], DH ; Check if has 15 stamina
     	    JC NotEnoughStamina   	                      
     	    SUB [PlayersStamina+0], DH ; Deduct Stamina  
-    	    OR Player1Status, 00000100B
-    	    JMP AttackFinal
+    	    Light_P1SkipStaminaCheck:
+	    	    OR Player1Status, 00000100B
+	    	    JMP AttackFinal
     	    LightMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE LightMChoice_2 
+        	   	CMP Team1Vitality, 0        ; Check if under vitality
+    	    	JG Light_P2SkipStaminaCheck   
 	    	    CMP [PlayersStamina+1], DH ; Check if has 15 stamina  	    	    
 	    	    JC NotEnoughStamina           	                       
-	    	    SUB [PlayersStamina+1], DH ; Deduct Stamina
-        	    OR Player2Status, 00000100B
-        	    JMP AttackFinal
+	    	    SUB [PlayersStamina+1], DH ; Deduct Stamina  
+	    	    Light_P2SkipStaminaCheck:
+        	    	OR Player2Status, 00000100B
+        	    	JMP AttackFinal
             LightMChoice_2:
                 CMP CurrentTurn, 2
-                JNE LightMChoice_3
+                JNE LightMChoice_3  
+        	   	CMP Team2Vitality, 0        ; Check if under vitality
+    	    	JG Light_P3SkipStaminaCheck                  
 	    	    CMP [PlayersStamina+2], DH ; Check if has 15 stamina
 	    	    JC NotEnoughStamina          
-	    	    SUB [PlayersStamina+2], DH ; Deduct Stamina         
-        	    OR Player3Status, 00000100B 
-                JMP AttackFinal
-            LightMChoice_3:        	
+	    	    SUB [PlayersStamina+2], DH ; Deduct Stamina 
+	    	    Light_P3SkipStaminaCheck:        
+        	    	OR Player3Status, 00000100B 
+                	JMP AttackFinal
+            LightMChoice_3:   
+        	   	CMP Team2Vitality, 0        ; Check if under vitality
+    	    	JG Light_P4SkipStaminaCheck                   	
 	    	    CMP [PlayersStamina+3], DH ; Check if has 15 stamina
 	    	    JC NotEnoughStamina 
-	    	    SUB [PlayersStamina+3], DH ; Deduct Stamina                  
-        	    OR Player4Status, 00000100B
-        	    JMP AttackFinal 
+	    	    SUB [PlayersStamina+3], DH ; Deduct Stamina    
+	    	    Light_P4SkipStaminaCheck:              
+        	    	OR Player4Status, 00000100B
+        	    	JMP AttackFinal 
         ; Heavy Attack    	      	    
     	HeavyAttack:   
     		MOV DH, HeavyAttackStaminaCost 	      
@@ -1764,11 +1831,14 @@ code SEGMENT
     	    ; was chosen by the player, it is done by updating
     	    ; the 2nd last bit on the PlayerXStatus vars
     	    CMP CurrentTurn, 0
-    	    JNE HeavyMChoice_1   
+    	    JNE HeavyMChoice_1  
+    	   	CMP Team1Vitality, 0        ; Check if under vitality
+	    	JG Heavy_P1SkipStaminaCheck     	     
     	    CMP [PlayersStamina+0], DH ; Check if has 30 stamina
     	    JC NotEnoughStamina 	 
-    	    SUB [PlayersStamina+0], DH ; Deduct Stamina       	    
-    	    OR Player1Status, 00000010B  ; Set Heavy Atk    	    
+    	    SUB [PlayersStamina+0], DH ; Deduct Stamina   
+			Heavy_P1SkipStaminaCheck:    	        	    
+    	    	OR Player1Status, 00000010B  ; Set Heavy Atk    	    
     	    ; Heavy is done by healer logic
     	    MOV BH, Team1Classes     
     	    AND BH, 00110000B 
@@ -1779,10 +1849,13 @@ code SEGMENT
     	    HeavyMChoice_1:
         	    CMP CurrentTurn, 1
         	    JNE HeavyMChoice_2 
+        	    CMP Team1Vitality, 0        ; Check if under vitality
+	    		JG Heavy_P2SkipStaminaCheck
         	    CMP [PlayersStamina+1], DH ; Check if has 30 stamina
 				JC NotEnoughStamina         
-				SUB [PlayersStamina+1], DH ; Deduct Stamina   
-        	    OR Player2Status, 00000010B        
+				SUB [PlayersStamina+1], DH ; Deduct Stamina  
+				Heavy_P2SkipStaminaCheck: 
+        	    	OR Player2Status, 00000010B        
 	    	    ; Heavy is done by healer logic
 	    	    MOV BH, Team1Classes     
 	    	    AND BH, 00000011B 
@@ -1792,11 +1865,14 @@ code SEGMENT
         	    JMP AttackFinal
             HeavyMChoice_2:
                 CMP CurrentTurn, 2
-                JNE HeavyMChoice_3 
+                JNE HeavyMChoice_3  
+                CMP Team2Vitality, 0        ; Check if under vitality
+	    		JG Heavy_P3SkipStaminaCheck
         	    CMP [PlayersStamina+2], DH ; Check if has 30 stamina
 				JC NotEnoughStamina  
-				SUB [PlayersStamina+2], DH ; Deduct Stamina                  
-        	    OR Player3Status, 00000010B    
+				SUB [PlayersStamina+2], DH ; Deduct Stamina
+				Heavy_P3SkipStaminaCheck:                  
+        	    	OR Player3Status, 00000010B    
 	    	    ; Heavy is done by healer logic
 	    	    MOV BH, Team2Classes     
 	    	    AND BH, 00110000B 
@@ -1804,11 +1880,14 @@ code SEGMENT
 	    	    JE P3HeavyHeal   
 	    	    ; Healer check Ends          	    
                 JMP AttackFinal
-            HeavyMChoice_3:    
+            HeavyMChoice_3:
+           		CMP Team2Vitality, 0        ; Check if under vitality
+	    		JG Heavy_P4SkipStaminaCheck    
         	    CMP [PlayersStamina+3], DH ; Check if has 30 stamina
 				JC NotEnoughStamina 
-				SUB [PlayersStamina+3], DH ; Deduct Stamina       	    
-        	    OR Player4Status, 00000010B  
+				SUB [PlayersStamina+3], DH ; Deduct Stamina  
+				Heavy_P4SkipStaminaCheck:     	    
+        	    	OR Player4Status, 00000010B  
 	    	    ; Heavy is done by healer logic
 	    	    MOV BH, Team2Classes     
 	    	    AND BH, 00000011B 
