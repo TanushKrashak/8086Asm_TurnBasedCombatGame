@@ -1886,8 +1886,8 @@ code SEGMENT
         	    CMP [PlayersStamina+3], DH ; Check if has 30 stamina
 				JC NotEnoughStamina 
 				SUB [PlayersStamina+3], DH ; Deduct Stamina  
-				Heavy_P4SkipStaminaCheck:     	    
-        	    	OR Player4Status, 00000010B  
+				Heavy_P4SkipStaminaCheck:
+        	    	OR Player4Status, 00000010B 
 	    	    ; Heavy is done by healer logic
 	    	    MOV BH, Team2Classes     
 	    	    AND BH, 00000011B 
