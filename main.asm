@@ -366,8 +366,32 @@ code SEGMENT
             ADD [SI], AH
             P4RecoveryFinal:
                 CALL ClampStatInSI
-        RET                      
-
+        RET
+                              
+    ; Update ultimate cooldown of all players after each turn
+    UpdateUltimateCooldown:
+        ; P1 UltC
+        MOV SI, OFFSET Player1Stats
+        ADD SI, 6
+        DEC [SI]
+        CALL ClampStatInSI         ; R.I.P ClampThatMf, you were a terribly made function but still my baby boy
+        ; P2 ultC
+        MOV SI, OFFSET Player2Stats
+        ADD SI, 6
+        DEC [SI]
+        CALL ClampStatInSI
+        ; P3 UltC
+        MOV SI, OFFSET Player3Stats
+        ADD SI, 6
+        DEC [SI]
+        CALL ClampStatInSI
+        ; P4 UltC
+        MOV SI, OFFSET Player4Stats
+        ADD SI, 6
+        DEC [SI]
+        CALL ClampStatInSI
+        RET   
+        
     ; Target an enemy player       
     ; Uses registers DX, AL 
     TargetEnemy:
