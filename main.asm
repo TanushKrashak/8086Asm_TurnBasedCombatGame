@@ -72,7 +72,8 @@ data SEGMENT
 ; STRINGS
 ;==================================================================================  
 	; Player Names
-    PlayerText  DB 'Player ', '$'           
+    PlayerText  DB 'Player ', '$'
+    TeamText    DB 'Team ', '$'           
     
     ; Class Names
     Knight      DB 'Knight', '$'     
@@ -122,8 +123,9 @@ data SEGMENT
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
     HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'  
-    HealerHeavyText				DB 0Dh, 0Ah, ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'   
-    VampHealHeavyText         	DB 0Dh, 0Ah, ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$'
+    HealerHeavyText				DB ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'
+    BurnUltimateText            DB ' has been engulfed in flames, and will burn for the next 4 turns!', 0Dh, 0Ah, '$'   
+    VampHealHeavyText         	DB ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$'
 	HPText						DB 'HP!', 0Dh, 0Ah, '$'
     
     ; Synergy texts
@@ -436,7 +438,7 @@ code SEGMENT
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack
     EvaluateAttack:       	
-    	; Is P1                 	
+    	; Is P1                	
     	CMP CurrentTurn, 0   		 
     	JNE EvalAttack_P2   	          
 	    	; Check P1 Status       
@@ -524,15 +526,16 @@ code SEGMENT
 				MOV EnemyIdentifier, 3; Store enemy ID  			
     	     	JMP FinishAttack      	         	               
         P1Ultimate:
+            MOV AL, Team1Classes            ; Temp store Team1Classes          
+            AND AL, 11110000B               ; Remove P2's class info
             CMP Team1Classes, 01010000B     ; Check if vampire
-            JNZ FinishAttack       
+            JNE P1PyroCheck       
             ; If Vampire, paralyze the target
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
         	AND BL, 11000000B  ; Remove redundant bits
         	CMP BL, 11000000B  ; Check if Atking P4         	   	         
-        	JE P1ParalysesP4
-    	    MOV CurrentTurn, 2 ; Attacking P3    	      
+        	JE P1ParalysesP4   	      
     	    OR Player3Status, 00100000B     ; Paralyze P3 
     	    MOV DX, OFFSET PlayerText
     	    CALL PrintLine
@@ -542,8 +545,7 @@ code SEGMENT
     	    CALL PrintLine
     	    CALL PrintNewLine
     	    RET   	     
-    	    P1ParalysesP4: 
-			    MOV CurrentTurn, 3              ; Attacking P4    	      
+    	    P1ParalysesP4:    	      
         	    OR Player4Status, 00100000B     ; Paralyze P4 
         	    MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -552,7 +554,24 @@ code SEGMENT
         	    MOV DX, OFFSET ParalysisWarning
         	    CALL PrintLine
         	    CALL PrintNewLine
-        	    RET          
+        	    RET    
+        ; Pyromancer Ultimate  
+        P1PyroCheck: 
+            ; Check if P2 is Pyromancer
+            CMP AL, 00100000B
+            JNE FinishAttack
+            ; Set burn bit, and update burn counters for both enemies
+            OR Player3Status, 10000000B
+            MOV P3BurnCounter, 4
+            OR Player4Status, 10000000B
+            MOV P4BurnCounter, 4
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '2'
+            CALL PrintChar
+            MOV DX, OFFSET BurnUltimateText
+            CALL PrintLine
+            JNE FinishAttack
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
@@ -595,14 +614,16 @@ code SEGMENT
 				MOV EnemyIdentifier, 3; Store enemy ID  
     	    	JMP FinishAttack      	         	               
         P2Ultimate:
+            MOV AL, Team1Classes        ; Temp store Team1Classes          
+            AND AL, 00001111B           ; Remove P1's class info
             ; If Vampire, paralyze the target
-            CMP Team1Classes, 00000101B
+            CMP AL, 00000101B
+            JNE P2PyroCheck
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
         	AND BL, 11000000B  ; Remove redundant bits
         	CMP BL, 11000000B  ; Check if Atking P4         	   	         
-        	JE P2ParalysesP4
-    	    MOV CurrentTurn, 2 ; Attacking P3    	      
+        	JE P2ParalysesP4	      
     	    OR Player3Status, 00100000B     ; Paralyze P3 
     	    MOV DX, OFFSET PlayerText
     	    CALL PrintLine
@@ -612,8 +633,7 @@ code SEGMENT
     	    CALL PrintLine
     	    CALL PrintNewLine
     	    RET   	     
-    	    P2ParalysesP4: 
-			    MOV CurrentTurn, 3              ; Attacking P4    	      
+    	    P2ParalysesP4: 	      
         	    OR Player4Status, 00100000B     ; Paralyze P4 
         	    MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -622,7 +642,24 @@ code SEGMENT
         	    MOV DX, OFFSET ParalysisWarning
         	    CALL PrintLine
         	    CALL PrintNewLine 
-        	    RET  
+        	    RET
+        ; Pyromancer Ultimate
+        P2PyroCheck:
+         ; Check if P2 is Pyromancer
+            CMP AL, 00000010B
+            JNE FinishAttack
+            ; Set burn bit, and update burn counters for both enemies
+            OR Player3Status, 10000000B
+            MOV P3BurnCounter, 4
+            OR Player4Status, 10000000B
+            MOV P4BurnCounter, 4
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '2'
+            CALL PrintChar
+            MOV DX, OFFSET BurnUltimateText
+            CALL PrintLine
+            JNE FinishAttack  
         ; P3 Attacks	      
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
@@ -665,9 +702,10 @@ code SEGMENT
         	     MOV EnemyIdentifier, 0 ; Store enemy ID      	     
         	     JMP FinishAttack     	         	               
         P3Ultimate:
-            ; If Vampire, paralyze the target
-            CMP Team2Classes, 01010000B
-            JNE FinishAttack
+            MOV AL, Team2Classes        ; Temp store Team2Classes
+            AND AL, 11110000B           ; Remove P4's class info
+            CMP AL, 01010000B           ; If Vampire, paralyze the target
+            JNE P3PyroCheck
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn
         	AND BL, 00000000B  ; Remove redundant bits
@@ -692,6 +730,22 @@ code SEGMENT
         	    CALL PrintLine
         	    CALL PrintNewLine
         	    RET
+        ; Pyromancer Ultimate
+        P3PyroCheck:         
+            CMP AL, 00100000B     ; Check if P3 is Pyromancer
+            JNE FinishAttack
+            ; Set burn bit, and update burn counters for both enemies
+            OR Player1Status, 10000000B
+            MOV P1BurnCounter, 4
+            OR Player2Status, 10000000B
+            MOV P2BurnCounter, 4
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '1'
+            CALL PrintChar
+            MOV DX, OFFSET BurnUltimateText
+            CALL PrintLine
+            JNE FinishAttack  
         ; P4 Attacks	      
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
@@ -734,9 +788,11 @@ code SEGMENT
         	     MOV EnemyIdentifier, 1 ; Store enemy ID     	     
         	     JMP FinishAttack 
         P4Ultimate:
+            MOV AL, Team2Classes        ; Temp store Team2Classes
+            AND AL, 00001111B           ; Remove P3's class info
             ; If Vampire, paralyze the target
-            CMP Team2Classes, 00000101B
-            JNE FinishAttack
+            CMP AL, 00000101B
+            JNE P4PyroCheck
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn
         	AND BL, 00000000B  ; Remove redundant bits
@@ -760,7 +816,23 @@ code SEGMENT
         	    MOV DX, OFFSET ParalysisWarning
         	    CALL PrintLine
         	    CALL PrintNewLine
-        	    RET	     
+        	    RET	 
+        ; Pyromancer Ultimate
+        P4PyroCheck:         
+            CMP AL, 00000010B     ; Check if P4 is Pyromancer
+            JNE FinishAttack
+            ; Set burn bit, and update burn counters for both enemies
+            OR Player1Status, 10000000B
+            MOV P1BurnCounter, 4
+            OR Player2Status, 10000000B
+            MOV P2BurnCounter, 4
+            MOV DX, OFFSET TeamText
+            CALL PrintLine
+            MOV DX, '1'
+            CALL PrintChar
+            MOV DX, OFFSET BurnUltimateText
+            CALL PrintLine
+            JNE FinishAttack      
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
 			CALL LoadPlayerStatsInDI
@@ -1347,17 +1419,17 @@ code SEGMENT
 	        CMP CurrentTurn, 0  
 	        JNE CheckP2Pyromancer
 	        OR Team1Classes, 00100000B
-	        JMP Healer_Final  
+	        JMP Pyromancer_Final  
 	        CheckP2Pyromancer:        
     	        CMP CurrentTurn, 1
     	        JNE CheckP3Pyromancer
     	        OR Team1Classes, 00000010B
-    	        JMP Healer_Final
+    	        JMP Pyromancer_Final
     	    CheckP3Pyromancer:
     	        CMP CurrentTurn, 2
     	        JNE MakeP4Pyromancer
     	        OR Team2Classes, 00100000B
-    	        JMP Healer_Final
+    	        JMP Pyromancer_Final
             MakeP4Pyromancer:
                 OR Team2Classes, 00000010B
             Pyromancer_Final: 
@@ -1738,30 +1810,48 @@ code SEGMENT
     	    ClampSection:
     	        CALL ClampHP 
     	        JMP PrintHealText 
-        UltimateAttack:    
+        UltimateAttack:   
             CMP CurrentTurn, 0
             JNE UltimateMChoice_1
             OR Player1Status, 00000001B 
+            ; Pyromancer ultimate targets both enemies, no need to give target choice
+            MOV AL, Team1Classes
+            AND AL, 11110000B
+            CMP AL, 00100000B
+            JE AttackFinalNoChoice
             JMP AttackFinal
             UltimateMChoice_1:
                 CMP CurrentTurn, 1
                 JNE UltimateMChoice_2
                 OR Player2Status, 00000001B
+                MOV AL, Team1Classes
+                AND AL, 00001111B
+                CMP Team1Classes, 00000010B
+                JE AttackFinalNoChoice
                 JMP AttackFinal
             UltimateMChoice_2:
                 CMP CurrentTurn, 2
                 JNE UltimateMChoice_3
                 OR Player3Status, 00000001B
+                MOV AL, Team2Classes
+                AND AL, 11110000B
+                CMP Team2Classes, 00100000B
+                JE AttackFinalNoChoice
                 JMP AttackFinal
             UltimateMChoice_3:
                 OR Player4Status, 00000001B
+                MOV AL, Team2Classes
+                AND AL, 00001111B
+                CMP Team2Classes, 00000010B
+                JE AttackFinalNoChoice
                 JMP AttackFinal           
     	; Attack Chosen, In case some common finishing
     	; logic is required         
     	AttackFinal:       		
     		CALL TargetEnemy
-    		CALL PrintNewLine 
-    	    RET      
+    		AttackFinalNoChoice:
+        		CALL PrintNewLine 
+        	    RET      
     	; Not Enough Stamina             
  		NotEnoughStamina:
  			MOV DX, OFFSET NotEnoughStaminaText
