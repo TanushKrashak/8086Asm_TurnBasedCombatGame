@@ -2000,8 +2000,9 @@ code SEGMENT
     	RET
     
     ; Set synergies for both teams. Must be called at the end of each team's class selection phase. Relies on Team1Classes and Team2Classes to be properly masked	
-    UpdateSynergy:  
-        CMP CurrentTurn, 3
+    UpdateSynergy: 
+    INT 20h 
+        CMP CurrentTurn, 2
         JNC LoadTeam2Classes 
         MOV BL, Team1Classes
         MOV SI, OFFSET Player1Stats
@@ -2012,7 +2013,7 @@ code SEGMENT
             MOV SI, OFFSET Player3Stats
             MOV DI, OFFSET Player4Stats 
         UpdateSynergy_BeginChecks:
-        ; Nobles Oblige, both knights 
+        ; Nobless Oblige, both knights 
         TEST BL, 11111111B 
         JNZ CheckGreatWall
         ; Increase LDmg and HDmg of both knights by 10
@@ -2088,7 +2089,7 @@ code SEGMENT
                 CALL PrintLine   
                 OR TeamSynergies, 00000110B
         UpdateSynergy_Final:
-            CMP CurrentTurn, 3
+            CMP CurrentTurn, 2
             JC ShiftSynergyLeft
             RET
             ShiftSynergyLeft:
@@ -2183,10 +2184,10 @@ main:
         CALL PrintPlayerStats    
         CALL PrintNewLine 
         CALL PrintNewLine  
-        CALL UpdateCurrentTurn
-
+        
     CALL UpdateSynergy
     CALL ApplyVanguardPassive
+    CALL UpdateCurrentTurn
 ;                        
 	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
 	; p1 	
@@ -2211,7 +2212,7 @@ main:
 ;	CALL InitializePlayerStats                        
 ;    CALL UpdateCurrentTurn 
 ;    CALL UpdateSynergy 
-;    MOV CurrentTurn, 0   
+    MOV CurrentTurn, 0   
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
