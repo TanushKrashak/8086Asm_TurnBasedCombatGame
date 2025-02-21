@@ -378,6 +378,18 @@ code SEGMENT
                 CALL ClampStatInSI
         RET
                               
+    ; Update vitality cooldown of both teams after each turn    
+    UpdateVitality:
+        ; Team 1 vitality updation
+        MOV SI, OFFSET Team1Vitality
+        DEC [SI]
+        CALL ClampStatInSI
+        ; Team 2 vitality updation
+        MOV SI, OFFSET Team2Vitality
+        DEC [SI]
+        CALL ClampStatInSI
+        RET   
+
     ; Update ultimate cooldown of all players after each turn
     UpdateUltimateCooldown:
         ; P1 UltC
@@ -400,7 +412,7 @@ code SEGMENT
         ADD SI, 6
         DEC [SI]
         CALL ClampStatInSI
-        RET   
+        RET  
         
     ; Target an enemy player       
     ; Uses registers DX, AL 
