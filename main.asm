@@ -338,6 +338,7 @@ code SEGMENT
 ; COMBAT FUNCTIONS
 ;==================================================================================  	 
     ; Restore Stamina of each player after every turn by STGainPerTurn. Increases stamina of a dead player too, as it doesn't matter since they can't act and upon revival, stamina is restored to 100 regardless
+    ; USES Registers SI, AH
     RecoverStamina:
         MOV AL, STGainPerTurn
         MOV AH, KnightExtraSTGain
@@ -379,7 +380,8 @@ code SEGMENT
                 CALL ClampStatInSI
         RET
                               
-    ; Update vitality cooldown of both teams after each turn    
+    ; Update vitality cooldown of both teams after each turn  
+    ; USES Registers SI  
     UpdateVitality:
         ; Team 1 vitality updation
         MOV SI, OFFSET Team1Vitality
@@ -391,7 +393,8 @@ code SEGMENT
         CALL ClampStatInSI
         RET   
 
-    ; Update ultimate cooldown of all players after each turn
+    ; Update ultimate cooldown of all players after each turn  
+    ; USES Registers SI
     UpdateUltimateCooldown:
         ; P1 UltC
         MOV SI, OFFSET Player1Stats
@@ -483,7 +486,8 @@ code SEGMENT
                         RET 
                         
     ; Attacks the selected enemy
-    ; Priority: Ultimate attack, attack
+    ; Priority: Ultimate attack, attack  
+    ; USES Registers DI, AX, BL, DX, CL
     EvaluateAttack:       	
     	; Is P1                	
     	CMP CurrentTurn, 0   		 
@@ -1339,7 +1343,8 @@ code SEGMENT
     
     ; Func to deal damage, needs Damage to be moved to DamageToBeDealt    
     ; Enemy Stats should be Loaded on DI      
-    ; Enemy Number should be Loaded on BH
+    ; Enemy Number should be Loaded on BH  
+    ; USES Registers SI, DI, AX, BX, DX
     DoDamage:     	                	
     	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI    	      
     	CALL UpdateCrit               	    	   
@@ -1597,7 +1602,8 @@ code SEGMENT
 	   	RET                        	  
        
     ; Set block bit in CurrentTurnStatus for player with current turn.
-    ; Must be called after AlternateTurn, as this function does NOT check the AliveAndHealStatus block
+    ; Must be called after AlternateTurn, as this function does NOT check the AliveAndHealStatus block   
+    ; USES Registers AX
     SetBlock:
         MOV AL, CurrentTurnStats
         MOV AH, CurrentTurn
@@ -1623,7 +1629,8 @@ code SEGMENT
             MOV CurrentTurnStats, AL 
             RET   
     
-    ; Update AliveAndHealStatus after every turn by checking HP of every player
+    ; Update AliveAndHealStatus after every turn by checking HP of every player  
+    ; USES Registers AX
     UpdateStatusOnDeath:
         MOV AL, AliveAndHealStatus
         MOV AH, Player1Stats
@@ -1651,6 +1658,7 @@ code SEGMENT
                                                                                                          
     ; Generic function to clamp value between 0 and 100, expects target value in SI
     ; Must always be called immediately after subtraction to prevent against the SF being overwritten later 
+    ; USES Registers AH, SI
     ClampStatInSI:
         LAHF
         TEST AH, 10000000B          ; Test whether sign flag is set
@@ -1664,7 +1672,8 @@ code SEGMENT
         ClampStatInSI_End:
             RET
 
-    ; Apply Burn and Poison effects after every turn, update burn and poison counters accordingly 
+    ; Apply Burn and Poison effects after every turn, update burn and poison counters accordingly
+    ; USES Registers BX, SI, DX 
     ApplyDOT:  
         MOV BL, BurnDamage
         MOV BH, PoisonDamage
@@ -1815,6 +1824,7 @@ code SEGMENT
             RET    
         
     ; Loads current player's stats into DI
+    ; USES Registers DI
     LoadPlayerStatsInDI:
 	    ; Check Turn 0 (Player 1)  
 		CMP CurrentTurn, 0
@@ -1841,7 +1851,7 @@ code SEGMENT
 			RET                        
         
     ; Updates critical bit in CurrentTurnStatus for players 
-    ; USES DX, AH and AL
+    ; USES Registers DX, AH, AL       
     UpdateCrit:
         ; Determine current player
         CALL LoadPlayerStatsInDI                  
@@ -1895,6 +1905,7 @@ code SEGMENT
         	RET 
 
 	; Circular increments current turn
+	; Uses Registers NONE
      UpdateCurrentTurn:
         INC CurrentTurn
         CMP CurrentTurn, 4
@@ -1905,6 +1916,7 @@ code SEGMENT
             RET
 	
 	; Progress player turns
+	; Uses Registers DX, AH
 	 AlternateTurn:
 	 	; REVISE THIS DH LOGIC!
 ;        ; Each recursive call increments DH by 1. At DH = 4 (0->1->2->3-->4), we know that 4 recursions were already made. In this case, all players are dead
@@ -1948,7 +1960,8 @@ code SEGMENT
         RET             
      
 	; Function to get the player's class, stores result
-	; in the BL Register     
+	; in the BL Register
+	; Uses Registers BX, DI, DX
 	SelectPlayerClass:    
 	    ; Get User Input
 	    CALL TakeCharInput
@@ -2100,6 +2113,7 @@ code SEGMENT
 	 
 	; Loads Player Stats based on the DI Value
 	; Player Has To Be Loaded inside SI	
+	; Uses Registers AL, DI, CX, SI
     InitializePlayerStats:           
         MOV CX, 7                    ; Loop counter (7 elements)        
 	    InitializePlayerStatsLoop:
@@ -2110,7 +2124,8 @@ code SEGMENT
 	        LOOP InitializePlayerStatsLoop  ; Repeat until CX = 0
 	    RET
 	          
-	; Apply Vanguard's passive (+5 Def)  to teammates
+	; Apply Vanguard's passive (+5 Def)  to teammates  
+	; Uses Registers NONE
 	ApplyVanguardPassive:
 	    TEST Team1Classes, 01000000B    ; Check if P1 is Vanguard
 	    JZ ApplyP2Vanguard
@@ -2130,7 +2145,8 @@ code SEGMENT
 	    ApplyVanguardPassive_Final:
 	        RET  
 	        
-	; Give Player choice for in Combat, Loads Choice in AL    
+	; Give Player choice for in Combat, Loads Choice in AL 
+	; Uses Registers DX, AL, BX, SI, DI
 	GivePlayerMainChoice:
 		CALL PrintPlayerName
 		CALL PrintNewLine 				
@@ -2587,7 +2603,8 @@ code SEGMENT
     	    JMP GivePlayerMainChoice   
     	RET
     
-    ; Set synergies for both teams. Must be called at the end of each team's class selection phase. Relies on Team1Classes and Team2Classes to be properly masked	
+    ; Set synergies for both teams. Must be called at the end of each team's class selection phase. Relies on Team1Classes and Team2Classes to be properly masked
+    ; Uses Registers BL, SI, DI, DX, CL	
     UpdateSynergy:     
         CMP CurrentTurn, 2
         JNC LoadTeam2Classes 
@@ -2685,17 +2702,13 @@ code SEGMENT
                 RET
             
     	                                                                            	    	   
-main:
+main:                                                                                     
+    MOV AX, data
+    MOV DS, AX  
 ;==================================================================================
 ; MAIN FUNCTION
-;================================================================================== 
-    MOV AX, data
-    MOV DS, AX        
-    
-    ; Print P1 MSG     
-					;====; 
-					; COMMENTED OUT FOR DEBUGGING, NO NEED TO KEEP ON SELECTING CLASSES OVER AND OVER!!!!!
-					;====;  
+;==================================================================================          
+    ; Print P1 MSG      
     MainP1ClassSelection:          
     	CALL PrintPlayerName    
     	CALL PrintNewLine   		          
@@ -2774,8 +2787,7 @@ main:
         
     CALL UpdateSynergy
     CALL ApplyVanguardPassive
-    CALL UpdateCurrentTurn
-;                        
+    CALL UpdateCurrentTurn                        
 	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
 	; p1 	
 ;	CALL SelectPlayerClass
@@ -2875,18 +2887,17 @@ main:
         	    CALL PrintLine  
         	    AND Player4Status, 11011111B
         	    CALL AlternateTurn    		         
-;        ; Apply DOT, update AliveAndHealStatus if any player is dead
-;        CALL UpdateStatusOnDeath
+        ; Apply DOT, update AliveAndHealStatus if any player is dead
+        ;CALL UpdateStatusOnDeath
         LoopFinalBlock:
-        CALL EvaluateAttack
-        CALL ApplyDOT 
-        ; Check if either team is dead
-        TEST AliveAndHealStatus, 11000000B
-        JZ Team2Victory
-        TEST AliveAndHealStatus, 00110000B
-        JZ Team1Victory
-        JMP GameLoop 
-    
+	        CALL EvaluateAttack
+	        CALL ApplyDOT 
+	        ; Check if either team is dead
+	        TEST AliveAndHealStatus, 11000000B
+	        JZ Team2Victory
+	        TEST AliveAndHealStatus, 00110000B
+	        JZ Team1Victory
+	        JMP GameLoop    
     Team1Victory:  
     	MOV DX, OFFSET Team1Won
     	CALL PrintLine 
@@ -2915,8 +2926,7 @@ main:
         MOV MatchTurn, 0
         MOV TeamSynergies, 00000000B    
         JMP main   
-        
-        
+                
     EndGame:
 		MOV AH, 4Ch        ; DOS function to terminate program
 		INT 21h            ; Exit program
