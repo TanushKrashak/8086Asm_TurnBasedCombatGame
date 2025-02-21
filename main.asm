@@ -133,7 +133,8 @@ data SEGMENT
     HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'  
     HealerHeavyText				DB ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'
     BurnUltimateText            DB ' has been engulfed in flames, and will burn for the next 4 turns!', 0Dh, 0Ah, '$'   
-    VampHealHeavyText         	DB ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$'
+    VampHealHeavyText         	DB ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$' 
+    VampHealSynHeavyText        DB 'The Count Shares Their Feast, Offering Lifeblood To The Ally In Dark Generosity. Restoring ','$'
 	HPText						DB 'HP!', 0Dh, 0Ah, '$'                                                   
 	KnightUltimateText 			DB "The Knight's Valor Shone Bright, Shielding All From Fatigue, Granting ", '$'
 	KnightUltimateRemText		DB ' Unyielding Endurance For 2 Turns.',0Dh,0Ah, '$'
@@ -1428,7 +1429,7 @@ code SEGMENT
     	    MOV AL, 50 				; Check if vamp was lucky
     	    CALL GetChance
     	    JNC  DoDamage_NotVampireOrHeavy ; Did not get lucky    	            	        	
-    	    MOV AL, BH 				; Revert AL
+    	    MOV AL, BH 				; Revert AL    	    
     		TEST Player1Status, 00000010B
     		JNZ HeavyVampHealLogic    		    		
     		JMP DoDamage_NotVampireOrHeavy       	    	    
@@ -1482,16 +1483,87 @@ code SEGMENT
 	    		JMP DoDamage_NotVampireOrHeavy 	    		    		    	    	
 			; Vamp check Ends  
 			HeavyVampHealLogic:
-				MOV AX, DamageToBeDealt
-				CALL LoadPlayerStatsInDI 
-				; Print Vampire Heal Text
-	    		CALL PrintPlayerName
-	    		MOV DX, OFFSET VampHealHeavyText
-	    		CALL PrintLine 
-	    		MOV DL, AL      	        	
-	    		CALL PrintInt
-	    		MOV DX, OFFSET HPText
-	    		CALL PrintLine   
+				MOV AX, DamageToBeDealt    							
+				CALL LoadPlayerStatsInDI   
+				; Check Synergy           
+				CMP CurrentTurn, 0
+			    JE HeavyVampHealLogic_Team1Syn
+			    CMP CurrentTurn, 1
+			    JE HeavyVampHealLogic_Team1Syn
+			    JMP HeavyVampHealLogic_CheckOtherTeam     
+			    HeavyVampHealLogic_Team1Syn:
+					MOV BL, TeamSynergies
+	    			CMP BL, 01010000b  ; Check if TeamSynergies for T1 is 5  
+	    			JE HeavyVampHealLogic_Team1SynApplied 
+	    			JMP HeavyVampHealLogic_NormalHeal
+	    		HeavyVampHealLogic_Team1SynApplied:
+	    			SHR AX, 1  ; Halve the damage
+	    			; Print Vampire Syn Heal Text
+		    		CALL PrintPlayerName
+		    		MOV DX, OFFSET VampHealSynHeavyText
+		    		CALL PrintLine 
+		    		MOV DL, AL      	        	
+		    		CALL PrintInt
+		    		MOV DX, OFFSET HPText
+		    		CALL PrintLine 	 					
+					; Healing Other Char 
+					CMP CurrentTurn, 0 
+					JNE HeavyVampHealLogic_Team1SynApplied_P2Vamp
+					MOV CurrentTurn, 1					
+					CALL LoadPlayerStatsInDI   
+					MOV SI, DI ; Put the stats into SI so that it can be clamped
+		    		ADD [SI], AL	        		
+					CALL ClampStatInSI 
+					MOV CurrentTurn, 0         ; revert Current Turn
+					CALL LoadPlayerStatsInDI ; Load Current Player Stats
+					JMP HeavyVampHealLogic_NormalHeal					    
+					HeavyVampHealLogic_Team1SynApplied_P2Vamp:
+						MOV CurrentTurn, 0  					
+                        CALL LoadPlayerStatsInDI   
+						MOV SI, DI ; Put the stats into SI so that it can be clamped
+			    		ADD [SI], AL	        		
+						CALL ClampStatInSI 
+						MOV CurrentTurn, 1         ; revert Current Turn
+						CALL LoadPlayerStatsInDI ; Load Current Player Stats
+						JMP HeavyVampHealLogic_NormalHeal
+				; Team 1 Synergy Logic Ends	
+	    		HeavyVampHealLogic_CheckOtherTeam:
+	    			MOV BL, TeamSynergies
+	    			CMP BL, 00000101b  ; Check if TeamSynergies for T2 is 5  
+	    			JE HeavyVampHealLogic_Team2SynApplied 
+	    			JMP HeavyVampHealLogic_NormalHeal 
+	    			HeavyVampHealLogic_Team2SynApplied:
+		    			SHR AX, 1  ; Halve the damage
+		    			; Print Vampire Syn Heal Text
+			    		CALL PrintPlayerName
+			    		MOV DX, OFFSET VampHealSynHeavyText
+			    		CALL PrintLine 
+			    		MOV DL, AL      	        	
+			    		CALL PrintInt
+			    		MOV DX, OFFSET HPText
+			    		CALL PrintLine 	 
+						; Healing Other Char 
+						CMP CurrentTurn, 2 
+						JNE HeavyVampHealLogic_NormalHeal
+						MOV CurrentTurn, 3						
+						CALL LoadPlayerStatsInDI   
+						MOV SI, DI ; Put the stats into SI so that it can be clamped
+			    		ADD [SI], AL	        		
+						CALL ClampStatInSI 
+						MOV CurrentTurn, 2         ; revert Current Turn
+						CALL LoadPlayerStatsInDI ; Load Current Player Stats
+						JMP HeavyVampHealLogic_NormalHeal					    
+						HeavyVampHealLogic_Team2SynApplied_P4Vamp:
+							MOV CurrentTurn, 2  					
+	                        CALL LoadPlayerStatsInDI   
+							MOV SI, DI ; Put the stats into SI so that it can be clamped
+				    		ADD [SI], AL	        		
+							CALL ClampStatInSI 
+							MOV CurrentTurn, 3         ; revert Current Turn
+							CALL LoadPlayerStatsInDI ; Load Current Player Stats
+							JMP HeavyVampHealLogic_NormalHeal
+				; Team 2 Synergy Logic Ends
+	    		HeavyVampHealLogic_NormalHeal:	
 	    		; Heal
 	    		MOV SI, DI ; Put the stats into SI so that it can be clamped
 	    		ADD [SI], AL	        		
