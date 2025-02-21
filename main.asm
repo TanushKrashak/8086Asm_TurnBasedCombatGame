@@ -123,7 +123,9 @@ data SEGMENT
     UltimateNotReadyText        DB 'Your ultimate ability is not yet ready!', '$' 
     SelfHealText                DB 'Health restored by 5', 0Dh, 0Ah, '$'   
     BurnDamageText              DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
-    PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$' 
+    BurnInflictionText          DB ' has been engulfed in flames!', 0Dh, 0Ah, '$'
+    PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'
+    PoisonInflictionText        DB ' has been poisoned!', 0Dh, 0Ah, '$' 
     ParalysisWarning            DB ' has been inflicted with vampiric cum, and will be paralyzed for the next turn!', 0Dh, 0Ah, '$'   
     ParalysisText               DB ' is paralyzed and couldn`t move!', 0Dh, 0Ah, '$'  
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
@@ -524,19 +526,53 @@ code SEGMENT
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
         	MOV DamageToBeDealt, AX
+        	MOV CL, Team1Classes            ; Load Team1Classes to check for Pyro
+        	AND CL, 11110000B               ; Remove P2's class info
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
-        	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
-        	AND BL, 11000000B  ; Remove redundant bits
-        	CMP BL, 11000000B  ; Check if Atking P4         	   	         
+        	MOV DL, CurrentTurn             ; Temp Store CurrentTurn        
+        	AND BL, 11000000B               ; Remove redundant bits
+        	CMP BL, 11000000B               ; Check if Atking P4         	   	         
         	JE P1StoreLightAtkDmgForP4
-        	     MOV CurrentTurn, 2 ; Attacking P3  
-        	     MOV EnemyIdentifier, 2 ; Store enemy ID  
-        	     JMP FinishAttack
-        	P1StoreLightAtkDmgForP4:        	
-        	     MOV CurrentTurn, 3 ; Attacking P4  
-        	     MOV EnemyIdentifier, 3 ; Store enemy ID    	    
-        	     JMP FinishAttack	       
+    	    CMP CL, 00100000B               ; Check is P1 is pyromancer
+    	    JNE P1StoreLightAtkDmgForP3_Final    ; Not pyro, jump away!
+    	    ; P1 is pyromancer
+    	    CALL GetChance
+    	    CMP DL, 20
+    	    JG P1StoreLightAtkDmgForP3_Final        ; Burn attempt failed 
+    	    ; Apply burn to P3
+    	    OR Player3Status, 10000000B
+    	    ADD P3BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '3'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine
+    	    P1StoreLightAtkDmgForP3_Final:
+        	    MOV CurrentTurn, 2              ; Attacking P3  
+        	    MOV EnemyIdentifier, 2          ; Store enemy ID  
+                JMP FinishAttack
+        	P1StoreLightAtkDmgForP4:
+        	    CMP CL, 00100000B
+        	    JNE P1StoreLightAtkDmgForP4_Final
+        	    ; P1 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20
+        	    JG P1StoreLightAtkDmgForP4_Final        ; Burn attempt failed 
+        	    ; Apply burn to P4
+        	    OR Player4Status, 10000000B
+        	    ADD P4BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '4'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    P1StoreLightAtkDmgForP4_Final:        	
+            	    MOV CurrentTurn, 3 ; Attacking P4  
+            	    MOV EnemyIdentifier, 3 ; Store enemy ID    	    
+            	    JMP FinishAttack	       
         P1HeavyAttack:  
         	TEST Player1Status, 00000010B ; Check if Heavy Attack 
 			JZ P1Ultimate        	
@@ -544,19 +580,53 @@ code SEGMENT
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
+        	MOV CL, Team1Classes            ; Load Team1Classes to check for Pyro
+        	AND CL, 11110000B               ; Remove P2's class info        	
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
         	AND BL, 11000000B  ; Remove redundant bits
         	CMP BL, 11000000B  ; Check if Atking P4         	   	         
         	JE P1StoreHeavyAtkDmgForP4
+        	CMP CL, 00100000B                   ; Check if P1 is a pyromancer
+    	    JNE P1StoreHeavyAtkDmgForP3_Final
+    	    ; P2 is pyromancer
+    	    CALL GetChance
+    	    CMP DL, 20                  
+    	    JG P1StoreHeavyAtkDmgForP3_Final        ; Burn attempt failed 
+    	    ; Apply burn to P3
+    	    OR Player3Status, 10000000B
+    	    ADD P3BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '3'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine
+    	    P1StoreHeavyAtkDmgForP3_Final:
 	    	     MOV CurrentTurn, 2 ; Attacking P3    	      
 	    	     MOV EnemyIdentifier, 2 ; Store enemy ID 
 	    	     JMP FinishAttack     	     
-    	    P1StoreHeavyAtkDmgForP4: 
-			    MOV CurrentTurn, 3 ; Attacking P3    	      
-				MOV EnemyIdentifier, 3; Store enemy ID  			
-    	     	JMP FinishAttack      	         	               
+    	    P1StoreHeavyAtkDmgForP4:
+    	        CMP CL, 00100000B                      ; Check if P1 is a pyromancer
+        	    JNE P1StoreHeavyAtkDmgForP4_Final
+        	    ; P1 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20
+        	    JG P1StoreHeavyAtkDmgForP4_Final        ; Burn attempt failed 
+        	    ; Apply burn to P4
+        	    OR Player4Status, 10000000B
+        	    ADD P4BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '4'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    P1StoreHeavyAtkDmgForP4_Final: 
+    			    MOV CurrentTurn, 3 ; Attacking P3    	      
+    				MOV EnemyIdentifier, 3; Store enemy ID  			
+        	     	JMP FinishAttack      	         	               
         P1Ultimate:
             MOV AL, Team1Classes            ; Temp store Team1Classes          
             AND AL, 11110000B               ; Remove P2's class info
@@ -653,19 +723,53 @@ code SEGMENT
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
         	MOV DamageToBeDealt, AX
+            MOV CL, Team1Classes            ; Load Team1Classes to check for Pyro
+        	AND CL, 00001111B               ; Remove P1's class info
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
         	AND BL, 00110000B  ; Remove redundant bits
-        	CMP BL, 00110000B  ; Check if Atking P4         	   	         
+        	CMP BL, 11000000B               ; Check if Atking P4        ;TODO: FIX! ANDing BL's higher 2 bits with 00 will always make 'CMP BL, 11000000B' True
         	JE P2StoreLightAtkDmgForP4
+        	CMP CL, 00000010B               ; Check if P2 is a pyromancer
+    	    JNE P2StoreLightAtkDmgForP3_Final
+    	    ; P2 is pyromancer
+    	    CALL GetChance
+    	    CMP DL, 20                  
+    	    JG P2StoreLightAtkDmgForP3_Final        ; Burn attempt failed 
+    	    ; Apply burn to P3
+    	    OR Player3Status, 10000000B
+    	    ADD P3BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '3'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine         	   	         
+        	P2StoreLightAtkDmgForP3_Final:
         	     MOV CurrentTurn, 2 ; Attacking P3  
         	     MOV EnemyIdentifier, 2 ; Store enemy ID 
-        	     JMP FinishAttack 
-        	P2StoreLightAtkDmgForP4:        	
-        	     MOV CurrentTurn, 3 ; Attacking P4  
-        	     MOV EnemyIdentifier, 3 ; Store enemy ID     	    
-        	     JMP FinishAttack	       
+        	     JMP FinishAttack
+        	P2StoreLightAtkDmgForP4:     
+                CMP CL, 00100000B                      ; Check if P2 is a pyromancer
+        	    JNE P2StoreLightAtkDmgForP4_Final
+        	    ; P2 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20
+        	    JG P2StoreLightAtkDmgForP4_Final        ; Burn attempt failed 
+        	    ; Apply burn to P4
+        	    OR Player4Status, 10000000B
+        	    ADD P4BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '4'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine 
+            	P2StoreLightAtkDmgForP4_Final:        	
+            	     MOV CurrentTurn, 3 ; Attacking P4  
+            	     MOV EnemyIdentifier, 3 ; Store enemy ID     	    
+            	     JMP FinishAttack	       
         P2HeavyAttack:  
         	TEST Player2Status, 00000010B ; Check if Heavy Attack 
 			JZ P2Ultimate        	
@@ -673,19 +777,53 @@ code SEGMENT
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
+        	MOV CL, Team1Classes            ; Load Team1Classes to check for Pyro
+        	AND CL, 00001111B               ; Remove P1's class info
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
         	AND BL, 00110000B  ; Remove redundant bits
-        	CMP BL, 00110000B  ; Check if Atking P4         	   	         
+        	CMP BL, 00110000B  ; Check if Atking P4                      
         	JE P2StoreHeavyAtkDmgForP4
+        	CMP CL, 00000010B               ; Check if P2 is a pyromancer
+    	    JNE P2StoreHeavyAtkDmgForP3_Final
+    	    ; P2 is pyromancer
+    	    CALL GetChance
+    	    CMP DL, 20                  
+    	    JG P2StoreHeavyAtkDmgForP3_Final        ; Burn attempt failed 
+    	    ; Apply burn to P3
+    	    OR Player3Status, 10000000B
+    	    ADD P3BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '3'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine
+    	    P2StoreHeavyAtkDmgForP3_Final:            	   	         
 	    	     MOV CurrentTurn, 2 ; Attacking P3    	      
 	    	     MOV EnemyIdentifier, 2 ; Store enemy ID 
 	    	     JMP FinishAttack     	     
-    	     P2StoreHeavyAtkDmgForP4: 
-			    MOV CurrentTurn, 3 ; Attacking P3    	      
-				MOV EnemyIdentifier, 3; Store enemy ID  
-    	    	JMP FinishAttack      	         	               
+    	     P2StoreHeavyAtkDmgForP4:
+    	        CMP CL, 00000010B                      ; Check if P2 is a pyromancer
+        	    JNE P2StoreHeavyAtkDmgForP4_Final
+        	    ; P2 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20
+        	    JG P2StoreHeavyAtkDmgForP4_Final        ; Burn attempt failed 
+        	    ; Apply burn to P4
+        	    OR Player4Status, 10000000B
+        	    ADD P4BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '4'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    P2StoreHeavyAtkDmgForP4_Final:  
+    			    MOV CurrentTurn, 3 ; Attacking P3    	      
+    				MOV EnemyIdentifier, 3; Store enemy ID  
+        	    	JMP FinishAttack      	         	               
         P2Ultimate:
             MOV AL, Team1Classes        ; Temp store Team1Classes          
             AND AL, 00001111B           ; Remove P1's class info
@@ -781,40 +919,108 @@ code SEGMENT
         	CALL LoadPlayerStatsInDI       	
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
-        	MOV DamageToBeDealt, AX
+        	MOV DamageToBeDealt, AX                         
+        	MOV CL, Team2Classes    ; Temp store Team2Classes
+        	AND CL, 11110000B        ; Remove P4's class info        	
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
         	AND BL, 00000000B  ; Remove redundant bits
-        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
-        	JE P3StoreLightAtkDmgForP1
+        	CMP BL, 00000000B  ; Check if Atking P1
+        	JNE P3StoreLightAtkDmgForP2
+        	CMP CL, 00100000B               ; Check if P3 is a pyromancer
+    	    JNE P3StoreLightAtkDmgForP1_Final
+    	    ; P3 is pyromancer
+    	    CALL GetChance
+    	    CMP DL, 20                  
+    	    JG P3StoreLightAtkDmgForP1_Final        ; Burn attempt failed 
+    	    ; Apply burn to P1
+    	    OR Player1Status, 10000000B
+    	    ADD P1BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '1'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine            	   	         
+        	P3StoreLightAtkDmgForP1_Final:
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID 
         	     JMP FinishAttack  
-        	P3StoreLightAtkDmgForP1:        	
-        	     MOV CurrentTurn, 1 ; Attacking P2 
-        	     MOV EnemyIdentifier, 1 ; Store enemy ID         	    	   
-        	     JMP FinishAttack	       
+        	P3StoreLightAtkDmgForP2:
+            	CMP CL, 00100000B               ; Check if P3 is a pyromancer
+        	    JNE P3StoreLightAtkDmgForP2_Final
+        	    ; P3 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20                  
+        	    JG P3StoreLightAtkDmgForP2_Final        ; Burn attempt failed 
+        	    ; Apply burn to P2
+        	    OR Player2Status, 10000000B
+        	    ADD P2BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '2'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    P3StoreLightAtkDmgForP2_Final:          	
+            	     MOV CurrentTurn, 1 ; Attacking P2 
+            	     MOV EnemyIdentifier, 1 ; Store enemy ID         	    	   
+            	     JMP FinishAttack	       
         P3HeavyAttack:  
         	TEST Player3Status, 00000010B ; Check if Heavy Attack 
 			JZ P3Ultimate        	
         	CALL LoadPlayerStatsInDI         	      
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
-        	MOV DamageToBeDealt, AX
+        	MOV DamageToBeDealt, AX 
+        	MOV CL, Team2Classes        ; Temp store Team2Classes
+        	AND CL, 11110000B           ; Remove P4's class info
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
-        	AND BL, 00000000B  ; Remove redundant bits
+        	AND BL, 00000000B  ; Remove redundant bits    
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
-        	JE P3StoreHeavyAtkDmgForP1
+        	JNE P3StoreHeavyAtkDmgForP2
+        	CMP CL, 00100000B
+        	JNE P3StoreHeavyAtkDmgForP1_Final
+        	; P3 is pyromancer
+    	    CALL GetChance
+    	    CMP DL, 20                  
+    	    JG P3StoreHeavyAtkDmgForP1_Final        ; Burn attempt failed 
+    	    ; Apply burn to P1
+    	    OR Player1Status, 10000000B
+    	    ADD P1BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '1'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine
+    	    P3StoreHeavyAtkDmgForP1_Final:
         	     MOV CurrentTurn, 1 ; Attacking P1 
         	     MOV EnemyIdentifier, 1 ; Store enemy ID  
         	     JMP FinishAttack 
-        	P3StoreHeavyAtkDmgForP1:        	
-        	     MOV CurrentTurn, 0 ; Attacking P2 
-        	     MOV EnemyIdentifier, 0 ; Store enemy ID      	     
-        	     JMP FinishAttack     	         	               
+        	P3StoreHeavyAtkDmgForP2:
+        	    CMP CL, 00100000B               ; Check if P3 is a pyromancer
+        	    JNE P3StoreHeavyAtkDmgForP2_Final
+        	    ; P3 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20                  
+        	    JG P3StoreHeavyAtkDmgForP2_Final        ; Burn attempt failed 
+        	    ; Apply burn to P2
+        	    OR Player2Status, 10000000B
+        	    ADD P2BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '2'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    P3StoreHeavyAtkDmgForP2_Final:        	
+            	    MOV CurrentTurn, 0 ; Attacking P2 
+            	    MOV EnemyIdentifier, 0 ; Store enemy ID      	     
+            	    JMP FinishAttack     	         	               
         P3Ultimate:
             MOV AL, Team2Classes        ; Temp store Team2Classes
             AND AL, 11110000B           ; Remove P4's class info
@@ -909,19 +1115,52 @@ code SEGMENT
         	MOV AL, [DI+2]  ; light atk dmg   
         	MOV AH, 0 
         	MOV DamageToBeDealt, AX
+        	MOV CL, Team2Classes        ; Temp store Team2Classes
+        	AND CL, 00001111B           ; Remove P3's class info
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
-        	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
-        	AND BL, 00000000B  ; Remove redundant bits
-        	CMP BL, 00000000B  ; Check if Atking P1         	   	         
-        	JE P4StoreLightAtkDmgForP2
+        	MOV DL, CurrentTurn         ; Temp Store CurrentTurn        
+        	AND BL, 00000000B           ; Remove redundant bits
+        	CMP BL, 00000000B           ; Check if Atking P1         	   	         
+        	JNE P4StoreLightAtkDmgForP2
+        	CMP CL, 00000010B           ; Check if P4 is a pyromancer
+        	JNE P4StoreLightAtkDmgForP1_Final
+        	CALL GetChance
+    	    CMP DL, 20                  
+    	    JG P3StoreLightAtkDmgForP1_Final        ; Burn attempt failed 
+    	    ; Apply burn to P1
+    	    OR Player1Status, 10000000B
+    	    ADD P1BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '1'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine  
+        	P4StoreLightAtkDmgForP1_Final:   
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID
         	     JMP FinishAttack   
-        	P4StoreLightAtkDmgForP2:        	
-        	     MOV CurrentTurn, 1 ; Attacking P2 
-        	     MOV EnemyIdentifier, 1 ; Store enemy ID      	    
-        	     JMP FinishAttack	       
+        	P4StoreLightAtkDmgForP2:
+            	CMP CL, 00000010B                   ; Check if P4 is a pyromancer
+        	    JNE P3StoreLightAtkDmgForP2_Final
+        	    ; P4 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20                  
+        	    JG P4StoreLightAtkDmgForP2_Final        ; Burn attempt failed 
+        	    ; Apply burn to P2
+        	    OR Player2Status, 10000000B
+        	    ADD P2BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '2'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    P4StoreLightAtkDmgForP2_Final:    	
+            	    MOV CurrentTurn, 1 ; Attacking P2 
+            	    MOV EnemyIdentifier, 1 ; Store enemy ID      	    
+            	    JMP FinishAttack	       
         P4HeavyAttack:  
         	TEST Player4Status, 00000010B ; Check if Heavy Attack 
 			JZ P4Ultimate        	
@@ -929,19 +1168,52 @@ code SEGMENT
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
+        	MOV CL, Team2Classes        ; Temp store Team2Classes
+        	AND CL, 00001111B           ; Remove P3's class info
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
         	AND BL, 00000000B  ; Remove redundant bits
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
-        	JE P4StoreHeavyAtkDmgForP2
+        	JNE P4StoreHeavyAtkDmgForP2
+        	CMP CL, 00000010B           ; Check if P4 is a pyromancer
+        	JNE P4StoreHeavyAtkDmgForP1_Final
+        	CALL GetChance
+    	    CMP DL, 20                  
+    	    JG P3StoreHeavyAtkDmgForP1_Final        ; Burn attempt failed 
+    	    ; Apply burn to P1
+    	    OR Player1Status, 10000000B
+    	    ADD P1BurnCounter, 2
+    	    MOV DX, OFFSET PlayerText
+    	    CALL PrintLine
+    	    MOV DX, '1'
+    	    CALL PrintChar
+    	    MOV DX, OFFSET BurnInflictionText
+    	    CALL PrintLine
+    	    P4StoreHeavyAtkDmgForP1_Final:
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID  
         	     JMP FinishAttack 
-        	P4StoreHeavyAtkDmgForP2:        	
-        	     MOV CurrentTurn, 1 ; Attacking P2 
-        	     MOV EnemyIdentifier, 1 ; Store enemy ID     	     
-        	     JMP FinishAttack 
+        	P4StoreHeavyAtkDmgForP2:
+        	    CMP CL, 00000010B                   ; Check if P4 is a pyromancer
+        	    JNE P3StoreHeavyAtkDmgForP2_Final
+        	    ; P4 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 20                  
+        	    JG P4StoreHeavyAtkDmgForP2_Final        ; Burn attempt failed 
+        	    ; Apply burn to P2
+        	    OR Player2Status, 10000000B
+        	    ADD P2BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '2'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    P4StoreHeavyAtkDmgForP2_Final:        	
+            	     MOV CurrentTurn, 1 ; Attacking P2 
+            	     MOV EnemyIdentifier, 1 ; Store enemy ID     	     
+            	     JMP FinishAttack 
         P4Ultimate:
             MOV AL, Team2Classes        ; Temp store Team2Classes
             AND AL, 00001111B           ; Remove P3's class info
@@ -1786,12 +2058,12 @@ code SEGMENT
 			; was chosen by the player, it is done by updating
     	    ; the 3rd last bit on the PlayerXStatus vars
     	    CMP CurrentTurn, 0
-    	    JNE LightMChoice_1   
-    	    CMP Team1Vitality, 0        ; Check if under vitality
+    	    JNE LightMChoice_1  
+    	    CMP Team1Vitality, 0            ; Check if under vitality
     	    JG Light_P1SkipStaminaCheck     	    
-    	    CMP [PlayersStamina+0], DH ; Check if has 15 stamina
+    	    CMP [PlayersStamina+0], DH      ; Check if has 15 stamina
     	    JC NotEnoughStamina   	                      
-    	    SUB [PlayersStamina+0], DH ; Deduct Stamina  
+    	    SUB [PlayersStamina+0], DH      ; Deduct Stamina  
     	    Light_P1SkipStaminaCheck:
 	    	    OR Player1Status, 00000100B
 	    	    JMP AttackFinal
