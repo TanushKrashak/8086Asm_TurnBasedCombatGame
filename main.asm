@@ -10,7 +10,8 @@ data SEGMENT
 	MaxStamina              DB 100
 	LightAttackStaminaCost  DB 15
 	HeavyAttackStaminaCost  DB 30
-	DefendStaminaCost       DB 5 
+	DefendStaminaCost       DB 5
+	UltimateAttackStaminaCost DB 80 
 	HPGainPerTurn           DB 5
 	STGainPerTurn           DB 10
 	KnightExtraSTGain       DB 5  
@@ -118,7 +119,8 @@ data SEGMENT
     SelectTeam1TargetText       DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
     SelectTeam2TargetText       DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
     InvalidInputText            DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
-    NotEnoughStaminaText        DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$' 
+    NotEnoughStaminaText        DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$'
+    UltimateNotReadyText        DB 'Your ultimate ability is not yet ready!', '$' 
     SelfHealText                DB 'Health restored by 5', 0Dh, 0Ah, '$'   
     BurnDamageText              DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
     PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$' 
@@ -2033,56 +2035,158 @@ code SEGMENT
     	    ClampSection:
     	        CALL ClampHP 
     	        JMP PrintHealText 
-        UltimateAttack:   
+        UltimateAttack:      
+            MOV DH, UltimateAttackStaminaCost
             CMP CurrentTurn, 0
             JNE UltimateMChoice_1
-            OR Player1Status, 00000001B
-            MOV AL, Team1Classes    ; Load Team1Classes into AL
-            AND AL, 11110000B       ; Remove P2's class info
-            ; Pyromancer ultimate targets both enemies, no need to give target choice
-            CMP AL, 00100000B
-            JE AttackFinalNoChoice
-            ; Assassin ultimate is random, no need to give target choice
-            CMP AL, 00010000B
-            JE AttackFinalNoChoice
-            JMP AttackFinal
+            CMP [PlayersUltCooldown], 0           ; Check if P1 has ultimate ready
+            JNE UltimateNotReady
+            CMP Team1Vitality, 0                ; Check if under vitality
+	    	JG Ultimate_P1SkipStaminaCheck     	     
+    	    CMP [PlayersStamina], DH          ; Check if has 80 stamina
+    	    JC NotEnoughStamina 	 
+    	    SUB [PlayersStamina], DH          ; Deduct Stamina   
+			Ultimate_P1SkipStaminaCheck:    
+                OR Player1Status, 00000001B         ; Set P1's Ult bit
+                MOV AL, Team1Classes                ; Load Team1Classes into AL
+                AND AL, 11110000B                   ; Remove P2's class info
+                CMP AL, 00100000B                   ; Check P1 pyromancer
+                JNE P1AssassinUltimateCheck
+                ; Pyromancer ultimate targets both enemies, no need to give target choice
+                MOV [PlayersUltCooldown], 4           ; Reset Pyromancer ultimate cooldown
+                JMP AttackFinalNoChoice
+                P1AssassinUltimateCheck:
+                    CMP AL, 00010000B               ; Check P1 assassin
+                    JNE P1KnightUltimateCheck
+                    ; Assassin ultimate is random, no need to give target choice
+                    MOV BL, TeamSynergies           ; Load TeamSynergies in temp GPR
+                    AND BL, 11110000B               ; Remove Team 2's synergy bits
+                    CMP BL, 00110000B               ; Check for Assassin's Creed
+                    JE SetP1UltCooldownTo3     
+                    MOV [PlayersUltCooldown], 4       ; Set cooldown to 4
+                    JMP AttackFinalNoChoice
+                    SetP1UltCooldownTo3:
+                        MOV [PlayersUltCooldown], 3  ; Set cooldown to 3
+                        JMP AttackFinalNoChoice
+                P1KnightUltimateCheck:
+                    ; Knight ultimate is for player's own team, no need to give target choice 
+                    CMP AL, 00000000B
+                    JNE AttackFinalNoChoice
+                    MOV [PlayersUltCooldown], 3        ; Reset Knight's ultimate cooldown
+                    JMP AttackFinalNoChoice
             UltimateMChoice_1:
                 CMP CurrentTurn, 1
                 JNE UltimateMChoice_2
-                OR Player2Status, 00000001B
-                MOV AL, Team1Classes            ; Load Team1Classes into AL
-                AND AL, 00001111B               ; Remove P1's class info
-                ; Pyromancer ultimate targets both enemies, no need to give target choice 
-                CMP AL, 00000010B
-                JE AttackFinalNoChoice
-                ; Assassin ultimate is random, no need to give target choice
-                CMP AL, 00000001B
-                JE AttackFinalNoChoice
-                JMP AttackFinal
+                CMP [PlayersUltCooldown+1], 0       ; Check if P2 has ultimate ready
+                JG UltimateNotReady
+                CMP Team1Vitality, 0                ; Check if under vitality
+    	    	JG Ultimate_P2SkipStaminaCheck     	     
+        	    CMP [PlayersStamina+1], DH            ; Check if has 80 stamina
+        	    JC NotEnoughStamina 	 
+        	    SUB [PlayersStamina+1], DH            ; Deduct Stamina
+        	    Ultimate_P2SkipStaminaCheck:   
+                    OR Player2Status, 00000001B
+                    MOV AL, Team1Classes            ; Load Team1Classes into AL
+                    AND AL, 00001111B               ; Remove P1's class info 
+                    CMP AL, 00000010B                     ; Check if P2 is pyromancer
+                    JNE P2AssassinUltimateCheck           
+                    ; Pyromancer ultimate targets both enemies, no need to give target choice
+                    MOV [PlayersUltCooldown+1], 4           ; Reset Pyromancer ultimate cooldown
+                    JMP AttackFinalNoChoice 
+                    P2AssassinUltimateCheck:
+                        CMP AL, 00000001B               ; Check if P2 is assassin
+                        JNE P2KnightUltimateCheck
+                        ; Assassin ultimate is random, no need to give target choice
+                        MOV BL, TeamSynergies           ; Load TeamSynergies in temp GPR
+                        AND BL, 11110000B               ; Remove Team 2's synergy bits
+                        CMP BL, 00110000B               ; Check for Assassin's Creed
+                        JE SetP2UltCooldownTo3
+                        MOV [PlayersUltCooldown+1], 4
+                        JMP AttackFinalNoChoice
+                        SetP2UltCooldownTo3:
+                            MOV [PlayersUltCooldown+1], 3
+                            JMP AttackFinalNoChoice
+                    P2KnightUltimateCheck:
+                        ; Knight ultimate is for player's own team, no need to give target choice 
+                        TEST AL, 00000000B
+                        JNZ AttackFinal
+                        MOV [PlayersUltCooldown+1], 3        ; Reset Knight ultimate cooldown
+                        JMP AttackFinalNoChoice
             UltimateMChoice_2:
                 CMP CurrentTurn, 2
-                JNE UltimateMChoice_3
-                OR Player3Status, 00000001B
-                MOV AL, Team2Classes    ; Load Team2Classes into AL
-                AND AL, 11110000B       ; Remove P4's class info
-                ; Pyromancer ultimate targets both enemies, no need to give target choice
-                CMP Team2Classes, 00100000B
-                JE AttackFinalNoChoice
-                ; Assassin ultimate is random, no need to give target choice
-                CMP AL, 00010000B
-                JE AttackFinalNoChoice
-                JMP AttackFinal
+                JNE UltimateMChoice_3 
+                CMP [PlayersUltCooldown+2], 0       ; Check if P3 has ultimate ready
+                JG UltimateNotReady
+                CMP Team2Vitality, 0
+                JG Ultimate_P3SkipStaminaCheck
+                CMP [PlayersStamina+2], DH            ; Check if has 80 stamina
+        	    JC NotEnoughStamina 	 
+        	    SUB [PlayersStamina+2], DH            ; Deduct Stamina 
+        	    Ultimate_P3SkipStaminaCheck:
+                    OR Player3Status, 00000001B
+                    MOV AL, Team2Classes    ; Load Team2Classes into AL
+                    AND AL, 11110000B       ; Remove P4's class info
+                    ; Pyromancer ultimate targets both enemies, no need to give target choice
+                    CMP AL, 00100000B
+                    JNE P3AssassinUltimateCheck
+                    MOV [PlayersUltCooldown+2], 4
+                    JMP AttackFinalNoChoice
+                    P3AssassinUltimateCheck:
+                        CMP AL, 00010000B
+                        JNE P3KnightUltimateCheck
+                        ; Assassin ultimate is random, no need to give target choice
+                        MOV BL, TeamSynergies           ; Load TeamSynergies in temp GPR
+                        AND BL, 00001111B               ; Remove Team 1's synergy bits
+                        CMP BL, 00000011B               ; Check for Assassin's Creed
+                        JE SetP3UltCooldownTo3
+                        MOV [PlayersUltCooldown+2], 4
+                        JMP AttackFinalNoChoice
+                        SetP3UltCooldownTo3:
+                            MOV [PlayersUltCooldown+2], 3
+                            JMP AttackFinalNoChoice
+                    P3KnightUltimateCheck:
+                        CMP AL, 00000000B
+                        ; Add logic to skip to next class' Ultimate Check 
+                        ; Knight ultimate is for player's own team, no need to give target choice
+                        MOV [PlayersUltCooldown+2], 3
+                        JMP AttackFinalNoChoice
             UltimateMChoice_3:
-                OR Player4Status, 00000001B
-                MOV AL, Team2Classes
-                AND AL, 00001111B
-                ; Pyromancer ultimate targets both enemies, no need to give target choice
-                CMP Team2Classes, 00000010B
-                JE AttackFinalNoChoice
-                ; Assassin ultimate is random, no need to give target choice
-                CMP Team2Classes, 00000001B
-                JE AttackFinalNoChoice
-                JMP AttackFinal           
+                CMP [PlayersUltCooldown+3], 0       ; Check if P4 has ultimate ready
+                JG UltimateNotReady
+                CMP Team2Vitality, 0
+                JG Ultimate_P4SkipStaminaCheck
+                CMP [PlayersStamina+3], DH            ; Check if has 80 stamina
+        	    JC NotEnoughStamina 	 
+        	    SUB [PlayersStamina+3], DH            ; Deduct Stamina
+        	    Ultimate_P4SkipStaminaCheck: 
+                    OR Player4Status, 00000001B
+                    MOV AL, Team2Classes
+                    AND AL, 00001111B
+                    CMP AL, 00000010B
+                    JNE P4AssassinUltimateCheck
+                    ; Pyromancer ultimate targets both enemies, no need to give target choice
+                    MOV [PlayersUltCooldown+3], 4     ; Reset Pyromancer ultimate cooldown
+                    JMP AttackFinalNoChoice                                                  
+                    P4AssassinUltimateCheck:
+                        ; Assassin ultimate is random, no need to give target choice
+                        CMP AL, 00000001B
+                        JNE P4KnightUltimateCheck
+                        ; Assassin ultimate is random, no need to give target choice
+                        MOV BL, TeamSynergies           ; Load TeamSynergies in temp GPR
+                        AND BL, 00001111B               ; Remove Team 1's synergy bits
+                        CMP BL, 00000011B               ; Check for Assassin's Creed
+                        JE SetP4UltCooldownTo3
+                        MOV [PlayersUltCooldown+3], 4
+                        JMP AttackFinalNoChoice
+                        SetP4UltCooldownTo3:
+                            MOV [PlayersUltCooldown+3], 3
+                            JMP AttackFinalNoChoice   
+                    P4KnightUltimateCheck:
+                        CMP AL, 00000000B
+                        ; JNE P4HealerUltimateCheck
+                        ; Knight ultimate is for player's own team, no need to give target choice
+                        MOV [PlayersUltCooldown+3], 3
+                        JMP AttackFinalNoChoice           
     	; Attack Chosen, In case some common finishing
     	; logic is required         
     	AttackFinal:       		
@@ -2095,6 +2199,11 @@ code SEGMENT
  			MOV DX, OFFSET NotEnoughStaminaText
  			CALL PrintLine
  			JMP GivePlayerMainChoice
+ 		; Ultimate not yet ready
+ 		UltimateNotReady:
+ 		    MOV DX, OFFSET UltimateNotReadyText
+ 		    CALL PrintLine
+ 		    JMP GivePlayerMainChoice
  		; Invalid INput
     	GivePlayerMainChoice_InvalidInput:
     	    MOV DX, OFFSET InvalidInputText
