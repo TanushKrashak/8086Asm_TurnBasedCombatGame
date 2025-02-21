@@ -1423,7 +1423,12 @@ code SEGMENT
     	    MOV BH, Team1Classes     
     	    AND BH, 01000000B 
     	    CMP BH, 01000000B
-    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+    	    JNE DoDamage_NotVampireOrHeavy 
+    	    MOV BH, AL       		; Store AL
+    	    MOV AL, 50 				; Check if vamp was lucky
+    	    CALL GetChance
+    	    JNC  DoDamage_NotVampireOrHeavy ; Did not get lucky    	            	        	
+    	    MOV AL, BH 				; Revert AL
     		TEST Player1Status, 00000010B
     		JNZ HeavyVampHealLogic    		    		
     		JMP DoDamage_NotVampireOrHeavy       	    	    
@@ -1434,7 +1439,12 @@ code SEGMENT
 	    	    MOV BH, Team1Classes     
 	    	    AND BH, 00000100B 
 	    	    CMP BH, 00000100B
-	    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+	    	    JNE DoDamage_NotVampireOrHeavy 
+	    	    MOV BH, AL       		; Store AL
+	    	    MOV AL, 50 				; Check if vamp was lucky
+	    	    CALL GetChance
+	    	    JNC  DoDamage_NotVampireOrHeavy ; Did not get lucky    	            	        	
+	    	    MOV AL, BH 				; Revert AL	    	           	            	        	
 	    		TEST Player2Status, 00000010B
 	    		JNZ HeavyVampHealLogic    		    		
 	    		JMP DoDamage_NotVampireOrHeavy  
@@ -1445,7 +1455,12 @@ code SEGMENT
 	    	    MOV BH, Team2Classes     
 	    	    AND BH, 01000000B 
 	    	    CMP BH, 01000000B
-	    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+	    	    JNE DoDamage_NotVampireOrHeavy 
+	    	    MOV BH, AL       		; Store AL
+	    	    MOV AL, 50 				; Check if vamp was lucky
+	    	    CALL GetChance
+	    	    JNC  DoDamage_NotVampireOrHeavy ; Did not get lucky    	            	        	
+	    	    MOV AL, BH 				; Revert AL	  	    	           	            	        	
 	    		TEST Player3Status, 00000010B
 	    		JNZ HeavyVampHealLogic    		    		
 	    		JMP DoDamage_NotVampireOrHeavy 	
@@ -1456,7 +1471,12 @@ code SEGMENT
 	    	    MOV BH, Team2Classes     
 	    	    AND BH, 00000100B 
 	    	    CMP BH, 00000100B
-	    	    JNE DoDamage_NotVampireOrHeavy        	            	        	
+	    	    JNE DoDamage_NotVampireOrHeavy  
+	    	    MOV BH, AL       		; Store AL
+	    	    MOV AL, 50 				; Check if vamp was lucky
+	    	    CALL GetChance
+	    	    JNC  DoDamage_NotVampireOrHeavy ; Did not get lucky    	            	        	
+	    	    MOV AL, BH 				; Revert AL		    	          	            	        	
 	    		TEST Player4Status, 00000010B
 	    		JNZ HeavyVampHealLogic    		    		
 	    		JMP DoDamage_NotVampireOrHeavy 	    		    		    	    	
