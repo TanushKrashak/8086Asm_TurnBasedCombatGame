@@ -1435,7 +1435,7 @@ code SEGMENT
     	    CALL GetChance
     	    JNC  DoDamage_NotVampireOrHeavy ; Did not get lucky    	            	        	
     	    MOV AL, BH 				; Revert AL    	    
-    		TEST Player1Status, 00000010B
+    		TEST Player1Status, 00000010B     ; Heavy 
     		JNZ HeavyVampHealLogic    		    		
     		JMP DoDamage_NotVampireOrHeavy       	    	    
     	    CheckIfP2IsVamp:  
@@ -1497,7 +1497,8 @@ code SEGMENT
 			    JE HeavyVampHealLogic_Team1Syn
 			    JMP HeavyVampHealLogic_CheckOtherTeam     
 			    HeavyVampHealLogic_Team1Syn:
-					MOV BL, TeamSynergies
+					MOV BL, TeamSynergies  
+					AND BL, 11110000B       ; Remove team 2's synergy info
 	    			CMP BL, 01010000b  ; Check if TeamSynergies for T1 is 5  
 	    			JE HeavyVampHealLogic_Team1SynApplied 
 	    			JMP HeavyVampHealLogic_NormalHeal
@@ -1534,6 +1535,7 @@ code SEGMENT
 				; Team 1 Synergy Logic Ends	
 	    		HeavyVampHealLogic_CheckOtherTeam:
 	    			MOV BL, TeamSynergies
+	    			AND BL, 00001111B       ; Remove team 1's synergy info
 	    			CMP BL, 00000101b  ; Check if TeamSynergies for T2 is 5  
 	    			JE HeavyVampHealLogic_Team2SynApplied 
 	    			JMP HeavyVampHealLogic_NormalHeal 
@@ -1906,7 +1908,10 @@ code SEGMENT
 
 	; Circular increments current turn
 	; Uses Registers NONE
-     UpdateCurrentTurn:
+     UpdateCurrentTurn:   
+        ; Check if match turn is even. If true, then order of turns is P4->P3->P2->P1
+        TEST MatchTurn, 00000001B
+        JZ DecrementCurrentTurn
         INC CurrentTurn
         CMP CurrentTurn, 4
         JGE WrappedIs4
@@ -1914,6 +1919,12 @@ code SEGMENT
         WrappedIs4: 
             MOV CurrentTurn, 0
             RET
+        DecrementCurrentTurn:
+            DEC CurrentTurn
+            CMP CurrentTurn, 0
+            JL WrappedIs4
+            RET
+            
 	
 	; Progress player turns
 	; Uses Registers DX, AH
@@ -2707,7 +2718,8 @@ main:
     MOV DS, AX  
 ;==================================================================================
 ; MAIN FUNCTION
-;==================================================================================          
+;==================================================================================
+    MOV MatchTurn, 1          
     ; Print P1 MSG      
     MainP1ClassSelection:          
     	CALL PrintPlayerName    
@@ -2811,20 +2823,24 @@ main:
 ;	CALL InitializePlayerStats                        
 ;    CALL UpdateCurrentTurn 
 ;    CALL UpdateSynergy 
-    MOV CurrentTurn, 0   
+    MOV CurrentTurn, 0
+    MOV MatchTurn, 0 ; Awful hack alert!!!   
     GameLoop:              
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
-    	CALL PrintMatchTurn
-    	CMP CurrentTurn, 0
-    	JNE P2GameChoice
-    	TEST Player1Status, 00100000B
-        JNZ P1Paralysed   	 
-    	CALL GivePlayerMainChoice  
-    	CALL PrintNewLine 
-    	; Give Player 2 Choice	 
-    	CALL AlternateTurn
-    	JMP P2GameChoice
+    	CALL PrintMatchTurn 
+    	P1Choice:
+        	CMP CurrentTurn, 0
+        	JNE P2GameChoice
+        	TEST Player1Status, 00100000B
+            JNZ P1Paralysed   	 
+        	CALL GivePlayerMainChoice  
+        	CALL PrintNewLine
+        	TEST MatchTurn, 1
+        	JZ LoopFinalBlock 
+        	; Give Player 2 Choice	 
+        	CALL AlternateTurn
+        	JMP P2GameChoice
     	P1Paralysed:             
     	    MOV DX, OFFSET PlayerText
     	    CALL PrintLine
@@ -2873,10 +2889,17 @@ main:
         	    CALL AlternateTurn  
     	; Give Player 4 Choice	     		
     	P4GameChoice:  
+    	    CMP CurrentTurn, 3   
+    	    JE P4GameChoice_True
+    	    TEST MatchTurn, 1
+    	    JZ P1Choice
+    	    P4GameChoice_True:    	   
     	    TEST Player4Status, 00100000B
     	    JNZ P4Paralysed
         	CALL GivePlayerMainChoice
-        	CALL AlternateTurn
+        	CALL AlternateTurn 
+        	TEST MatchTurn, 1
+    	    JZ P1Choice
         	JMP LoopFinalBlock
         	P4Paralysed:
                 MOV DX, OFFSET PlayerText
@@ -2897,6 +2920,10 @@ main:
 	        JZ Team2Victory
 	        TEST AliveAndHealStatus, 00110000B
 	        JZ Team1Victory
+	        ; Check if match turn is even. If true, then order of turns is P4->P3->P2->P1
+            TEST MatchTurn, 00000001B
+	        JZ GameLoop
+	        MOV CurrentTurn, 3
 	        JMP GameLoop    
     Team1Victory:  
     	MOV DX, OFFSET Team1Won
