@@ -30,10 +30,10 @@ data SEGMENT
 	
 	; Player Statuses
 	; burn,poison,paralyse,vitality,rage,LAtk,HAtk,Ult
-	Player1Status   DB 11000000B
-	Player2Status   DB 11000000B
-	Player3Status   DB 11000000B
-	Player4Status   DB 11000000B
+	Player1Status   DB 00000000B
+	Player2Status   DB 00000000B
+	Player3Status   DB 00000000B
+	Player4Status   DB 00000000B
 	      
 	; Debuff Countdowns
 	P1BurnCounter       DB 1
@@ -62,8 +62,9 @@ data SEGMENT
     ; Synergy indices: 1) Nobles Oblige, 2) Great Wall, 3) Assassin's Creed, 4) Scorched Earth, 5) Count's Generosity, 6) Holy Empire
     
     ; Temporary Values
-    DamageToBeDealt DW 0 ; used for the damage function, prevents value being discarded from GPRs
-    EnemyIdentifier DB 0;
+    DamageToBeDealt         DW 0 ; used for the damage function, prevents value being discarded from GPRs
+    EnemyIdentifier         DB 0; 
+    TempCurrentTurn         DB 0
 
 	; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,  CC,UltC)
 	KnightStats    	DB  85,  85,  20,  35,  30,  30,  1 ; Balanced, high defense
@@ -189,9 +190,7 @@ code SEGMENT
    	; Generic random function, expects chance in AL. Result in CF
 	GetChance:
 	    CALL GetTime   ; Load Counter and Data registers with time data
-        MOV BL, TotalStats    ; Load length of array for based offset later   
-        MOV BH, 0   ;Ensure BX is same as BL in terms of actual value
-        CMP AL, DL      ; DL has hundredth of a second
+	    CMP AL, DL     ; DL has hundredth of a second
         RET  
    
 	; This function converts an Integer in AL to a String and then prints it
@@ -488,7 +487,9 @@ code SEGMENT
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack  
     ; USES Registers DI, AX, BL, DX, CL
-    EvaluateAttack:       	
+    EvaluateAttack:       	        
+        MOV DL, CurrentTurn
+        MOV TempCurrentTurn, DL
     	; Is P1                	
     	CMP CurrentTurn, 0   		 
     	JNE EvalAttack_P2   	          
@@ -647,7 +648,7 @@ code SEGMENT
         P1Ultimate:
             MOV AL, Team1Classes            ; Temp store Team1Classes          
             AND AL, 11110000B               ; Remove P2's class info
-            CMP Team1Classes, 01010000B     ; Check if vampire
+            CMP AL, 01010000B               ; Check if vampire
             JNE P1PyroCheck       
             ; If Vampire, paralyze the target
         	MOV BL, CurrentlyTargeting                     
@@ -663,7 +664,7 @@ code SEGMENT
     	    MOV DX, OFFSET ParalysisWarning
     	    CALL PrintLine
     	    CALL PrintNewLine
-    	    RET   	     
+    	    JMP EvalAttack_CheckNextAttacker   	     
     	    P1ParalysesP4:    	      
         	    OR Player4Status, 00100000B     ; Paralyze P4 
         	    MOV DX, OFFSET PlayerText
@@ -673,7 +674,7 @@ code SEGMENT
         	    MOV DX, OFFSET ParalysisWarning
         	    CALL PrintLine
         	    CALL PrintNewLine
-        	    RET    
+        	    JMP EvalAttack_CheckNextAttacker   
         ; Pyromancer Ultimate  
         P1PyroCheck: 
             ; Check if P2 is Pyromancer
@@ -690,12 +691,12 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            JMP FinishAttack
+            JMP EvalAttack_CheckNextAttacker
         P1AssassinCheck:
-            CMP AL, 00010000B       ; Check if P1 is assassin
+            CMP AL, 00010000B       ; Check if P1 is assassin  
+            INT 20h
             JNE P1KnightCheck     	      
-        	MOV AL, 200 ; instakill     
-        	MOV AH, 0
+        	MOV AX, 200 ; instakill     
         	MOV DamageToBeDealt, AX
         	; If only one enemy alive, pick them
         	TEST AliveAndHealStatus, 01000000B
@@ -729,9 +730,9 @@ code SEGMENT
             CALL PrintLine
             MOV DX, '1'
             CALL PrintChar 
-             MOV DX, OFFSET KnightUltimateRemText  
-             CALL PrintLine
-            JMP FinishAttack        	           
+            MOV DX, OFFSET KnightUltimateRemText  
+            CALL PrintLine
+            JMP EvalAttack_CheckNextAttacker        	           
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
@@ -746,7 +747,7 @@ code SEGMENT
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
         	AND BL, 00110000B  ; Remove redundant bits
-        	CMP BL, 11000000B               ; Check if Atking P4        ;TODO: FIX! ANDing BL's higher 2 bits with 00 will always make 'CMP BL, 11000000B' True
+        	CMP BL, 00110000B               ; Check if Atking P4
         	JE P2StoreLightAtkDmgForP4
         	CMP CL, 00000010B               ; Check if P2 is a pyromancer
     	    JNE P2StoreLightAtkDmgForP3_Final
@@ -849,8 +850,8 @@ code SEGMENT
             JNE P2PyroCheck
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
-        	AND BL, 11000000B  ; Remove redundant bits
-        	CMP BL, 11000000B  ; Check if Atking P4         	   	         
+        	AND BL, 00110000B  ; Remove redundant bits
+        	CMP BL, 00110000B  ; Check if Atking P4         	   	         
         	JE P2ParalysesP4	      
     	    OR Player3Status, 00100000B     ; Paralyze P3 
     	    MOV DX, OFFSET PlayerText
@@ -870,7 +871,7 @@ code SEGMENT
         	    MOV DX, OFFSET ParalysisWarning
         	    CALL PrintLine
         	    CALL PrintNewLine 
-        	    RET
+        	    JMP EvalAttack_CheckNextAttacker
         ; Pyromancer Ultimate
         P2PyroCheck:
          ; Check if P2 is Pyromancer
@@ -887,7 +888,7 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            RET
+            JMP EvalAttack_CheckNextAttacker
         P2AssassinCheck:
             CMP AL, 00000001B       ; Check if P2 is assassin
             JNE P2KnightCheck     	      
@@ -926,9 +927,9 @@ code SEGMENT
             CALL PrintLine
             MOV DX, '1'
             CALL PrintChar 
-             MOV DX, OFFSET KnightUltimateRemText  
-             CALL PrintLine
-            JMP FinishAttack        	     
+            MOV DX, OFFSET KnightUltimateRemText  
+            CALL PrintLine
+            JMP EvalAttack_CheckNextAttacker        	     
         ; P3 Attacks	      
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
@@ -942,7 +943,7 @@ code SEGMENT
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn        
-        	AND BL, 00000000B  ; Remove redundant bits
+        	AND BL, 00001100B  ; Remove redundant bits
         	CMP BL, 00000000B  ; Check if Atking P1
         	JNE P3StoreLightAtkDmgForP2
         	CMP CL, 00100000B               ; Check if P3 is a pyromancer
@@ -996,7 +997,7 @@ code SEGMENT
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
-        	AND BL, 00000000B  ; Remove redundant bits    
+        	AND BL, 00001100B  ; Remove redundant bits    
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JNE P3StoreHeavyAtkDmgForP2
         	CMP CL, 00100000B
@@ -1045,7 +1046,7 @@ code SEGMENT
             JNE P3PyroCheck
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn
-        	AND BL, 00000000B  ; Remove redundant bits
+        	AND BL, 00001100B  ; Remove redundant bits
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JE P3ParalysesP2  	      
     	    OR Player1Status, 00100000B     ; Paralyze P1
@@ -1056,7 +1057,7 @@ code SEGMENT
     	    MOV DX, OFFSET ParalysisWarning
     	    CALL PrintLine
     	    CALL PrintNewLine 
-    	    RET  	     
+    	    JMP EvalAttack_CheckNextAttacker  	     
     	    P3ParalysesP2: 	      
         	    OR Player2Status, 00100000B     ; Paralyze P2 
         	    MOV DX, OFFSET PlayerText
@@ -1066,7 +1067,7 @@ code SEGMENT
         	    MOV DX, OFFSET ParalysisWarning
         	    CALL PrintLine
         	    CALL PrintNewLine
-        	    RET
+        	    JMP EvalAttack_CheckNextAttacker
         ; Pyromancer Ultimate
         P3PyroCheck:         
             CMP AL, 00100000B     ; Check if P3 is Pyromancer
@@ -1082,7 +1083,7 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            RET
+            JMP EvalAttack_CheckNextAttacker
         P3AssassinCheck:
             CMP AL, 00010000B       ; Check if P3 is assassin    
             JNE P3KnightCheck  	      
@@ -1121,9 +1122,9 @@ code SEGMENT
             CALL PrintLine
             MOV DX, '1'
             CALL PrintChar 
-             MOV DX, OFFSET KnightUltimateRemText  
-             CALL PrintLine
-            JMP FinishAttack 	     
+            MOV DX, OFFSET KnightUltimateRemText  
+            CALL PrintLine
+            JMP EvalAttack_CheckNextAttacker 	     
         ; P4 Attacks	      
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
@@ -1137,7 +1138,7 @@ code SEGMENT
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting             
         	MOV DL, CurrentTurn         ; Temp Store CurrentTurn        
-        	AND BL, 00000000B           ; Remove redundant bits
+        	AND BL, 00000011B           ; Remove redundant bits
         	CMP BL, 00000000B           ; Check if Atking P1         	   	         
         	JNE P4StoreLightAtkDmgForP2
         	CMP CL, 00000010B           ; Check if P4 is a pyromancer
@@ -1190,7 +1191,7 @@ code SEGMENT
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn ; Temp Store CurrentTurn
-        	AND BL, 00000000B  ; Remove redundant bits
+        	AND BL, 00000011B  ; Remove redundant bits
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JNE P4StoreHeavyAtkDmgForP2
         	CMP CL, 00000010B           ; Check if P4 is a pyromancer
@@ -1239,7 +1240,7 @@ code SEGMENT
             JNE P4PyroCheck
         	MOV BL, CurrentlyTargeting                     
         	MOV DL, CurrentTurn
-        	AND BL, 00000000B  ; Remove redundant bits
+        	AND BL, 00000011B  ; Remove redundant bits
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JE P4ParalysesP2  	      
     	    OR Player1Status, 00100000B     ; Paralyze P1
@@ -1250,7 +1251,7 @@ code SEGMENT
     	    MOV DX, OFFSET ParalysisWarning
     	    CALL PrintLine
     	    CALL PrintNewLine
-    	    RET   	     
+    	    JMP EvalAttack_CheckNextAttacker   	     
     	    P4ParalysesP2: 	      
         	    OR Player2Status, 00100000B     ; Paralyze P2 
         	    MOV DX, OFFSET PlayerText
@@ -1260,7 +1261,7 @@ code SEGMENT
         	    MOV DX, OFFSET ParalysisWarning
         	    CALL PrintLine
         	    CALL PrintNewLine
-        	    RET	 
+        	    JMP EvalAttack_CheckNextAttacker	 
         ; Pyromancer Ultimate
         P4PyroCheck:         
             CMP AL, 00000010B     ; Check if P4 is Pyromancer
@@ -1276,7 +1277,7 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            RET
+            JMP EvalAttack_CheckNextAttacker
         P4AssassinCheck:
             CMP AL, 00000001B       ; Check if P4 is Assassin  
             JNE P4KnightCheck    	      
@@ -1299,12 +1300,7 @@ code SEGMENT
         	P4AssassinatesP1:        	
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID      	    
-        	     JMP FinishAttack	
-        	; Extract Enemy Number from Currently Targetting
-        	MOV BL, CurrentlyTargeting                     
-        	MOV DL, CurrentTurn ; Temp Store CurrentTurn
-        	AND BL, 00000000B  ; Remove redundant bits
-        	CMP BL, 00000000B  ; Check if Atking P1 
+        	     JMP FinishAttack 
 		; Knight Ultimate  
         P4KnightCheck:             
             CMP AL, 00000000B  ; Check if Knight
@@ -1320,13 +1316,15 @@ code SEGMENT
             CALL PrintLine
             MOV DX, '1'
             CALL PrintChar 
-             MOV DX, OFFSET KnightUltimateRemText  
-             CALL PrintLine
-            JMP FinishAttack         	                        
+            MOV DX, OFFSET KnightUltimateRemText  
+            CALL PrintLine
+            JMP EvalAttack_CheckNextAttacker         	                        
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
-			CALL LoadPlayerStatsInDI
-			MOV CurrentTurn, DL  ; Revert Current Turn To OG Val 
+			CALL LoadPlayerStatsInDI          
+			MOV DL, TempCurrentTurn 
+			MOV BH, CurrentTurn         ;Store enemy number in BH for do_damage  
+			MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
 			CALL DoDamage
 		EvalAttack_CheckNextAttacker:	
 			INC CurrentTurn    
@@ -1420,8 +1418,8 @@ code SEGMENT
     	DoDamage_SetLowestDmgValue:
  			MOV AL, 5   ; Lowest possible dmg value     				 	
     	DoDamage_DoDamage:  	
-			SUB [SI], AL
-			MOV AH, 0
+			SUB [SI], AL   
+			CALL CLampStatInSI
 			MOV DamageToBeDealt, AX	
 			; P1 Heavy is done by Vamp Heal logic
 			CMP CurrentTurn, 0   
@@ -1576,7 +1574,8 @@ code SEGMENT
 	    		ADD [SI], AL	        		
 				CALL ClampStatInSI    			        			        		    		    	  
 	   	DoDamage_NotVampireOrHeavy:	
-	   		MOV DamageToBeDealt, AX					  
+	   		MOV DamageToBeDealt, AX	
+	   		SUB [SI], AX				  
 			JNC DoDamage_NoClamp
 			MOV [SI], 0
 		DoDamage_NoClamp: 			
