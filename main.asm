@@ -198,6 +198,7 @@ code SEGMENT
  	; you have to add '0' to convert it to a Character 
 	PrintInt:	 
 		MOV AH, 00h	   
+	PrintLongInt:
 	    MOV BX, 10         ; Divisor
 	    MOV CX, 0	   		
 	    ; Basically just pushes remainder to stack
@@ -530,7 +531,7 @@ code SEGMENT
 		; Is P4    
 		EvalAttack_P4: 		
             TEST AliveAndHealStatus, 10000000B ; P4 Alive
-			JNZ EvalAttack_CheckNextAttacker 
+			JZ EvalAttack_CheckNextAttacker 
 	        TEST AliveAndHealStatus, 00001000B ; P4 Healing
 	        JNZ EvalAttack_CheckNextAttacker
 	        TEST CurrentTurnStats, 00001000B ; P4 Defending
@@ -723,9 +724,10 @@ code SEGMENT
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
             JMP EvalAttack_CheckNextAttacker
-        P1AssassinCheck:                                       
-        	INT 20h
-            CMP AL, 00010000B       ; Check if P1 is assassin              
+		; Assassin Ultimate            
+        P1AssassinCheck:            
+        	; Check if P1 is Assassin                                 	
+            CMP AL, 00010000B       
             JNE P1KnightCheck     	      
         	MOV AX, 200 ; instakill     
         	MOV DamageToBeDealt, AX
@@ -849,9 +851,9 @@ code SEGMENT
     	    CALL PrintChar
     	    MOV DX, OFFSET BurnInflictionText
     	    CALL PrintLine
-    	    JMP P2StoreHeavyAtkDmgForP3_Final
+    	    JMP P2StoreHeavyAtkDmgForP3_Final     	    
     	    P2AssassinHeavyCheck_ForP3:
-    	        CMP CL, 00000001B                   ; Check if P2 is an assassin
+    	        CMP CL, 00000001B                   ; Check if P2 is an assassin        	        
     	        JNE P2StoreHeavyAtkDmgForP3_Final   ; Not assassin
     	        CALL GetChance
     	        CMP DL, 33                      ; Assassin has 33% chance of poisoning enemy
@@ -937,7 +939,7 @@ code SEGMENT
         	    JMP EvalAttack_CheckNextAttacker
         ; Pyromancer Ultimate
         P2PyroCheck:
-         ; Check if P2 is Pyromancer
+         	; Check if P2 is Pyromancer
             CMP AL, 00000010B
             JNE P2AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
@@ -951,13 +953,15 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            JMP EvalAttack_CheckNextAttacker
-        P2AssassinCheck:
-            CMP AL, 00000001B       ; Check if P2 is assassin
+            JMP EvalAttack_CheckNextAttacker  
+		; Assassin Ultimate
+        P2AssassinCheck:                    	
+            CMP AL, 00000001B       
             JNE P2KnightCheck     	      
         	MOV AL, 200 ; instakill     
         	MOV AH, 0
-        	MOV DamageToBeDealt, AX
+        	MOV DamageToBeDealt, AX 
+        	INT 20h
         	; If only one enemy alive, pick them
         	TEST AliveAndHealStatus, 01000000B
         	JZ P2AssassinatesP4                 ; P3 dead, target P4
@@ -965,7 +969,7 @@ code SEGMENT
         	JZ P2AssassinatesP3                 ; P4 dead, target P3
         	; Both alive, randomly select any one
         	CALL GetChance
-        	CMP DL, 50
+        	CMP DL, 50              	
         	JLE P2AssassinatesP3
     	    P2AssassinatesP4:
         	    MOV CurrentTurn, 3 ; Attacking P4
@@ -1179,6 +1183,7 @@ code SEGMENT
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
             JMP EvalAttack_CheckNextAttacker
+		; Assassin Ultimate
         P3AssassinCheck:
             CMP AL, 00010000B       ; Check if P3 is assassin    
             JNE P3KnightCheck  	      
@@ -1402,7 +1407,8 @@ code SEGMENT
             CALL PrintChar
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
-            JMP EvalAttack_CheckNextAttacker
+            JMP EvalAttack_CheckNextAttacker 
+        ; Assassin Ultimate  
         P4AssassinCheck:
             CMP AL, 00000001B       ; Check if P4 is Assassin  
             JNE P4KnightCheck    	      
@@ -1722,7 +1728,7 @@ code SEGMENT
 	    	MOV DX, OFFSET ForText
 	    	CALL PrintLine
 	    	MOV AX, DamageToBeDealt ; Print stored damage dealt    	
-	    	CALL PrintInt              
+	    	CALL PrintLongInt              
 	    	CALL PrintNewLine
 	    	; Display Enemy Remaining HP
 	    	MOV DX, OFFSET ShowEnemyHPText
@@ -3046,9 +3052,9 @@ main:
 	        CALL ApplyDOT 
 	        ; Check if either team is dead
 	        TEST AliveAndHealStatus, 11000000B
-	        JZ Team2Victory
-	        TEST AliveAndHealStatus, 00110000B
 	        JZ Team1Victory
+	        TEST AliveAndHealStatus, 00110000B
+	        JZ Team2Victory
 	        ; Check if match turn is even. If true, then order of turns is P4->P3->P2->P1
             TEST MatchTurn, 00000001B
 	        JZ GameLoop
