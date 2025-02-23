@@ -607,7 +607,7 @@ code SEGMENT
         	CMP BL, 11000000B  ; Check if Atking P4         	   	         
         	JE P1StoreHeavyAtkDmgForP4
         	CMP CL, 00100000B                   ; Check if P1 is a pyromancer
-    	    JNE P1StoreHeavyAtkDmgForP3_Final
+    	    JNE P1AssassinHeavyCheck_ForP3
     	    ; P2 is pyromancer
     	    CALL GetChance
     	    CMP DL, 20                  
@@ -621,13 +621,29 @@ code SEGMENT
     	    CALL PrintChar
     	    MOV DX, OFFSET BurnInflictionText
     	    CALL PrintLine
+    	    JMP P1StoreHeavyAtkDmgForP3_Final
+    	    P1AssassinHeavyCheck_ForP3:
+    	        CMP CL, 00010000B               ; Check if P1 is an assassin
+    	        JNE P1StoreHeavyAtkDmgForP3_Final   ; Not assassin
+    	        CALL GetChance
+    	        CMP DL, 33                      ; Assassin has 33% chance of poisoning enemy
+    	        JG P1StoreHeavyAtkDmgForP3_Final    ; Failed to poison P3
+    	        ; Apply poison to P3
+    	        OR Player3Status, 01000000B
+    	        ADD P3PoisonCounter, 4
+    	        MOV DX, OFFSET PlayerText
+    	        CALL PrintLine
+    	        MOV DX, '3'
+    	        CALL PrintLine
+    	        MOV DX, OFFSET PoisonInflictionText
+    	        CALL PrintLine
     	    P1StoreHeavyAtkDmgForP3_Final:
 	    	     MOV CurrentTurn, 2 ; Attacking P3    	      
 	    	     MOV EnemyIdentifier, 2 ; Store enemy ID 
 	    	     JMP FinishAttack     	     
     	    P1StoreHeavyAtkDmgForP4:
     	        CMP CL, 00100000B                      ; Check if P1 is a pyromancer
-        	    JNE P1StoreHeavyAtkDmgForP4_Final
+        	    JNE P1AssassinHeavyCheck_ForP4         ; Not pyromancer, check if assassin 
         	    ; P1 is pyromancer
         	    CALL GetChance
         	    CMP DL, 20
@@ -641,6 +657,21 @@ code SEGMENT
         	    CALL PrintChar
         	    MOV DX, OFFSET BurnInflictionText
         	    CALL PrintLine
+        	    P1AssassinHeavyCheck_ForP4:
+        	    CMP CL, 00010000B                   ; Check if P1 is an assassin
+        	    JNE P1StoreHeavyAtkDmgForP4_Final   ; Not assassin 
+    	        CALL GetChance
+    	        CMP DL, 33                      ; Assassin has 33% chance of poisoning enemy
+    	        JG P1StoreHeavyAtkDmgForP4_Final    ; Failed to poison P4
+    	        ; Apply poison to P3
+    	        OR Player3Status, 01000000B
+    	        ADD P3PoisonCounter, 4
+    	        MOV DX, OFFSET PlayerText
+    	        CALL PrintLine
+    	        MOV DX, '4'
+    	        CALL PrintLine
+    	        MOV DX, OFFSET PoisonInflictionText
+    	        CALL PrintLine
         	    P1StoreHeavyAtkDmgForP4_Final: 
     			    MOV CurrentTurn, 3 ; Attacking P3    	      
     				MOV EnemyIdentifier, 3; Store enemy ID  			
@@ -795,7 +826,7 @@ code SEGMENT
         	MOV AL, [DI+3] ; heavy atk dmg     
         	MOV AH, 0
         	MOV DamageToBeDealt, AX
-        	MOV CL, Team1Classes            ; Load Team1Classes to check for Pyro
+        	MOV CL, Team1Classes            ; Load Team1Classes
         	AND CL, 00001111B               ; Remove P1's class info
         	; Extract Enemy Number from Currently Targetting
         	MOV BL, CurrentlyTargeting                     
@@ -804,7 +835,7 @@ code SEGMENT
         	CMP BL, 00110000B  ; Check if Atking P4                      
         	JE P2StoreHeavyAtkDmgForP4
         	CMP CL, 00000010B               ; Check if P2 is a pyromancer
-    	    JNE P2StoreHeavyAtkDmgForP3_Final
+    	    JNE P2AssassinHeavyCheck_ForP3       ; Not pyromancer, check for assassin next
     	    ; P2 is pyromancer
     	    CALL GetChance
     	    CMP DL, 20                  
@@ -818,13 +849,29 @@ code SEGMENT
     	    CALL PrintChar
     	    MOV DX, OFFSET BurnInflictionText
     	    CALL PrintLine
+    	    JMP P2StoreHeavyAtkDmgForP3_Final
+    	    P2AssassinHeavyCheck_ForP3:
+    	        CMP CL, 00000001B                   ; Check if P2 is an assassin
+    	        JNE P2StoreHeavyAtkDmgForP3_Final   ; Not assassin
+    	        CALL GetChance
+    	        CMP DL, 33                      ; Assassin has 33% chance of poisoning enemy
+    	        JG P2StoreHeavyAtkDmgForP3_Final    ; Failed to poison P3
+    	        ; Apply poison to P3
+    	        OR Player3Status, 01000000B
+    	        ADD P3PoisonCounter, 4
+    	        MOV DX, OFFSET PlayerText
+    	        CALL PrintLine
+    	        MOV DX, '3'
+    	        CALL PrintLine
+    	        MOV DX, OFFSET PoisonInflictionText
+    	        CALL PrintLine
     	    P2StoreHeavyAtkDmgForP3_Final:            	   	         
 	    	     MOV CurrentTurn, 2 ; Attacking P3    	      
 	    	     MOV EnemyIdentifier, 2 ; Store enemy ID 
 	    	     JMP FinishAttack     	     
     	     P2StoreHeavyAtkDmgForP4:
     	        CMP CL, 00000010B                      ; Check if P2 is a pyromancer
-        	    JNE P2StoreHeavyAtkDmgForP4_Final
+        	    JNE P2AssassinHeavyCheck_ForP4         ; Not pyromancer, check for assassin next
         	    ; P2 is pyromancer
         	    CALL GetChance
         	    CMP DL, 20
@@ -838,6 +885,22 @@ code SEGMENT
         	    CALL PrintChar
         	    MOV DX, OFFSET BurnInflictionText
         	    CALL PrintLine
+        	    JMP P2StoreHeavyAtkDmgForP4_Final
+        	    P2AssassinHeavyCheck_ForP4:
+        	        CMP CL, 00000001B                   ; Check if P2 is an assassin
+        	        JNE P2StoreHeavyAtkDmgForP4_Final   ; Not assassin
+        	        CALL GetChance
+        	        CMP DL, 33                          ; Assassin has 33% chance of poisoning enemy
+        	        JG P2StoreHeavyAtkDmgForP4_Final    ; Failed to poison P3
+        	        ; Apply poison to P4
+        	        OR Player4Status, 01000000B
+        	        ADD P4PoisonCounter, 4
+        	        MOV DX, OFFSET PlayerText
+        	        CALL PrintLine
+        	        MOV DX, '4'
+        	        CALL PrintLine
+        	        MOV DX, OFFSET PoisonInflictionText
+        	        CALL PrintLine
         	    P2StoreHeavyAtkDmgForP4_Final:  
     			    MOV CurrentTurn, 3 ; Attacking P3    	      
     				MOV EnemyIdentifier, 3; Store enemy ID  
@@ -1000,8 +1063,8 @@ code SEGMENT
         	AND BL, 00001100B  ; Remove redundant bits    
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JNE P3StoreHeavyAtkDmgForP2
-        	CMP CL, 00100000B
-        	JNE P3StoreHeavyAtkDmgForP1_Final
+        	CMP CL, 00100000B                       ; Check if P3 is pyromancer
+        	JNE P3AssassinHeavyCheck_ForP1          ; If not pyromancer, check for assassin
         	; P3 is pyromancer
     	    CALL GetChance
     	    CMP DL, 20                  
@@ -1015,12 +1078,29 @@ code SEGMENT
     	    CALL PrintChar
     	    MOV DX, OFFSET BurnInflictionText
     	    CALL PrintLine
+    	    JMP P3StoreHeavyAtkDmgForP1_Final
+        	P3AssassinHeavyCheck_ForP1:
+        	    CMP CL, 00010000B                       ; Check if P3 is assassin
+            	JNE P3StoreHeavyAtkDmgForP1_Final       ; Not assassin, end evaluation for P3
+            	; P3 is pyromancer
+        	    CALL GetChance
+        	    CMP DL, 33                  
+        	    JG P3StoreHeavyAtkDmgForP1_Final        ; Poison attempt failed 
+        	    ; Apply burn to P1
+        	    OR Player1Status, 01000000B
+        	    ADD P1PoisonCounter, 4
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '1'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET PoisonInflictionText
+        	    CALL PrintLine
     	    P3StoreHeavyAtkDmgForP1_Final:
         	     MOV CurrentTurn, 1 ; Attacking P1 
         	     MOV EnemyIdentifier, 1 ; Store enemy ID  
         	     JMP FinishAttack 
         	P3StoreHeavyAtkDmgForP2:
-        	    CMP CL, 00100000B               ; Check if P3 is a pyromancer
+        	    CMP CL, 00100000B                       ; Check if P3 is a pyromancer
         	    JNE P3StoreHeavyAtkDmgForP2_Final
         	    ; P3 is pyromancer
         	    CALL GetChance
@@ -1035,6 +1115,21 @@ code SEGMENT
         	    CALL PrintChar
         	    MOV DX, OFFSET BurnInflictionText
         	    CALL PrintLine
+        	    JMP P3StoreHeavyAtkDmgForP2_Final
+        	    P3AssassinHeavyCheck_ForP2:
+            	    CMP CL, 00010000B                       ; Check if P3 is assassin
+                	JNE P3StoreHeavyAtkDmgForP2_Final       ; Not assassin, end evaluation for P3
+            	    CALL GetChance
+            	    CMP DL, 33                  
+            	    JG P3StoreHeavyAtkDmgForP2_Final        ; Poison attempt failed
+            	    OR Player2Status, 01000000B
+            	    ADD P2PoisonCounter, 4
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '2'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET PoisonInflictionText
+            	    CALL PrintLine
         	    P3StoreHeavyAtkDmgForP2_Final:        	
             	    MOV CurrentTurn, 0 ; Attacking P2 
             	    MOV EnemyIdentifier, 0 ; Store enemy ID      	     
@@ -1154,7 +1249,7 @@ code SEGMENT
     	    MOV DX, '1'
     	    CALL PrintChar
     	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine  
+    	    CALL PrintLine
         	P4StoreLightAtkDmgForP1_Final:   
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID
@@ -1195,7 +1290,7 @@ code SEGMENT
         	CMP BL, 00000000B  ; Check if Atking P1         	   	         
         	JNE P4StoreHeavyAtkDmgForP2
         	CMP CL, 00000010B           ; Check if P4 is a pyromancer
-        	JNE P4StoreHeavyAtkDmgForP1_Final
+        	JNE P4AssassinHeavyCheck_ForP1  ; Not pyromancer, check for assassin insteaad
         	CALL GetChance
     	    CMP DL, 20                  
     	    JG P3StoreHeavyAtkDmgForP1_Final        ; Burn attempt failed 
@@ -1208,6 +1303,21 @@ code SEGMENT
     	    CALL PrintChar
     	    MOV DX, OFFSET BurnInflictionText
     	    CALL PrintLine
+    	    P4AssassinHeavyCheck_ForP1:
+        	    CMP CL, 00000001B                       ; Check if P4 is an assassin
+            	JNE P4StoreHeavyAtkDmgForP1_Final
+            	CALL GetChance
+        	    CMP DL, 33                  
+        	    JG P4StoreHeavyAtkDmgForP1_Final        ; Poison attempt failed 
+        	    ; Poison P1
+        	    OR Player1Status, 10000000B
+        	    ADD P1PoisonCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '1'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET PoisonInflictionText
+        	    CALL PrintLine
     	    P4StoreHeavyAtkDmgForP1_Final:
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID  
@@ -1217,7 +1327,7 @@ code SEGMENT
         	    JNE P3StoreHeavyAtkDmgForP2_Final
         	    ; P4 is pyromancer
         	    CALL GetChance
-        	    CMP DL, 20                  
+        	    CMP DL, 33                  
         	    JG P4StoreHeavyAtkDmgForP2_Final        ; Burn attempt failed 
         	    ; Apply burn to P2
         	    OR Player2Status, 10000000B
@@ -1228,6 +1338,21 @@ code SEGMENT
         	    CALL PrintChar
         	    MOV DX, OFFSET BurnInflictionText
         	    CALL PrintLine
+        	    P4AssassinHeavyCheck_ForP2:
+            	    CMP CL, 00000001B                       ; Check if P4 is an assassin
+                	JNE P4StoreHeavyAtkDmgForP2_Final
+                	CALL GetChance
+            	    CMP DL, 20                  
+            	    JG P4StoreHeavyAtkDmgForP2_Final        ; Poison attempt failed 
+            	    ; Poison P2
+            	    OR Player2Status, 01000000B
+            	    ADD P2PoisonCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '2'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET PoisonInflictionText
+            	    CALL PrintLine
         	    P4StoreHeavyAtkDmgForP2_Final:        	
             	     MOV CurrentTurn, 1 ; Attacking P2 
             	     MOV EnemyIdentifier, 1 ; Store enemy ID     	     
