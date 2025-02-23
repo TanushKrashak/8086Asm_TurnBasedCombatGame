@@ -1558,7 +1558,7 @@ code SEGMENT
 	    	CALL PrintLongInt
 	    	MOV DX, OFFSET VanguardUltReflectRemText
 	    	; Load CurrentTurn as Enemy
-	    	CALL LoadPlayerStatsInSI   
+	    	CALL LoadPlayerStatsInDI   
 	    	MOV AX, DamageToBeDealt
 	    	SUB [DI], AX  
 	    	JNC VandCount_NoClamp
