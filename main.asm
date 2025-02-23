@@ -36,14 +36,14 @@ data SEGMENT
 	Player4Status   DB 00000000B
 	      
 	; Debuff Countdowns
-	P1BurnCounter       DB 1
-	P2BurnCounter       DB 1
-	P3BurnCounter       DB 1
-	P4BurnCounter       DB 1
-	P1PoisonCounter     DB 1
-	P2PoisonCounter     DB 1
-	P3PoisonCounter     DB 1
-	P4PoisonCounter     DB 1	
+	P1BurnCounter       DB 0
+	P2BurnCounter       DB 0
+	P3BurnCounter       DB 0
+	P4BurnCounter       DB 0
+	P1PoisonCounter     DB 0
+	P2PoisonCounter     DB 0
+	P3PoisonCounter     DB 0
+	P4PoisonCounter     DB 0	
 	
 	; Buff Countdowns
 	Team1Vitality 	DB 0
@@ -495,7 +495,7 @@ code SEGMENT
     	JNE EvalAttack_P2   	          
 	    	; Check P1 Status       
 	        TEST AliveAndHealStatus, 00010000B ; P1 Alive
-	        JZ EvaluateAttack_P2Alive 
+	        JZ EvalAttack_CheckNextAttacker 
 	        TEST AliveAndHealStatus, 00000001B ; P1 Healing
 	        JNZ EvalAttack_CheckNextAttacker 
 	        TEST CurrentTurnStats, 00000001B ; P1 Defending
@@ -508,7 +508,7 @@ code SEGMENT
 	        ; Check P2 Status
 	        EvaluateAttack_P2Alive:
 	            TEST AliveAndHealStatus, 00100000B ; P2 Alive
-		        JZ EvaluateAttack_P3Alive 
+		        JZ EvalAttack_CheckNextAttacker 
 		        TEST AliveAndHealStatus, 00000010B ; P2 Healing
     	        JNZ EvalAttack_CheckNextAttacker
 		        TEST CurrentTurnStats, 00000010B ; P2 Defending
@@ -521,7 +521,7 @@ code SEGMENT
 	 		; Check P3 Status
 	        EvaluateAttack_P3Alive:
 	            TEST AliveAndHealStatus, 01000000B ; P3 Alive
-		        JZ EvalAttack_P4 
+		        JZ EvalAttack_CheckNextAttacker 
 		        TEST AliveAndHealStatus, 00000100B ; P3 Healing
     	        JNZ EvalAttack_CheckNextAttacker
 		        TEST CurrentTurnStats, 00000100B ; P3 Defending
@@ -723,9 +723,9 @@ code SEGMENT
             MOV DX, OFFSET BurnUltimateText
             CALL PrintLine
             JMP EvalAttack_CheckNextAttacker
-        P1AssassinCheck:
-            CMP AL, 00010000B       ; Check if P1 is assassin  
-            INT 20h
+        P1AssassinCheck:                                       
+        	INT 20h
+            CMP AL, 00010000B       ; Check if P1 is assassin              
             JNE P1KnightCheck     	      
         	MOV AX, 200 ; instakill     
         	MOV DamageToBeDealt, AX
@@ -1533,18 +1533,16 @@ code SEGMENT
     		JZ DoDamage_EnemyIsNotBlocking
 			MUL BL   
     	DoDamage_EnemyIsNotBlocking: 
-			MOV DH, AL ; Store Final Def in DH
-	    	MOV AX, DamageToBeDealt        
-	    	SUB AL, DH  ; Damage Shred cuz of Def    	
+			MOV AH, 0 ; Store Final Def in DH	    	     
+	    	SUB DamageToBeDealt, AX  ; Damage Shred cuz of Def  
+	    	MOV AX, DamageToBeDealt  ; Store reduced dmg in AX	
 	    	JC DoDamage_SetLowestDmgValue  ; negative dmg not allowed  
-	    	CMP AL, 5
+	    	CMP AX, 5
 	    	JC DoDamage_SetLowestDmgValue  ; dmg < 5 not allowed
 	    	JMP DoDamage_DoDamage
     	DoDamage_SetLowestDmgValue:
- 			MOV AL, 5   ; Lowest possible dmg value     				 	
+ 			MOV AX, 5   ; Lowest possible dmg value     				 	
     	DoDamage_DoDamage:  	
-			SUB [SI], AL   
-			CALL CLampStatInSI
 			MOV DamageToBeDealt, AX	
 			; P1 Heavy is done by Vamp Heal logic
 			CMP CurrentTurn, 0   
