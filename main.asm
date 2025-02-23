@@ -1697,10 +1697,18 @@ code SEGMENT
 	    		ADD [SI], AL	        		
 				CALL ClampStatInSI    			        			        		    		    	  
 	   	DoDamage_NotVampireOrHeavy:	
-	   		MOV DamageToBeDealt, AX	
-	   		SUB [SI], AX				  
-			JNC DoDamage_NoClamp
-			MOV [SI], 0
+	   		MOV DamageToBeDealt, AX ;
+	   		; If damage is Above 100, Make it 8 bit (here 120 for eg)
+	   		; Do not update DamageToBeDealt in this cuz
+	   		; its used for printing
+	   		CMP AX, 100
+	   		JL DoDamage_DamageDontCapTo8Bit
+	   		MOV AX, 120                
+	   		; 8 Bit check ends
+	   		DoDamage_DamageDontCapTo8Bit:		   		
+		   		SUB [SI], AL				  
+				JNC DoDamage_NoClamp
+				MOV [SI], 0
 		DoDamage_NoClamp: 			
 			; Print Damage Value	
 	        MOV DX, OFFSET DamagedText
