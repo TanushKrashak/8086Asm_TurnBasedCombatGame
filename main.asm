@@ -97,7 +97,7 @@ data SEGMENT
     StatsText                   DB 'Stats:', '$'   
     TurnText                    DB 'Turn ', '$'
     FightText                   DB ' - Fight!',0Dh,0Ah,'$' 
-    ReplayText                  DB 0Dh,0Ah, 'Replay?',0Dh,0Ah,'$'
+    ReplayText                  DB 0Dh,0Ah, 'Replay? [1]-Yes [0]-No',0Dh,0Ah,'$'
     
     ; Stat Printing Texts
     HealthText                  DB 0DH, 0AH, 'Health: ', '$' 
@@ -1452,6 +1452,7 @@ code SEGMENT
 			MOV CurrentTurn, DL  ; Revert Current Turn To OG Val
 			CALL DoDamage
 		EvalAttack_CheckNextAttacker:	
+			CALL UpdateStatusOnDeath  ; refreshes who died
 			INC CurrentTurn    
 			CMP CurrentTurn, 4 ; Check if all attacks have been done   			
 			JGE EndAttackCycle          
@@ -1699,8 +1700,7 @@ code SEGMENT
 	   	DoDamage_NotVampireOrHeavy:	
 	   		MOV DamageToBeDealt, AX ;
 	   		; If damage is Above 100, Make it 8 bit (here 120 for eg)
-	   		; Do not update DamageToBeDealt in this cuz
-	   		; its used for printing
+	   		; Do not update DamageToBeDealt in this cuz its used for printing
 	   		CMP AX, 100
 	   		JL DoDamage_DamageDontCapTo8Bit
 	   		MOV AX, 120                
@@ -3040,8 +3040,7 @@ main:
         	    CALL PrintLine  
         	    AND Player4Status, 11011111B
         	    CALL AlternateTurn    		         
-        ; Apply DOT, update AliveAndHealStatus if any player is dead
-        ;CALL UpdateStatusOnDeath
+        ; Apply DOT, update AliveAndHealStatus if any player is dead        
         LoopFinalBlock:
 	        CALL EvaluateAttack
 	        CALL ApplyDOT 
