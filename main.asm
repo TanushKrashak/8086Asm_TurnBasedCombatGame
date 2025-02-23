@@ -48,6 +48,7 @@ data SEGMENT
 	; Buff Countdowns
 	Team1Vitality 	DB 0
 	Team2Vitality 	DB 0
+	VanguardCounterFlags DB 00000000B ; Lower nibble for Vanguard Ult Flags (P4, P3, P2, P1) ;; Higher Nibble Reserved!
     
     ; Game Helpers
     PlayerCount        DB 4	; Number of players
@@ -120,8 +121,7 @@ data SEGMENT
     SelectTeam1TargetText       DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 3',0Dh,0Ah, '[2]-Player 4',0Dh,0Ah,'$'
     SelectTeam2TargetText       DB 'Select Enemy:', 0DH, 0AH, '[1]-Player 1',0Dh,0Ah, '[2]-Player 2',0Dh,0Ah,'$'  
     InvalidInputText            DB 'Pwease enter correct input UWU',0Dh,0Ah,'$' 
-    NotEnoughStaminaText        DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$'
-    UltimateNotReadyText        DB 'Your ultimate ability is not yet ready!', '$' 
+    NotEnoughStaminaText        DB 'Not Enough Stamina For Action!',0Dh,0Ah,'$'    
     SelfHealText                DB 'Health restored by 5', 0Dh, 0Ah, '$'   
     BurnDamageText              DB ' is burning and lost 10 health!', 0Dh, 0Ah, '$'
     BurnInflictionText          DB ' has been engulfed in flames!', 0Dh, 0Ah, '$'
@@ -132,14 +132,18 @@ data SEGMENT
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
     HolyEmpireHealText          DB 0Dh, 0Ah, 'Holy Empire: Health restored by 5!', 0Dh, 0Ah, '$'  
-    HealerHeavyText				DB ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'
-    BurnUltimateText            DB ' has been engulfed in flames, and will burn for the next 4 turns!', 0Dh, 0Ah, '$'   
+    HealerHeavyText				DB ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'    
     VampHealHeavyText         	DB ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$' 
     VampHealSynHeavyText        DB 'The Count Shares Their Feast, Offering Lifeblood To The Ally In Dark Generosity. Restoring ','$'
 	HPText						DB 'HP!', 0Dh, 0Ah, '$'                                                   
+
+	; Ultimate Texts   
+	UltimateNotReadyText        DB 'Your ultimate ability is not yet ready!', '$'
+	BurnUltimateText            DB ' has been engulfed in flames, and will burn for the next 4 turns!', 0Dh, 0Ah, '$'   
 	KnightUltimateText 			DB "The Knight's Valor Shone Bright, Shielding All From Fatigue, Granting ", '$'
-	KnightUltimateRemText		DB ' Unyielding Endurance For 2 Turns.',0Dh,0Ah, '$'
-    
+	KnightUltimateRemText		DB ' Unyielding Endurance For 2 Turns.',0Dh,0Ah, '$'           
+	VanguardUltimateText		DB "Stands Resolute, Deflecting Every Blow, Countering All Damage For 1 Turn",0Dh,0Ah,'$'
+   
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
     GreatWallText               DB 0Dh, 0Ah, 'Unleashed Synergy: Great Wall! Your party`s Vanguard has received an additonal 30 HP, and your party`s Healer has received a defence buff',0Dh,0Ah,'$'
@@ -751,7 +755,7 @@ code SEGMENT
 		; Knight Ultimate  
         P1KnightCheck:             
             CMP AL, 00000000B  ; Check if Knight
-            JNE FinishAttack
+            JNE P1VanguardCheck
             ; Set Vitality bit, and update vitality counters for team
             OR Player1Status, 00010000B
             MOV Team1Vitality, 2
@@ -764,8 +768,19 @@ code SEGMENT
             MOV DX, '1'
             CALL PrintChar 
             MOV DX, OFFSET KnightUltimateRemText  
-            CALL PrintLine
-            JMP EvalAttack_CheckNextAttacker        	           
+            CALL PrintLine                                 
+            JMP EvalAttack_CheckNextAttacker   
+        ; Vanguard Ultimate
+        P1VanguardCheck:            	
+        	CMP AL, 01000000B  ; Check if Vanguard
+            JNE FinishAttack
+            ; Set Vanguard Flag bit  
+            OR VanguardCounterFlags, 00000001B 			
+            ; Print Text
+            CALL PrintPlayerName                                     
+            MOV DX, OFFSET VanguardUltimateText
+            CALL PrintLine                                 
+            JMP EvalAttack_CheckNextAttacker      	           
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
@@ -982,7 +997,7 @@ code SEGMENT
 		; Knight Ultimate  
         P2KnightCheck:             
             CMP AL, 00000000B  ; Check if Knight
-            JNE FinishAttack
+            JNE P2VanguardCheck
             ; Set Vitality bit, and update vitality counters for team
             OR Player1Status, 00010000B
             MOV Team1Vitality, 2
@@ -996,7 +1011,18 @@ code SEGMENT
             CALL PrintChar 
             MOV DX, OFFSET KnightUltimateRemText  
             CALL PrintLine
-            JMP EvalAttack_CheckNextAttacker        	     
+            JMP EvalAttack_CheckNextAttacker  
+        ; Vanguard Ultimate
+        P2VanguardCheck:            	
+        	CMP AL, 00000100B  ; Check if Vanguard
+            JNE FinishAttack
+            ; Set Vanguard Flag bit  
+            OR VanguardCounterFlags, 00000010B
+ 			; Print Text
+			CALL PrintPlayerName                                     
+            MOV DX, OFFSET VanguardUltimateText
+            CALL PrintLine                                 
+            JMP EvalAttack_CheckNextAttacker                      	     
         ; P3 Attacks	      
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
@@ -1210,7 +1236,7 @@ code SEGMENT
         ; Knight Ultimate  
         P3KnightCheck:             
             CMP AL, 00000000B  ; Check if Knight
-            JNE FinishAttack
+            JNE P3VanguardCheck
             ; Set Vitality bit, and update vitality counters for team
             OR Player3Status, 00010000B
             MOV Team2Vitality, 2
@@ -1224,7 +1250,18 @@ code SEGMENT
             CALL PrintChar 
             MOV DX, OFFSET KnightUltimateRemText  
             CALL PrintLine
-            JMP EvalAttack_CheckNextAttacker 	     
+            JMP EvalAttack_CheckNextAttacker 
+        ; Vanguard Ultimate
+        P3VanguardCheck:            
+        	CMP AL, 01000000B  ; Check if Vanguard
+            JNE FinishAttack
+            ; Set Vanguard Flag bit  
+            OR VanguardCounterFlags, 00000100B
+ 			; Print Text
+			CALL PrintPlayerName                                     
+            MOV DX, OFFSET VanguardUltimateText
+            CALL PrintLine                                 
+            JMP EvalAttack_CheckNextAttacker              	     
         ; P4 Attacks	      
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
@@ -1435,7 +1472,7 @@ code SEGMENT
 		; Knight Ultimate  
         P4KnightCheck:             
             CMP AL, 00000000B  ; Check if Knight
-            JNE FinishAttack
+            JNE P4VanguardCheck
             ; Set Vitality bit, and update vitality counters for team
             OR Player3Status, 00010000B
             MOV Team2Vitality, 2
@@ -1449,7 +1486,18 @@ code SEGMENT
             CALL PrintChar 
             MOV DX, OFFSET KnightUltimateRemText  
             CALL PrintLine
-            JMP EvalAttack_CheckNextAttacker         	                        
+            JMP EvalAttack_CheckNextAttacker      
+        ; Vanguard Ultimate
+        P4VanguardCheck:            	
+        	CMP AL, 00001000B  ; Check if Vanguard
+            JNE FinishAttack
+            ; Set Vanguard Flag bit  
+            OR VanguardCounterFlags, 00001000B
+ 			; Print Text
+			CALL PrintPlayerName                                     
+            MOV DX, OFFSET VanguardUltimateText
+            CALL PrintLine                                 
+            JMP EvalAttack_CheckNextAttacker                 	                        
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
 			CALL LoadPlayerStatsInDI          
@@ -1466,7 +1514,8 @@ code SEGMENT
 			RET   
 		; Reset Attack Variables
 		EndAttackCycle:
-	        MOV CurrentlyTargeting, 0B         ; reset targetting
+	        MOV CurrentlyTargeting, 0B         ; reset targetting 
+	        MOV VanguardCounterFlags, 00000000B ; Resetting Vanguard Counter Flags
     		AND AliveAndHealStatus, 11110000B  ; reset healing
     		MOV CurrentTurn, 0	
         RET
