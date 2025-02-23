@@ -143,6 +143,8 @@ data SEGMENT
 	KnightUltimateText 			DB "The Knight's Valor Shone Bright, Shielding All From Fatigue, Granting ", '$'
 	KnightUltimateRemText		DB ' Unyielding Endurance For 2 Turns.',0Dh,0Ah, '$'           
 	VanguardUltimateText		DB "Stands Resolute, Deflecting Every Blow, Countering All Damage For 1 Turn",0Dh,0Ah,'$'
+	VanguardUltReflectText		DB "The Attack To Vanguard Was Reflected, Dealing ", '$'  
+	VanguardUltReflectRemText	DB " Damage Back!", 0Dh, 0Ah, '$'
    
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
@@ -1524,16 +1526,55 @@ code SEGMENT
     ; Enemy Stats should be Loaded on DI      
     ; Enemy Number should be Loaded on BH  
     ; USES Registers SI, DI, AX, BX, DX
-    DoDamage:     	                	
-    	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI    	      
-    	CALL UpdateCrit               	    	   
-    	; Crits Calc    	
-    	; CurrentTurn AND CurrentTurnStats For P1  
-    	CMP CurrentTurn, 0
-	    JNE DoDamage_CheckP2Crit
-	    TEST CurrentTurnStats, 00010000B      ; check crit
-	    JZ DoDamage_CheckP2Crit	    
-	    JMP DoDamage_PlayerHasCrit  
+    DoDamage:    
+    	; Check For Vanguard Counter      	
+    	CMP BH, 0    ; p1
+    	JNE DoDmg_P2VanguardCheck     
+		TEST VanguardCounterFlags, 00000001B  ; p1 vanguard check
+		JNZ VanguardCountered
+    	JMP DoDmg_NoCounter
+    	DoDmg_P2VanguardCheck:
+	 		CMP BH, 1     ; p2
+	    	JNE DoDmg_P3VanguardCheck     
+	    	TEST VanguardCounterFlags, 00000010B ; p2 vanguard check
+    		JNZ VanguardCountered 
+	    	JMP DoDmg_NoCounter 
+	    DoDmg_P3VanguardCheck:
+	 		CMP BH, 2     ; p3
+	    	JNE DoDmg_P4VanguardCheck     
+	    	TEST VanguardCounterFlags, 00000100B ; p3 vanguard check
+	    	JNZ VanguardCountered 
+	    	JMP DoDmg_NoCounter   
+	    DoDmg_P4VanguardCheck:	
+	    	CMP BH, 3     ; p4
+	    	JNE DoDmg_NoCounter     
+	    	TEST VanguardCounterFlags, 00001000B ; p4 vanguard check
+	    	JNZ VanguardCountered 
+	    	JMP DoDmg_NoCounter
+	    VanguardCountered:
+	    	MOV DX, OFFSET VanguardUltReflectText
+	    	CALL PrintLine
+	    	MOV DX, DamageToBeDealt
+	    	CALL PrintLongInt
+	    	MOV DX, OFFSET VanguardUltReflectRemText
+	    	; Load CurrentTurn as Enemy
+	    	CALL LoadPlayerStatsInSI   
+	    	MOV AX, DamageToBeDealt
+	    	SUB [DI], AX  
+	    	JNC VandCount_NoClamp
+			MOV [DI], 0  
+			VandCount_NoClamp:
+	    		RET
+    	DoDmg_NoCounter: 	                	
+	    	MOV SI, DI  ; Mov Enemy Stats into SI cuz UpdateCrit updates DI    	      
+	    	CALL UpdateCrit               	    	   
+	    	; Crits Calc    	
+	    	; CurrentTurn AND CurrentTurnStats For P1  
+	    	CMP CurrentTurn, 0
+		    JNE DoDamage_CheckP2Crit
+		    TEST CurrentTurnStats, 00010000B      ; check crit
+		    JZ DoDamage_CheckP2Crit	    
+		    JMP DoDamage_PlayerHasCrit  
 	    ; CurrentTurn AND CurrentTurnStats For P2
     	DoDamage_CheckP2Crit:
 		    CMP CurrentTurn, 1        
