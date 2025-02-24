@@ -18,7 +18,9 @@ data SEGMENT
 	BurnDamage              DB 10
 	BurnDuration            DB 2
 	PoisonDamage            DB 5
-	PoisonDuration          DB 4
+	PoisonDuration          DB 4 
+	VampireLeechChance      DB 50
+	Arena                   DB 0B
 	
 	; Player Stats
 	Player1Stats  	DB 0,0,0,0,0,0,0	
@@ -156,6 +158,14 @@ data SEGMENT
     CountsGenerosityText        DB 0Dh, 0Ah, 'Unleashed Synergy: Count`s Generosity! Absorbed health will now be shared with your party`s Vanguard!',0Dh,0Ah,'$'
     HolyEmpireText              DB 0Dh, 0Ah, 'Unleashed Synergy: Holy Empire! Your party`s Knight will now receive an additonal 5 HP for every heal action!',0Dh,0Ah,'$'
     
+    ; Arena texts
+    ArenaAnnouncementText       DB 0Dh, 0Ah, 'The arena for this battle is: ', '$'
+    StandardArenaText           DB 'Grasslands -_-', 0Dh, 0Ah, '$'                              
+    ChurchText                  DB 'Bastion Of Light! All Vanguards and Holy Knights will receive damage and defense boosts', 0Dh, 0Ah, '$'
+    HellscapeText               DB 'Pyre Of The Forsaken! All Pyromancers will receive a damage boost', 0Dh, 0Ah, '$'
+    CountsRestText              DB 'Count`s Cathedral! All Vampiric attacks will guarantee the life force of the target to be leeched', 0Dh, 0Ah, '$'
+    AttritionText               DB 'Withering Grounds! All attacks will now be reduced, and the health and defenses of all warriors will be boosted', 0Dh, 0Ah, '$' 
+    ; All arenas will have an equal probability of 20%
 data ENDS
       
       
@@ -3134,6 +3144,86 @@ main:
 ;==================================================================================
 ; MAIN FUNCTION
 ;==================================================================================
+    ArenaSelectionStart:
+        ; Grasslands, no change in classes
+        CALL GetChance
+        CMP DL, 20
+        JG TestArenaChurch
+        JMP PlayerSection       
+        TestArenaChurch:
+            CMP DL, 40
+            JG TestArenaHell
+            OR Arena, 00000001B
+            ; Set arena bit, buff Vanguard class in advance (Holy Knight buff done during class selection phase)
+            ; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,CC,UltC)
+            MOV DI, OFFSET VanguardStats
+            ADD [DI], 10
+            ADD [DI+1], 10
+            ADD [DI+2], 5
+            ADD [DI+4], 5
+            JMP PlayerSection
+        TestArenaHell:
+            CMP DL, 60
+            JG TestArenaAttrition
+            OR Arena, 00000010B
+            ; Set arena bit, increment burn duration and buff Pyromancer damage stats
+            MOV BurnDuration, 3
+            MOV BurnDamage, 15 
+            ; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,CC,UltC)
+            MOV DI, OFFSET PyromancerStats
+            ADD [DI+2], 5
+            ADD [DI+2], 10
+            JMP PlayerSection
+        TestArenaAttrition:
+            CMP DL, 80
+            JG SetArenaCountsCourt
+            OR Arena, 00000100B
+            ; Set arena bit, increment every class' HP, MaxHP, and Def. Decrement LDmg and Hdmg
+            ; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,CC,UltC)
+            MOV DI, OFFSET KnightStats
+            ADD [DI], 15
+            ADD [DI+1], 15
+            SUB [DI+3], 10
+            ADD [DI+4], 15
+            
+            MOV DI, OFFSET AssassinStats
+            ADD [DI], 15
+            SUB [DI+3], 10
+            SUB [DI+2], 5
+            ADD [DI+4], 20           
+            
+            MOV DI, OFFSET PyromancerStats
+            ADD [DI], 20
+            ADD [DI+1], 20
+            SUB [DI+2], 5
+            SUB [DI+3], 5
+            ADD [DI+4], 20
+            
+            MOV DI, OFFSET HealerStats
+            ADD [DI+3], 10
+            ADD [DI+4], 15
+            
+            MOV DI, OFFSET VanguardStats
+            SUB [DI+3], 10
+            ADD [DI+4], 10
+            
+            MOV DI, OFFSET VampireStats
+            ADD [DI+4], 15
+            SUB [DI+5], 20
+            JMP PlayerSection
+        SetArenaCountsCourt:
+            OR Arena, 00001000B
+            ; Buff vampire stats
+            ; Class Stats     (HP, MaxHP,LDmg,HDmg,Def,CC,UltC)
+            MOV DI, OFFSET VampireStats
+            ADD [DI], 10
+            ADD [DI+1], 10
+            ADD [DI+2], 5
+            ADD [DI+3], 5
+            ADD [DI+4], 10
+            MOV VampireLeechChance, 100
+        
+    PlayerSection:
     MOV MatchTurn, 1          
     ; Print P1 MSG      
     MainP1ClassSelection:          
@@ -3215,29 +3305,34 @@ main:
     CALL UpdateSynergy
     CALL ApplyVanguardPassive
     CALL UpdateCurrentTurn                        
-	; TEMPORARILY CLASS ASSIGNMENT ONLY!!!!  
-	; p1 	
-;	CALL SelectPlayerClass
-;	MOV SI, OFFSET Player1Stats
-;	CALL InitializePlayerStats
-;		; p2
-;	CALL UpdateCurrentTurn
-;	MOV DI, OFFSET AssassinStats
-;	MOV SI, OFFSET Player2Stats
-;	CALL InitializePlayerStats                             
-;    CALL UpdateSynergy                                 
-;    ; p3                
-;    CALL UpdateCurrentTurn 
-;	MOV DI, OFFSET AssassinStats
-;	MOV SI, OFFSET Player3Stats
-;	CALL InitializePlayerStats                             
-;        ; p4                                       
-;	CALL UpdateCurrentTurn                
-;	MOV DI, OFFSET AssassinStats 	
-;	MOV SI, OFFSET Player4Stats
-;	CALL InitializePlayerStats                        
-;    CALL UpdateCurrentTurn 
-;    CALL UpdateSynergy 
+
+    ; Announce arena now
+    MOV DX, OFFSET ArenaAnnouncementText
+    CALL PrintLine
+    TEST Arena, 00001000B   ; Count's Court
+    JZ CheckAttrition
+    MOV DX, OFFSET CountsRestText
+    JMP ArenaAnnouncementFinal    
+    CheckAttrition:
+        TEST Arena, 00000100B
+        JZ CheckHellscape
+        MOV DX, OFFSET AttritionText
+        JMP ArenaAnnouncementFinal
+    CheckHellscape:
+        TEST Arena, 00000010B
+        JZ CheckChurch
+        MOV DX, OFFSET HellscapeText
+        JMP ArenaAnnouncementFinal
+    CheckChurch:
+        TEST Arena, 00000001B 
+        JZ StandardArena
+        MOV DX, OFFSET ChurchText
+        JMP ArenaAnnouncementFinal
+    StandardArena:
+        MOV DX, OFFSET StandardArenaText     
+    ArenaAnnouncementFinal:
+        CALL PrintLine
+     
     MOV CurrentTurn, 0
     MOV MatchTurn, 0 ; Awful hack alert!!!   
     GameLoop:              
@@ -3342,7 +3437,7 @@ main:
     Team1Victory:  
     	MOV DX, OFFSET Team1Won
     	CALL PrintLine 
-    	JMP EndGame       	   
+    	JMP AskReplay       	   
     Team2Victory:  
     	MOV DX, OFFSET Team2Won
 		CALL PrintLine
@@ -3365,7 +3460,68 @@ main:
         MOV Team1Classes, 00000000B 
         MOV Team2Classes, 00000000B  
         MOV MatchTurn, 0
-        MOV TeamSynergies, 00000000B    
+        MOV TeamSynergies, 00000000B
+        	
+    	; Restore Vampire stats
+    	MOV DI, OFFSET VampireStats
+    	MOV [DI], 70
+    	MOV [DI+1], 70
+    	MOV [DI+2], 15
+    	MOV [DI+3], 25
+    	MOV [DI+4], 15
+    	MOV [DI+5], 40
+    	MOV [DI+6], 4
+    	
+    	; Restore Vanguard stats
+    	MOV DI, OFFSET HealerStats
+    	MOV [DI], 100
+    	MOV [DI+1], 100
+    	MOV [DI+2], 10
+    	MOV [DI+3], 35
+    	MOV [DI+4], 50
+    	MOV [DI+5], 0
+    	MOV [DI+6], 4        	
+    	
+    	; Restore Healer stats
+    	MOV DI, OFFSET HealerStats
+    	MOV [DI], 70
+    	MOV [DI+1], 70
+    	MOV [DI+2], 15
+    	MOV [DI+3], 30
+    	MOV [DI+4], 15
+    	MOV [DI+5], 30
+    	MOV [DI+6], 4
+    	
+    	; Restore Knight stats 
+    	MOV DI, OFFSET KnightStats
+    	MOV [DI], 85
+    	MOV [DI+1], 85
+    	MOV [DI+2], 20
+    	MOV [DI+3], 35
+    	MOV [DI+4], 30
+    	MOV [DI+5], 30
+    	MOV [DI+6], 4
+    	
+    	; Restore Assassin stats 
+    	MOV DI, OFFSET AssassinStats
+    	MOV [DI], 30
+    	MOV [DI+1], 60
+    	MOV [DI+2], 30
+    	MOV [DI+3], 40
+    	MOV [DI+4], 10
+    	MOV [DI+5], 50
+    	MOV [DI+6], 4
+    	
+    	; Restore Pyromancer stats 
+    	MOV DI, OFFSET PyromancerStats
+    	MOV [DI], 50
+    	MOV [DI+1], 50
+    	MOV [DI+2], 20
+    	MOV [DI+3], 30
+    	MOV [DI+4], 20
+    	MOV [DI+5], 30
+    	MOV [DI+6], 4
+     
         JMP main   
                 
     EndGame:
