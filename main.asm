@@ -567,13 +567,17 @@ code SEGMENT
     	    JG P1StoreLightAtkDmgForP3_Final        ; Burn attempt failed 
     	    ; Apply burn to P3
     	    OR Player3Status, 10000000B
-    	    ADD P3BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '3'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine
+    	    TEST TeamSynergies, 01000000B
+    	    JZ P1LBurnsP3Step
+    	    ADD P3BurnCounter, 1
+    	    P1LBurnsP3Step:
+        	    ADD P3BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '3'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
     	    P1StoreLightAtkDmgForP3_Final:
         	    MOV CurrentTurn, 2              ; Attacking P3  
         	    MOV EnemyIdentifier, 2          ; Store enemy ID  
@@ -587,13 +591,17 @@ code SEGMENT
         	    JG P1StoreLightAtkDmgForP4_Final        ; Burn attempt failed 
         	    ; Apply burn to P4
         	    OR Player4Status, 10000000B
-        	    ADD P4BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '4'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine
+        	    TEST TeamSynergies, 01000000B
+        	    JZ P1LBurnsP4Step
+                ADD P4BurnCounter, 1       	    
+        	    P1LBurnsP4Step:
+            	    ADD P4BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '4'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine
         	    P1StoreLightAtkDmgForP4_Final:        	
             	    MOV CurrentTurn, 3 ; Attacking P4  
             	    MOV EnemyIdentifier, 3 ; Store enemy ID    	    
@@ -621,14 +629,18 @@ code SEGMENT
     	    JG P1StoreHeavyAtkDmgForP3_Final        ; Burn attempt failed 
     	    ; Apply burn to P3
     	    OR Player3Status, 10000000B
-    	    ADD P3BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '3'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine
-    	    JMP P1StoreHeavyAtkDmgForP3_Final
+    	    TEST TeamSynergies, 01000000B            ; Test for scorched earth synergy
+    	    JZ P1HBurnsP3Step                        
+    	    ADD P3BurnCounter, 1                    ; Add additonal turn for burn status effect
+    	    P1HBurnsP3Step:
+        	    ADD P3BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '3'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    JMP P1StoreHeavyAtkDmgForP3_Final
     	    P1AssassinHeavyCheck_ForP3:
     	        CMP CL, 00010000B               ; Check if P1 is an assassin
     	        JNE P1StoreHeavyAtkDmgForP3_Final   ; Not assassin
@@ -657,13 +669,17 @@ code SEGMENT
         	    JG P1StoreHeavyAtkDmgForP4_Final        ; Burn attempt failed 
         	    ; Apply burn to P4
         	    OR Player4Status, 10000000B
-        	    ADD P4BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '4'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine
+        	    TEST TeamSynergies, 01000000B           ; Test scorched earth synergy for team 1
+        	    JNZ P1HBurnsP4Step
+        	    ADD P4BurnCounter, 1                    ; Add additonal turn for burning target
+        	    P1HBurnsP4Step:
+            	    ADD P4BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '4'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine
         	    P1AssassinHeavyCheck_ForP4:
         	    CMP CL, 00010000B                   ; Check if P1 is an assassin
         	    JNE P1StoreHeavyAtkDmgForP4_Final   ; Not assassin 
@@ -720,9 +736,9 @@ code SEGMENT
             JNE P1AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
             OR Player3Status, 10000000B
-            MOV P3BurnCounter, 4
+            ADD P3BurnCounter, 4
             OR Player4Status, 10000000B
-            MOV P4BurnCounter, 4
+            ADD P4BurnCounter, 4
             MOV DX, OFFSET TeamText
             CALL PrintLine
             MOV DX, '2'
@@ -804,14 +820,18 @@ code SEGMENT
     	    CMP DL, 20                  
     	    JG P2StoreLightAtkDmgForP3_Final        ; Burn attempt failed 
     	    ; Apply burn to P3
-    	    OR Player3Status, 10000000B
-    	    ADD P3BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '3'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine         	   	         
+    	    OR Player3Status, 10000000B 
+    	    TEST TeamSynergies, 01000000B
+    	    JZ P2LBurnsP3Step
+            ADD P3BurnCounter, 1   	    
+    	    P2LBurnsP3Step:
+        	    ADD P3BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '3'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine         	   	         
         	P2StoreLightAtkDmgForP3_Final:
         	     MOV CurrentTurn, 2 ; Attacking P3  
         	     MOV EnemyIdentifier, 2 ; Store enemy ID 
@@ -825,17 +845,21 @@ code SEGMENT
         	    JG P2StoreLightAtkDmgForP4_Final        ; Burn attempt failed 
         	    ; Apply burn to P4
         	    OR Player4Status, 10000000B
-        	    ADD P4BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '4'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine 
+        	    TEST TeamSynergies, 01000000B
+        	    JZ P2LBurnsP4Step
+                ADD P4BurnCounter, 1       	    
+        	    P2LBurnsP4Step:
+            	    ADD P4BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '4'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine 
             	P2StoreLightAtkDmgForP4_Final:        	
-            	     MOV CurrentTurn, 3 ; Attacking P4  
-            	     MOV EnemyIdentifier, 3 ; Store enemy ID     	    
-            	     JMP FinishAttack	       
+            	    MOV CurrentTurn, 3 ; Attacking P4  
+            	    MOV EnemyIdentifier, 3 ; Store enemy ID     	    
+            	    JMP FinishAttack	       
         P2HeavyAttack:  
         	TEST Player2Status, 00000010B ; Check if Heavy Attack 
 			JZ P2Ultimate        	
@@ -858,15 +882,19 @@ code SEGMENT
     	    CMP DL, 20                  
     	    JG P2StoreHeavyAtkDmgForP3_Final        ; Burn attempt failed 
     	    ; Apply burn to P3
-    	    OR Player3Status, 10000000B
-    	    ADD P3BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '3'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine
-    	    JMP P2StoreHeavyAtkDmgForP3_Final     	    
+    	    OR Player3Status, 10000000B 
+    	    TEST TeamSynergies, 01000000B           ; Check Team 1 for scorched earth synergy
+    	    JZ P2HBurnsP3Step
+    	    ADD P3BurnCounter, 1                    ; Add additional burn duration
+    	    P2HBurnsP3Step:
+        	    ADD P3BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '3'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    JMP P2StoreHeavyAtkDmgForP3_Final     	    
     	    P2AssassinHeavyCheck_ForP3:
     	        CMP CL, 00000001B                   ; Check if P2 is an assassin        	        
     	        JNE P2StoreHeavyAtkDmgForP3_Final   ; Not assassin
@@ -895,14 +923,18 @@ code SEGMENT
         	    JG P2StoreHeavyAtkDmgForP4_Final        ; Burn attempt failed 
         	    ; Apply burn to P4
         	    OR Player4Status, 10000000B
-        	    ADD P4BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '4'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine
-        	    JMP P2StoreHeavyAtkDmgForP4_Final
+        	    TEST TeamSynergies, 01000000B
+        	    JZ P2HBurnsP4Step
+                ADD P4BurnCounter, 1       	    
+        	    P2HBurnsP4Step:
+            	    ADD P4BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '4'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine
+            	    JMP P2StoreHeavyAtkDmgForP4_Final
         	    P2AssassinHeavyCheck_ForP4:
         	        CMP CL, 00000001B                   ; Check if P2 is an assassin
         	        JNE P2StoreHeavyAtkDmgForP4_Final   ; Not assassin
@@ -959,9 +991,9 @@ code SEGMENT
             JNE P2AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
             OR Player3Status, 10000000B
-            MOV P3BurnCounter, 4
+            ADD P3BurnCounter, 4
             OR Player4Status, 10000000B
-            MOV P4BurnCounter, 4
+            ADD P4BurnCounter, 4
             MOV DX, OFFSET TeamText
             CALL PrintLine
             MOV DX, '2'
@@ -1044,13 +1076,17 @@ code SEGMENT
     	    JG P3StoreLightAtkDmgForP1_Final        ; Burn attempt failed 
     	    ; Apply burn to P1
     	    OR Player1Status, 10000000B
-    	    ADD P1BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '1'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine            	   	         
+    	    TEST TeamSynergies, 00000100B
+    	    JZ P3LBurnsP1Step
+            ADD P1BurnCounter, 1   	    
+    	    P3LBurnsP1Step:
+        	    ADD P1BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '1'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine            	   	         
         	P3StoreLightAtkDmgForP1_Final:
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID 
@@ -1063,14 +1099,18 @@ code SEGMENT
         	    CMP DL, 20                  
         	    JG P3StoreLightAtkDmgForP2_Final        ; Burn attempt failed 
         	    ; Apply burn to P2
-        	    OR Player2Status, 10000000B
-        	    ADD P2BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '2'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine
+        	    OR Player2Status, 10000000B  
+        	    TEST TeamSynergies, 00000100B
+        	    JZ P3LBurnsP2Step
+        	    ADD P3BurnCounter, 1
+        	    P3LBurnsP2Step:
+            	    ADD P2BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '2'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine
         	    P3StoreLightAtkDmgForP2_Final:          	
             	     MOV CurrentTurn, 1 ; Attacking P2 
             	     MOV EnemyIdentifier, 1 ; Store enemy ID         	    	   
@@ -1098,14 +1138,18 @@ code SEGMENT
     	    JG P3StoreHeavyAtkDmgForP1_Final        ; Burn attempt failed 
     	    ; Apply burn to P1
     	    OR Player1Status, 10000000B
-    	    ADD P1BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '1'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine
-    	    JMP P3StoreHeavyAtkDmgForP1_Final
+    	    TEST TeamSynergies, 00000100B
+    	    JZ P3HBurnsP1Step
+            ADD P1BurnCounter, 1   	    
+    	    P3HBurnsP1Step:
+        	    ADD P1BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '1'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    JMP P3StoreHeavyAtkDmgForP1_Final
         	P3AssassinHeavyCheck_ForP1:
         	    CMP CL, 00010000B                       ; Check if P3 is assassin
             	JNE P3StoreHeavyAtkDmgForP1_Final       ; Not assassin, end evaluation for P3
@@ -1113,8 +1157,8 @@ code SEGMENT
         	    CALL GetChance
         	    CMP DL, 33                  
         	    JG P3StoreHeavyAtkDmgForP1_Final        ; Poison attempt failed 
-        	    ; Apply burn to P1
-        	    OR Player1Status, 01000000B
+        	    ; Apply Poison to P1
+        	    OR Player1Status, 01000000B 
         	    ADD P1PoisonCounter, 4
         	    MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -1128,21 +1172,25 @@ code SEGMENT
         	     JMP FinishAttack 
         	P3StoreHeavyAtkDmgForP2:
         	    CMP CL, 00100000B                       ; Check if P3 is a pyromancer
-        	    JNE P3StoreHeavyAtkDmgForP2_Final
+        	    JNE P3AssassinHeavyCheck_ForP2
         	    ; P3 is pyromancer
         	    CALL GetChance
         	    CMP DL, 20                  
         	    JG P3StoreHeavyAtkDmgForP2_Final        ; Burn attempt failed 
         	    ; Apply burn to P2
         	    OR Player2Status, 10000000B
-        	    ADD P2BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '2'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine
-        	    JMP P3StoreHeavyAtkDmgForP2_Final
+        	    TEST TeamSynergies, 00000100B           ; Test team 2 for scorched earth
+        	    JZ P3HBurnsP2Step
+        	    ADD P2BurnCounter, 1                    ; Add additional burn duration
+        	    P3HBurnsP2Step:
+            	    ADD P2BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '2'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine
+            	    JMP P3StoreHeavyAtkDmgForP2_Final
         	    P3AssassinHeavyCheck_ForP2:
             	    CMP CL, 00010000B                       ; Check if P3 is assassin
                 	JNE P3StoreHeavyAtkDmgForP2_Final       ; Not assassin, end evaluation for P3
@@ -1196,9 +1244,9 @@ code SEGMENT
             JNE P3AssassinCheck
             ; Set burn bit, and update burn counters for both enemies
             OR Player1Status, 10000000B
-            MOV P1BurnCounter, 4
+            ADD P1BurnCounter, 4
             OR Player2Status, 10000000B
-            MOV P2BurnCounter, 4
+            ADD P2BurnCounter, 4
             MOV DX, OFFSET TeamText
             CALL PrintLine
             MOV DX, '1'
@@ -1280,13 +1328,17 @@ code SEGMENT
     	    JG P3StoreLightAtkDmgForP1_Final        ; Burn attempt failed 
     	    ; Apply burn to P1
     	    OR Player1Status, 10000000B
-    	    ADD P1BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '1'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine
+    	    TEST TeamSynergies, 00000100B
+    	    JZ P4LBurnsP1Step
+            ADD P1BurnCounter, 1   	    
+    	    P4LBurnsP1Step:
+        	    ADD P1BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '1'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
         	P4StoreLightAtkDmgForP1_Final:   
         	     MOV CurrentTurn, 0 ; Attacking P1 
         	     MOV EnemyIdentifier, 0 ; Store enemy ID
@@ -1300,13 +1352,17 @@ code SEGMENT
         	    JG P4StoreLightAtkDmgForP2_Final        ; Burn attempt failed 
         	    ; Apply burn to P2
         	    OR Player2Status, 10000000B
-        	    ADD P2BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '2'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine
+        	    TEST TeamSynergies, 00000100B
+        	    JZ P4LBurnsP2Step
+        	    ADD P2BurnCounter, 1
+        	    P4LBurnsP2Step:
+            	    ADD P2BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '2'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine
         	    P4StoreLightAtkDmgForP2_Final:    	
             	    MOV CurrentTurn, 1 ; Attacking P2 
             	    MOV EnemyIdentifier, 1 ; Store enemy ID      	    
@@ -1333,13 +1389,18 @@ code SEGMENT
     	    JG P3StoreHeavyAtkDmgForP1_Final        ; Burn attempt failed 
     	    ; Apply burn to P1
     	    OR Player1Status, 10000000B
-    	    ADD P1BurnCounter, 2
-    	    MOV DX, OFFSET PlayerText
-    	    CALL PrintLine
-    	    MOV DX, '1'
-    	    CALL PrintChar
-    	    MOV DX, OFFSET BurnInflictionText
-    	    CALL PrintLine
+    	    TEST TeamSynergies, 00000100B
+    	    JZ P4HBurnsP1Step
+            ADD P1BurnCounter, 1   	    
+    	    P4HBurnsP1Step:
+        	    ADD P1BurnCounter, 2
+        	    MOV DX, OFFSET PlayerText
+        	    CALL PrintLine
+        	    MOV DX, '1'
+        	    CALL PrintChar
+        	    MOV DX, OFFSET BurnInflictionText
+        	    CALL PrintLine
+        	    JMP P4StoreHeavyAtkDmgForP1_Final
     	    P4AssassinHeavyCheck_ForP1:
         	    CMP CL, 00000001B                       ; Check if P4 is an assassin
             	JNE P4StoreHeavyAtkDmgForP1_Final
@@ -1361,20 +1422,25 @@ code SEGMENT
         	     JMP FinishAttack 
         	P4StoreHeavyAtkDmgForP2:
         	    CMP CL, 00000010B                   ; Check if P4 is a pyromancer
-        	    JNE P3StoreHeavyAtkDmgForP2_Final
+        	    JNE P4AssassinHeavyCheck_ForP2
         	    ; P4 is pyromancer
         	    CALL GetChance
         	    CMP DL, 33                  
         	    JG P4StoreHeavyAtkDmgForP2_Final        ; Burn attempt failed 
         	    ; Apply burn to P2
         	    OR Player2Status, 10000000B
-        	    ADD P2BurnCounter, 2
-        	    MOV DX, OFFSET PlayerText
-        	    CALL PrintLine
-        	    MOV DX, '2'
-        	    CALL PrintChar
-        	    MOV DX, OFFSET BurnInflictionText
-        	    CALL PrintLine
+        	    TEST TeamSynergies, 00000100B
+        	    JZ P4HBurnsP2Step
+        	    ADD P2BurnCounter, 1
+        	    P4HBurnsP2Step:
+            	    ADD P2BurnCounter, 2
+            	    MOV DX, OFFSET PlayerText
+            	    CALL PrintLine
+            	    MOV DX, '2'
+            	    CALL PrintChar
+            	    MOV DX, OFFSET BurnInflictionText
+            	    CALL PrintLine
+            	    JMP P4StoreHeavyAtkDmgForP2_Final
         	    P4AssassinHeavyCheck_ForP2:
             	    CMP CL, 00000001B                       ; Check if P4 is an assassin
                 	JNE P4StoreHeavyAtkDmgForP2_Final
