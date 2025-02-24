@@ -147,7 +147,7 @@ data SEGMENT
 	VanguardUltReflectRemText	DB " Damage Back!", 0Dh, 0Ah, '$'
    
     ; Synergy texts
-    NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Nobles Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
+    NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Noblesse Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
     GreatWallText               DB 0Dh, 0Ah, 'Unleashed Synergy: Great Wall! Your party`s Vanguard has received an additonal 30 HP, and your party`s Healer has received a defence buff',0Dh,0Ah,'$'
     AssassinsCreedText          DB 0Dh, 0Ah, 'Unleashed Synergy: Assassin`s Creed! Both Assassins can now perform their ultimate attack after only 3 turns, at the cost of 10 HP', 0Dh, 0Ah, '$'  
     ScorchedEarthText           DB 0Dh, 0Ah, 'Unleashed Synergy: Scorched Earth! Enemy players will be burnt for 1 additional turn!', 0Dh, 0Ah, '$'
@@ -775,9 +775,7 @@ code SEGMENT
         ; Vanguard Ultimate
         P1VanguardCheck:            	
         	CMP AL, 01000000B  ; Check if Vanguard
-            JNE FinishAttack
-            ; Set Vanguard Flag bit  
-            OR VanguardCounterFlags, 00000001B 			
+            JNE FinishAttack			
             ; Print Text
             CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
@@ -977,8 +975,7 @@ code SEGMENT
             JNE P2KnightCheck     	      
         	MOV AL, 200 ; instakill     
         	MOV AH, 0
-        	MOV DamageToBeDealt, AX 
-        	INT 20h
+        	MOV DamageToBeDealt, AX
         	; If only one enemy alive, pick them
         	TEST AliveAndHealStatus, 01000000B
         	JZ P2AssassinatesP4                 ; P3 dead, target P4
@@ -1018,8 +1015,6 @@ code SEGMENT
         P2VanguardCheck:            	
         	CMP AL, 00000100B  ; Check if Vanguard
             JNE FinishAttack
-            ; Set Vanguard Flag bit  
-            OR VanguardCounterFlags, 00000010B
  			; Print Text
 			CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
@@ -1167,7 +1162,6 @@ code SEGMENT
             	    MOV EnemyIdentifier, 0 ; Store enemy ID      	     
             	    JMP FinishAttack     	         	               
         P3Ultimate:           
-            INT 20h
             MOV AL, Team2Classes        ; Temp store Team2Classes
             AND AL, 11110000B           ; Remove P4's class info
             CMP AL, 01010000B           ; If Vampire, paralyze the target
@@ -1258,8 +1252,6 @@ code SEGMENT
         P3VanguardCheck:            
         	CMP AL, 01000000B  ; Check if Vanguard
             JNE FinishAttack
-            ; Set Vanguard Flag bit  
-            OR VanguardCounterFlags, 00000100B
  			; Print Text
 			CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
@@ -1494,8 +1486,6 @@ code SEGMENT
         P4VanguardCheck:            	
         	CMP AL, 00001000B  ; Check if Vanguard
             JNE FinishAttack
-            ; Set Vanguard Flag bit  
-            OR VanguardCounterFlags, 00001000B
  			; Print Text
 			CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
@@ -1553,12 +1543,12 @@ code SEGMENT
 	    	JNZ VanguardCountered 
 	    	JMP DoDmg_NoCounter
 	    VanguardCountered:      
-	        INT 20h
 	    	MOV DX, OFFSET VanguardUltReflectText
 	    	CALL PrintLine
 	    	MOV AX, DamageToBeDealt
 	    	CALL PrintLongInt
 	    	MOV DX, OFFSET VanguardUltReflectRemText
+	    	CALL PrintLine
 	    	; Load CurrentTurn as Enemy
 	    	CALL LoadPlayerStatsInDI   
 	    	MOV AX, DamageToBeDealt  
@@ -2707,9 +2697,15 @@ code SEGMENT
                 P1KnightUltimateCheck:
                     ; Knight ultimate is for player's own team, no need to give target choice 
                     CMP AL, 00000000B
-                    JNE AttackFinalNoChoice
+                    JNE P1VanguardUltimateCheck
                     MOV [PlayersUltCooldown], 3        ; Reset Knight's ultimate cooldown
                     JMP AttackFinalNoChoice
+                P1VanguardUltimateCheck:    
+                    CMP AL, 01000000B  ; Check if Vanguard
+                    JNE AttackFinalNoChoice
+                    ; Set Vanguard Flag bit  
+                    OR VanguardCounterFlags, 00000001B
+                    JMP AttackFinalNoChoice 
             UltimateMChoice_1:
                 CMP CurrentTurn, 1
                 JNE UltimateMChoice_2
@@ -2744,10 +2740,16 @@ code SEGMENT
                             JMP AttackFinalNoChoice
                     P2KnightUltimateCheck:
                         ; Knight ultimate is for player's own team, no need to give target choice 
-                        TEST AL, 00000000B
-                        JNZ AttackFinal
+                        CMP AL, 00000000B
+                        JNE P2VanguardUltimateCheck
                         MOV [PlayersUltCooldown+1], 3        ; Reset Knight ultimate cooldown
                         JMP AttackFinalNoChoice
+                    P2VanguardUltimateCheck:    
+                        CMP AL, 00000100B  ; Check if Vanguard
+                        JNE AttackFinalNoChoice
+                        ; Set Vanguard Flag bit  
+                        OR VanguardCounterFlags, 00000010B
+                        JMP AttackFinalNoChoice 
             UltimateMChoice_2:
                 CMP CurrentTurn, 2
                 JNE UltimateMChoice_3 
@@ -2782,10 +2784,16 @@ code SEGMENT
                             JMP AttackFinalNoChoice
                     P3KnightUltimateCheck:
                         CMP AL, 00000000B
-                        ; Add logic to skip to next class' Ultimate Check 
+                        JNE P3VanguardUltimateCheck
                         ; Knight ultimate is for player's own team, no need to give target choice
                         MOV [PlayersUltCooldown+2], 3
                         JMP AttackFinalNoChoice
+                    P3VanguardUltimateCheck:    
+                        CMP AL, 01000000B  ; Check if Vanguard
+                        JNE AttackFinalNoChoice
+                        ; Set Vanguard Flag bit  
+                        OR VanguardCounterFlags, 00000100B
+                        JMP AttackFinalNoChoice 
             UltimateMChoice_3:
                 CMP [PlayersUltCooldown+3], 0       ; Check if P4 has ultimate ready
                 JG UltimateNotReady
@@ -2819,10 +2827,16 @@ code SEGMENT
                             JMP AttackFinalNoChoice   
                     P4KnightUltimateCheck:
                         CMP AL, 00000000B
-                        ; JNE P4HealerUltimateCheck
+                        JNE P4VanguardUltimateCheck
                         ; Knight ultimate is for player's own team, no need to give target choice
                         MOV [PlayersUltCooldown+3], 3
-                        JMP AttackFinalNoChoice           
+                        JMP AttackFinalNoChoice
+                    P4VanguardUltimateCheck:    
+                        CMP AL, 00000100B  ; Check if Vanguard
+                        JNE AttackFinalNoChoice
+                        ; Set Vanguard Flag bit  
+                        OR VanguardCounterFlags, 00001000B
+                        JMP AttackFinalNoChoice            
     	; Attack Chosen, In case some common finishing
     	; logic is required         
     	AttackFinal:       		
