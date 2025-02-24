@@ -1166,7 +1166,8 @@ code SEGMENT
             	    MOV CurrentTurn, 0 ; Attacking P2 
             	    MOV EnemyIdentifier, 0 ; Store enemy ID      	     
             	    JMP FinishAttack     	         	               
-        P3Ultimate:
+        P3Ultimate:           
+            INT 20h
             MOV AL, Team2Classes        ; Temp store Team2Classes
             AND AL, 11110000B           ; Remove P4's class info
             CMP AL, 01010000B           ; If Vampire, paralyze the target
@@ -1551,16 +1552,22 @@ code SEGMENT
 	    	TEST VanguardCounterFlags, 00001000B ; p4 vanguard check
 	    	JNZ VanguardCountered 
 	    	JMP DoDmg_NoCounter
-	    VanguardCountered:
+	    VanguardCountered:      
+	        INT 20h
 	    	MOV DX, OFFSET VanguardUltReflectText
 	    	CALL PrintLine
-	    	MOV DX, DamageToBeDealt
+	    	MOV AX, DamageToBeDealt
 	    	CALL PrintLongInt
 	    	MOV DX, OFFSET VanguardUltReflectRemText
 	    	; Load CurrentTurn as Enemy
 	    	CALL LoadPlayerStatsInDI   
-	    	MOV AX, DamageToBeDealt
-	    	SUB [DI], AX  
+	    	MOV AX, DamageToBeDealt  
+	    	CMP AX, 100
+	   		JL DoDamage_VDamageDontCapTo8Bit
+	   		MOV AX, 120                
+	   		; 8 Bit check ends
+	   		DoDamage_VDamageDontCapTo8Bit:
+	    	SUB [DI], AL  
 	    	JNC VandCount_NoClamp
 			MOV [DI], 0  
 			VandCount_NoClamp:
