@@ -816,14 +816,14 @@ code SEGMENT
            	CALL PrintLine
            	JMP EvalAttack_CheckNextAttacker
            	P1UltRevTeamate:
-           	; Heal and Revive Teamate Player  
-           	MOV BH, [Player2Stats+1]
-           	MOV [Player2Stats], BH
-           	OR AliveAndHealStatus, 00100000B           	          	
-            ; Print Text                                                 
-            MOV DX, OFFSET HealerUltReviveText
-            CALL PrintLine                                 
-            JMP EvalAttack_CheckNextAttacker                         	   	           
+	           	; Heal and Revive Teamate Player  
+	           	MOV BH, [Player2Stats+1]
+	           	MOV [Player2Stats], BH
+	           	OR AliveAndHealStatus, 00100000B           	          	
+	            ; Print Text                                                 
+	            MOV DX, OFFSET HealerUltReviveText
+	            CALL PrintLine                                 
+	            JMP EvalAttack_CheckNextAttacker                         	   	           
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
@@ -1073,12 +1073,37 @@ code SEGMENT
         ; Vanguard Ultimate
         P2VanguardCheck:            	
         	CMP AL, 00000100B  ; Check if Vanguard
-            JNE FinishAttack
+            JNE P2HealerCheck
  			; Print Text
 			CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
             CALL PrintLine                                 
-            JMP EvalAttack_CheckNextAttacker                      	     
+            JMP EvalAttack_CheckNextAttacker  
+       	; Healer Ultimate
+        P2HealerCheck:            	
+        	CMP AL, 00000011B  ; Check if Healer
+            JNE FinishAttack            		            
+           	TEST AliveAndHealStatus, 00010000B   
+           	JZ P2UltRevTeamate ; Check if teamate is Dead              
+           	; Heal Self
+           	MOV BH, [Player2Stats+1]
+           	MOV [Player2Stats], BH 
+           	; Heal Teamate
+           	MOV BH, [Player1Stats+1]
+           	MOV [Player1Stats], BH 
+           	; Print Text 
+           	MOV DX, OFFSET HealerUltHealBothText
+           	CALL PrintLine
+           	JMP EvalAttack_CheckNextAttacker
+           	P2UltRevTeamate:
+	           	; Heal and Revive Teamate Player  
+	           	MOV BH, [Player1Stats+1]
+	           	MOV [Player1Stats], BH
+	           	OR AliveAndHealStatus, 00010000B           	          	
+	            ; Print Text                                                 
+	            MOV DX, OFFSET HealerUltReviveText
+	            CALL PrintLine                                 
+	            JMP EvalAttack_CheckNextAttacker                     	     
         ; P3 Attacks	      
         P3LightAttack:
         	TEST Player3Status, 00000100B ; Check if Light Attack 
@@ -1326,12 +1351,37 @@ code SEGMENT
         ; Vanguard Ultimate
         P3VanguardCheck:            
         	CMP AL, 01000000B  ; Check if Vanguard
-            JNE FinishAttack
+            JNE P3HealerCheck
  			; Print Text
 			CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
             CALL PrintLine                                 
-            JMP EvalAttack_CheckNextAttacker              	     
+            JMP EvalAttack_CheckNextAttacker 
+		; Healer Ultimate
+        P3HealerCheck:            	
+        	CMP AL, 00110000B  ; Check if Healer
+            JNE FinishAttack            		            
+           	TEST AliveAndHealStatus, 10000000B   
+           	JZ P3UltRevTeamate ; Check if teamate is Dead              
+           	; Heal Self
+           	MOV BH, [Player3Stats+1]
+           	MOV [Player3Stats], BH 
+           	; Heal Teamate
+           	MOV BH, [Player4Stats+1]
+           	MOV [Player4Stats], BH 
+           	; Print Text 
+           	MOV DX, OFFSET HealerUltHealBothText
+           	CALL PrintLine
+           	JMP EvalAttack_CheckNextAttacker
+           	P3UltRevTeamate:
+	           	; Heal and Revive Teamate Player  
+	           	MOV BH, [Player4Stats+1]
+	           	MOV [Player4Stats], BH
+	           	OR AliveAndHealStatus, 10000000B           	          	
+	            ; Print Text                                                 
+	            MOV DX, OFFSET HealerUltReviveText
+	            CALL PrintLine                                 
+	            JMP EvalAttack_CheckNextAttacker                         	     
         ; P4 Attacks	      
         P4LightAttack:
         	TEST Player4Status, 00000100B ; Check if Light Attack 
@@ -1578,12 +1628,37 @@ code SEGMENT
         ; Vanguard Ultimate
         P4VanguardCheck:            	
         	CMP AL, 00001000B  ; Check if Vanguard
-            JNE FinishAttack
+            JNE P4HealerCheck
  			; Print Text
 			CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
             CALL PrintLine                                 
-            JMP EvalAttack_CheckNextAttacker                 	                        
+            JMP EvalAttack_CheckNextAttacker              
+		; Healer Ultimate
+        P4HealerCheck:            	
+        	CMP AL, 00000011B  ; Check if Healer
+            JNE FinishAttack            		            
+           	TEST AliveAndHealStatus, 01000000B   
+           	JZ P4UltRevTeamate ; Check if teamate is Dead              
+           	; Heal Self
+           	MOV BH, [Player4Stats+1]
+           	MOV [Player4Stats], BH 
+           	; Heal Teamate
+           	MOV BH, [Player3Stats+1]
+           	MOV [Player3Stats], BH 
+           	; Print Text 
+           	MOV DX, OFFSET HealerUltHealBothText
+           	CALL PrintLine
+           	JMP EvalAttack_CheckNextAttacker
+           	P4UltRevTeamate:
+	           	; Heal and Revive Teamate Player  
+	           	MOV BH, [Player3Stats+1]
+	           	MOV [Player3Stats], BH
+	           	OR AliveAndHealStatus, 01000000B           	          	
+	            ; Print Text                                                 
+	            MOV DX, OFFSET HealerUltReviveText
+	            CALL PrintLine                                 
+	            JMP EvalAttack_CheckNextAttacker                	                        
         ; Finish Attack, used for Finishing Attack Logic
         FinishAttack: 
 			CALL LoadPlayerStatsInDI          
