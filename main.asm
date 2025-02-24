@@ -144,7 +144,9 @@ data SEGMENT
 	KnightUltimateRemText		DB ' Unyielding Endurance For 2 Turns.',0Dh,0Ah, '$'           
 	VanguardUltimateText		DB "Stands Resolute, Deflecting Every Blow, Countering All Damage For 1 Turn",0Dh,0Ah,'$'
 	VanguardUltReflectText		DB "The Attack To Vanguard Was Reflected, Dealing ", '$'  
-	VanguardUltReflectRemText	DB " Damage Back!", 0Dh, 0Ah, '$'
+	VanguardUltReflectRemText	DB " Damage Back!", 0Dh, 0Ah, '$'  
+	HealerUltReviveText 		DB "From the Brink of Oblivion, a Beacon of Life Ignited Once More—Banishing Death's Embrace and Restoring Strength Anew, Revives Teamate To Full HP!", 0Dh, 0Ah, '$'
+	HealerUltHealBothText		DB "A Luminous Wave of Vitality Swept Through the Air, Cradling the Injured in Divine Warmth, Restoring Self to Full HP!", 0Dh, 0Ah, '$'
    
     ; Synergy texts
     NoblesObligeText            DB 0Dh, 0Ah, 'Unleashed Synergy: Noblesse Oblige! Both Knights shall deal an additonal 10 damage!',0Dh,0Ah,'$'
@@ -699,7 +701,7 @@ code SEGMENT
     			    MOV CurrentTurn, 3 ; Attacking P3    	      
     				MOV EnemyIdentifier, 3; Store enemy ID  			
         	     	JMP FinishAttack      	         	               
-        P1Ultimate:
+        P1Ultimate:             	
             MOV AL, Team1Classes            ; Temp store Team1Classes          
             AND AL, 11110000B               ; Remove P2's class info
             CMP AL, 01010000B               ; Check if vampire
@@ -791,12 +793,37 @@ code SEGMENT
         ; Vanguard Ultimate
         P1VanguardCheck:            	
         	CMP AL, 01000000B  ; Check if Vanguard
-            JNE FinishAttack			
+            JNE P1HealerCheck			
             ; Print Text
             CALL PrintPlayerName                                     
             MOV DX, OFFSET VanguardUltimateText
             CALL PrintLine                                 
-            JMP EvalAttack_CheckNextAttacker      	           
+            JMP EvalAttack_CheckNextAttacker  
+        ; Healer Ultimate
+        P1HealerCheck:            	
+        	CMP AL, 00110000B  ; Check if Healer
+            JNE FinishAttack            		            
+           	TEST AliveAndHealStatus, 00100000B   
+           	JZ P1UltRevTeamate ; Check if teamate is Dead              
+           	; Heal Self
+           	MOV BH, [Player1Stats+1]
+           	MOV [Player1Stats], BH 
+           	; Heal Teamate
+           	MOV BH, [Player2Stats+1]
+           	MOV [Player2Stats], BH 
+           	; Print Text 
+           	MOV DX, OFFSET HealerUltHealBothText
+           	CALL PrintLine
+           	JMP EvalAttack_CheckNextAttacker
+           	P1UltRevTeamate:
+           	; Heal and Revive Teamate Player  
+           	MOV BH, [Player2Stats+1]
+           	MOV [Player2Stats], BH
+           	OR AliveAndHealStatus, 00100000B           	          	
+            ; Print Text                                                 
+            MOV DX, OFFSET HealerUltReviveText
+            CALL PrintLine                                 
+            JMP EvalAttack_CheckNextAttacker                         	   	           
         ; P2 Attacks	      
         P2LightAttack:
         	TEST Player2Status, 00000100B ; Check if Light Attack 
