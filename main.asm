@@ -137,7 +137,8 @@ data SEGMENT
     HealerHeavyText				DB ' Has Been Healed For 15 HP!', 0Dh, 0Ah, '$'    
     VampHealHeavyText         	DB ' Sank Their Fangs Into Their Enemy Draining Their Life, Restoring ','$' 
     VampHealSynHeavyText        DB 'The Count Shares Their Feast, Offering Lifeblood To The Ally In Dark Generosity. Restoring ','$'
-	HPText						DB 'HP!', 0Dh, 0Ah, '$'                                                   
+	HPText						DB 'HP!', 0Dh, 0Ah, '$'        
+	PassedAwayText				DB 'Has Passed Away! RIP!', 0Dh, 0Ah, '$'                                            
 
 	; Ultimate Texts   
 	UltimateNotReadyText        DB 'Your ultimate ability is not yet ready!', '$'
@@ -374,49 +375,76 @@ code SEGMENT
 		; Print Player Num Stats
  	    CALL PrintPlayerName
 		MOV DX, OFFSET StatsText		 	     	 
-    	CALL PrintLine              	
-    	CALL LoadPlayerStatsInDI ; Load Stats
-    	; Print Health	
- 		MOV DX, OFFSET HealthText
- 		CALL PrintLine	   			 
- 		MOV AL, [SI]       
- 		CALL PrintInt 	
- 		; Print Max Health	
- 		MOV DX, '/'
- 		CALL PrintChar	  		 	
- 		MOV AL, [SI+1]       
- 		CALL PrintInt   
- 		; Print Player Stamina
- 		 MOV DX, OFFSET StaminaText     
- 		CALL PrintLine	 
- 		MOV DH,0h   
- 		; Player 1 Stamina
-		CMP CurrentTurn, 0
- 		JNE PPCS_P2StaminaPrintCheck
- 		MOV AL, [PlayersStamina+0] 
- 		JMP PPCS_StaminaPrintCheckFinish 	
- 		; Player 2 Stamina
- 		PPCS_P2StaminaPrintCheck:     
- 			CMP CurrentTurn, 1 
- 			JNE PPCS_P3StaminaPrintCheck
- 			MOV AL, [PlayersStamina+1]  
- 			JMP PPCS_StaminaPrintCheckFinish 
- 		; Player 3 Stamina
- 		PPCS_P3StaminaPrintCheck:   
- 		 	CMP CurrentTurn, 2 
- 			JNE PPCS_P4StaminaPrintCheck
- 			MOV AL, [PlayersStamina+2] 
- 			JMP PPCS_StaminaPrintCheckFinish 
- 		 ; Player 3 Stamina
- 		PPCS_P4StaminaPrintCheck:  		 	 			
- 			MOV AL, [PlayersStamina+3]
- 		PPCS_StaminaPrintCheckFinish:  
- 			CALL PrintInt	
- 		MOV DX, OFFSET UltimateCDText     
- 		CALL PrintLine	  		 	
- 		MOV AL, [SI+6]       
- 		CALL PrintInt 	
- 		CALL PrintNewLine 		
+    	CALL PrintLine          
+    	CMP CurrentTurn, 0 ; Check P1 
+    	JNE PPCS_CheckIfP2Alive    	
+    	TEST AliveAndHealStatus, 00010000B  ; If Alive
+    	JNZ PPCS_PlayerIsAlive
+        JMP PPCS_PlayerIsDead
+    	PPCS_CheckIfP2Alive:
+    		CMP CurrentTurn, 1 ; Check P2 
+    		JNE PPCS_CheckIfP3Alive
+    		TEST AliveAndHealStatus, 00100000B  ; If Alive
+	    	JNZ PPCS_PlayerIsAlive
+	        JMP PPCS_PlayerIsDead
+    	PPCS_CheckIfP3Alive:
+    		CMP CurrentTurn, 2 ; Check P3 
+    		JNE PPCS_CheckIfP4Alive
+    		TEST AliveAndHealStatus, 01000000B  ; If Alive
+	    	JNZ PPCS_PlayerIsAlive
+	        JMP PPCS_PlayerIsDead	
+	   PPCS_CheckIfP4Alive:
+    		TEST AliveAndHealStatus, 10000000B ; Check If Alive
+	    	JNZ PPCS_PlayerIsAlive
+	        JMP PPCS_PlayerIsDead	       
+    	PPCS_PlayerIsDead:
+    	    MOV DX, OFFSET PassedAwayText
+	    	CALL PrintLine
+	    	CALL PrintNewLine 
+	    	RET	
+    	PPCS_PlayerIsAlive:
+	    	CALL LoadPlayerStatsInDI ; Load Stats
+	    	; Print Health	
+	 		MOV DX, OFFSET HealthText
+	 		CALL PrintLine	   			 
+	 		MOV AL, [DI]       
+	 		CALL PrintInt 	
+	 		; Print Max Health	
+	 		MOV DX, '/'
+	 		CALL PrintChar	  		 	
+	 		MOV AL, [DI+1]       
+	 		CALL PrintInt   
+	 		; Print Player Stamina
+	 		 MOV DX, OFFSET StaminaText     
+	 		CALL PrintLine	 
+	 		MOV DH,0h   
+	 		; Player 1 Stamina
+			CMP CurrentTurn, 0
+	 		JNE PPCS_P2StaminaPrintCheck
+	 		MOV AL, [PlayersStamina+0] 
+	 		JMP PPCS_StaminaPrintCheckFinish 	
+	 		; Player 2 Stamina
+	 		PPCS_P2StaminaPrintCheck:     
+	 			CMP CurrentTurn, 1 
+	 			JNE PPCS_P3StaminaPrintCheck
+	 			MOV AL, [PlayersStamina+1]  
+	 			JMP PPCS_StaminaPrintCheckFinish 
+	 		; Player 3 Stamina
+	 		PPCS_P3StaminaPrintCheck:   
+	 		 	CMP CurrentTurn, 2 
+	 			JNE PPCS_P4StaminaPrintCheck
+	 			MOV AL, [PlayersStamina+2] 
+	 			JMP PPCS_StaminaPrintCheckFinish 
+	 		 ; Player 3 Stamina
+	 		PPCS_P4StaminaPrintCheck:  		 	 			
+	 			MOV AL, [PlayersStamina+3]
+	 		PPCS_StaminaPrintCheckFinish:  
+	 			CALL PrintInt	
+	 		MOV DX, OFFSET UltimateCDText     
+	 		CALL PrintLine	  		 	
+	 		MOV AL, [DI+6]       
+	 		CALL PrintInt 	
+	 		CALL PrintNewLine 		
  		RET	
 	         	    
 ;==================================================================================
