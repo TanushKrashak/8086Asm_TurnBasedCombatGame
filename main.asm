@@ -237,7 +237,8 @@ code SEGMENT
 			LOOP PopFromStack     ; keep going till CX becomes 0
    		RET
 
- 	; Prints the player stats
+ 	; Prints the player stats 
+ 	; Expects Stats In SI
 	PrintPlayerStats:
  	    ; Print Player Num Stats: 
  	    CALL PrintPlayerName
@@ -306,7 +307,7 @@ code SEGMENT
  		RET  
  	
 	; Prints the current turn's player name, can be used to be print
-	; all of the player names    	
+	; all of the player names. Current Player in CurrentTurn 	
 	PrintPlayerName:      	
 		; print "Player"    		
 	    MOV DX, OFFSET PlayerText    
@@ -349,9 +350,75 @@ code SEGMENT
 		CALL PrintInt
 		MOV DX, OFFSET FightText
 		CALL PrintLine 
+		CALL PrintNewLine    
+		MOV AH, CurrentTurn   ; Store Current Turn
+		; Print P1 Combat Stats
+		MOV CurrentTurn, 0
+		CALL PrintPlayerCombatStatus 
+		; Print P2 Combat Stats
+		MOV CurrentTurn, 1
+		CALL PrintPlayerCombatStatus 
+		; Print P3 Combat Stats
+		MOV CurrentTurn, 2
+		CALL PrintPlayerCombatStatus 
+		; Print P2 Combat Stats
+		MOV CurrentTurn, 3
+		CALL PrintPlayerCombatStatus
+		MOV CurrentTurn, AH    ; Revert Current Turn   
 		CALL PrintNewLine
 		RET	 
-			          	    
+		
+	; Prints the stats of all of the player in CurrentTurn			 	
+	PrintPlayerCombatStatus:  
+		CALL PrintNewLine  		  		         
+		; Print Player Num Stats
+ 	    CALL PrintPlayerName
+		MOV DX, OFFSET StatsText		 	     	 
+    	CALL PrintLine              	
+    	CALL LoadPlayerStatsInDI ; Load Stats
+    	; Print Health	
+ 		MOV DX, OFFSET HealthText
+ 		CALL PrintLine	   			 
+ 		MOV AL, [SI]       
+ 		CALL PrintInt 	
+ 		; Print Max Health	
+ 		MOV DX, '/'
+ 		CALL PrintChar	  		 	
+ 		MOV AL, [SI+1]       
+ 		CALL PrintInt   
+ 		; Print Player Stamina
+ 		 MOV DX, OFFSET StaminaText     
+ 		CALL PrintLine	 
+ 		MOV DH,0h   
+ 		; Player 1 Stamina
+		CMP CurrentTurn, 0
+ 		JNE PPCS_P2StaminaPrintCheck
+ 		MOV AL, [PlayersStamina+0] 
+ 		JMP PPCS_StaminaPrintCheckFinish 	
+ 		; Player 2 Stamina
+ 		PPCS_P2StaminaPrintCheck:     
+ 			CMP CurrentTurn, 1 
+ 			JNE PPCS_P3StaminaPrintCheck
+ 			MOV AL, [PlayersStamina+1]  
+ 			JMP PPCS_StaminaPrintCheckFinish 
+ 		; Player 3 Stamina
+ 		PPCS_P3StaminaPrintCheck:   
+ 		 	CMP CurrentTurn, 2 
+ 			JNE PPCS_P4StaminaPrintCheck
+ 			MOV AL, [PlayersStamina+2] 
+ 			JMP PPCS_StaminaPrintCheckFinish 
+ 		 ; Player 3 Stamina
+ 		PPCS_P4StaminaPrintCheck:  		 	 			
+ 			MOV AL, [PlayersStamina+3]
+ 		PPCS_StaminaPrintCheckFinish:  
+ 			CALL PrintInt	
+ 		MOV DX, OFFSET UltimateCDText     
+ 		CALL PrintLine	  		 	
+ 		MOV AL, [SI+6]       
+ 		CALL PrintInt 	
+ 		CALL PrintNewLine 		
+ 		RET	
+	         	    
 ;==================================================================================
 ; COMBAT FUNCTIONS
 ;==================================================================================  	 
