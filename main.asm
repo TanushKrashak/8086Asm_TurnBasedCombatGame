@@ -3187,7 +3187,7 @@ code SEGMENT
             MOV SI, OFFSET Player3Stats
             MOV DI, OFFSET Player4Stats 
         UpdateSynergy_BeginChecks:
-        ; Nobless Oblige, both knights 
+        ; Noblesse Oblige, both knights 
         TEST BL, 11111111B 
         JNZ CheckGreatWall
         ; Increase LDmg and HDmg of both knights by 10
@@ -3262,6 +3262,20 @@ code SEGMENT
                 MOV DX, OFFSET HolyEmpireText
                 CALL PrintLine   
                 OR TeamSynergies, 00000110B
+                ; Check for arena: Bastion Of Light
+                TEST Arena, 00000001B
+                JZ UpdateSynergy_Final         ; Different arena, buffs won't apply
+                CMP BL, 00110000B              ; Check if first player is healer
+                JE BastionOfLight_FirstKnight
+                ; Second player is knight
+                ADD [DI+2], 10
+                ADD [DI+3], 10
+                ADD [DI+3], 10
+                JMP UpdateSynergy_Final 
+                BastionOfLight_FirstKnight:
+                    ADD [SI+2], 10
+                    ADD [SI+3], 10
+                    ADD [SI+3], 10
         UpdateSynergy_Final:
             CMP CurrentTurn, 2
             JC ShiftSynergyLeft
