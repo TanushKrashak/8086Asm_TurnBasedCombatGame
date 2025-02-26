@@ -103,9 +103,8 @@ data SEGMENT
     TitleTable DW TitleText0, OFFSET TitleText1, OFFSET TitleText2, OFFSET TitleText3, OFFSET TitleText4, OFFSET TitleText5, OFFSET TitleText6, OFFSET TitleText7, OFFSET TitleText8, OFFSET TitleText9, OFFSET TitleText10, OFFSET TitleText11, OFFSET TitleText12, OFFSET TitleText13, OFFSET TitleText14, OFFSET TitleText15, 11111111B 
     
 
-    ; Main menu texts
-    MenuText        DB 0DH, 0AH, 0DH, 0AH, '                                        Main Menu                                                               ', 0Dh, 0Ah, '$'
-    MenuChoiceText  DB '[1] Play [2] Gameplay Guide: ', '$'
+    ; Main menu texts    
+    MenuChoiceText  DB '                               [1] Play', 0DH, 0AH, '                               [2] Gameplay Guide ',0DH, 0AH, '$'
     ClassInfoText   DB '===========================Classes===========================', 0DH, 0Ah, 'Knight: Balanced, with sligtly amped up defense', 0DH, 0Ah, 'Ultimate: Bless your team with vitality for the next 2 turns', 0DH, 0Ah, 'Passive: Recover an additional 10 stamina points per turn', 0DH, 0Ah, 'Assassin: Very weak, but able to deal immense damage', 0DH, 0Ah, 'Ultimate: Assassinate a random enemy [OwO]', 0DH, 0Ah, 'Passive: Have a 33% chance of poisoning the target on heavy attacks', 0DH, 0Ah, 'Pyromancer: Lower stats overall, but be able to burn enemies', 0DH, 0Ah, 'Ultimate: Burn enemy team for 4 turns', 0DH, 0Ah, 'Passive: Have a 20% chance of burning the target on all normal attacks', 0DH, 0Ah, 'Healer: It`s a healer, what else', 0DH, 0Ah, 'Ultimate: Revive fallen ally to max stats', 0DH, 0Ah, 'Passive: Be able to heal your ally on heavy attacks', 0DH, 0Ah, 'Vanguard: Very high HP and defense, but very low damage', 0DH, 0Ah, 'Ultimate: Reflect all attacks for 1 turn', 0DH, 0Ah
                     DB 'Passive: Increase allys defense by 5', 0DH, 0Ah, 'Vampire: Sucky sucky', 0DH, 0Ah, 'Ultimate: Paralyse enemy team for the next turn', 0DH, 0Ah, 'Passive: Have a 50% chance of recovering the amount of damage dealt by an attack', 0DH, 0Ah, '$'
 	SynergyInfoText DB '===========================Synergies===========================', 0DH, 0Ah, '1) Noblesse Oblige (Both Knights): Increase light and heavy attack damage by 10', 0DH, 0Ah, '2) Great Wall (Healer and Vanguard): Increase defense of healer by 10 and HP of Vanguard by 30', 0DH, 0Ah, '3) Assassin’s creed (Both Assassin): HP cap reduced by 10, ultimate cooldown reduced by 1', 0DH, 0Ah, '4) Scorched Earth (Both Pyromancers): Increase burn duration by 1', 0DH, 0Ah, '5) Count’s generosity (Vampire, Vanguard): Split HP gained by Vampire with Vanguard', 0DH, 0Ah, '6) Holy Empire (Knight, Healer): Add additional 5 HP to any healing actions to knight ', 0Dh, 0AH, '$'
@@ -210,8 +209,67 @@ code SEGMENT
 	PrintLine:
 		MOV AH, 09h        ; DOS print string function
 	    INT 21h            ; Print Msg
-	 	RET        
-	 
+	 	RET  			   
+	
+	; Generic Function to Print Lines in Colors   
+	; Uses AX, CX, DL, DI
+	PrintColoredLine:    
+	    PCL_NextChar: 
+	    	; Get cursor position (DL = Col, DH = Row)
+		    MOV AH, 03h
+		    INT 10h  
+		    MOV AL, [DI]  ; Load character		         
+		    CMP AL, '$'
+		    JNE PCL_Continue       ; If not null terminator
+		    RET                    ; null terminator, stop
+		    PCL_Continue:
+			    ; Print character
+			    MOV CX, 1
+			    MOV AH, 09h
+			    INT 10h	  
+			    INC DL         ; Move cursor right
+			    INC DI         ; Move to next character    
+			   	; Set cursor position to next column
+		        MOV AH, 02h
+		        INT 10h
+			    JMP PCL_NextChar
+			      
+	; Print A Gray Line
+	PrintGrayLine:
+		MOV BL, 8   ; Gray
+		CALL PrintColoredLine 
+		RET
+		
+	; Print A Green Line
+	PrintGreenLine:
+		MOV BL, 10   ; Green
+		CALL PrintColoredLine 
+		RET	    
+		
+	; Print A Cyan Line	
+	PrintCyanLine:
+		MOV BL, 11   ; Cyan
+		CALL PrintColoredLine 
+		RET	
+			
+	; Print A Red Line	
+	PrintRedLine:
+		MOV BL, 12   ; Red
+		CALL PrintColoredLine 
+		RET	   
+		
+	; Print A Purple Line	
+	PrintPurpleLine:
+		MOV BL, 13   ; Purple
+		CALL PrintColoredLine 
+		RET	
+			
+	; Print A Yellow Line	
+	PrintYellowLine:
+		MOV BL, 14   ; Yellow
+		CALL PrintColoredLine 
+		RET	
+	    
 	; Function For Printing A Character
 	PrintChar:
 		MOV AH, 02h        ; DOS function to print a character
@@ -3261,7 +3319,7 @@ code SEGMENT
             HolyEmpire: 
                 MOV DX, OFFSET HolyEmpireText
                 CALL PrintLine   
-                OR TeamSynergies, 00000110B
+                OR TeamSynergies, 00000110B  
                 ; Check for arena: Bastion Of Light
                 TEST Arena, 00000001B
                 JZ UpdateSynergy_Final         ; Different arena, buffs won't apply
@@ -3302,13 +3360,14 @@ main:
         JMP PrintThatMf
 
     ; Let player decide between wanting to start the game or wanting to see the gameplay guide
-    MainMenu:
-        MOV DX, OFFSET MenuText
-        CALL PrintLine
+    MainMenu:        
+        CALL PrintNewLine
         MOV DX, OFFSET MenuChoiceText
         CALL PrintLine
         CALL TakeCharInput
-        CMP AL, '1'
+        CMP AL, '1'    
+        CALL PrintNewLine   
+ 		CALL PrintNewLine
         JE ArenaSelectionStart
         CMP AL, '2'
         JE GameplayGuide
@@ -3330,8 +3389,7 @@ main:
        JE MainMenu
        MOV DX, OFFSET InvalidInputText
        CALL PrintLine
-       JMP GamePlayGuide
-           
+       JMP GamePlayGuide           
        ClassGuide:
           MOV DX, OFFSET ClassInfoText
           CALL PrintLine
