@@ -442,7 +442,7 @@ code SEGMENT
 		MOV DX, OFFSET FightText
 		CALL PrintLine 
 		CALL PrintNewLine    
-		MOV AH, CurrentTurn   ; Store Current Turn
+		MOV BH, CurrentTurn   ; Store Current Turn
 		; Print P1 Combat Stats
 		MOV CurrentTurn, 0
 		CALL PrintPlayerCombatStatus 
@@ -455,7 +455,7 @@ code SEGMENT
 		; Print P2 Combat Stats
 		MOV CurrentTurn, 3
 		CALL PrintPlayerCombatStatus
-		MOV CurrentTurn, AH    ; Revert Current Turn   
+		MOV CurrentTurn, BH    ; Revert Current Turn   
 		CALL PrintNewLine
 		RET	 
 		
@@ -1870,10 +1870,10 @@ code SEGMENT
 			CMP CurrentTurn, 4 ; Check if all attacks have been done   			
 			JGE EndAttackCycle          
 			JMP EvaluateAttack
-			EvalAttack_DecrementCurrentTurn:
-			    DEC CurrentTurn
+			EvalAttack_DecrementCurrentTurn:			    
 			    CMP CurrentTurn, 0      ; Check if all attacks have been done
-			    JLE EndAttackCycle
+			    JLE EndAttackCycle          
+			    DEC CurrentTurn
 			    JMP EvaluateAttack
 		; Reset Attack Variables
 		EndAttackCycle:
