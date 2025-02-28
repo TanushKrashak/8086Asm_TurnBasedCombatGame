@@ -2453,31 +2453,31 @@ code SEGMENT
         MOV AL, [DI+5]  ;Load chance to be compared into AL       
         CALL GetChance 
         JNC GoodLuck ;If current 1/100 of second is less than crit chance, we have critical hit >:)    
-        ; Logic for normal hit
+        ; Logic for normal hit            
         MOV DX, OFFSET NormalHitText 
-        CALL PrintLine
+        CALL PrintLine   
+        MOV AL, CurrentTurnStats
         CMP CurrentTurn, 0
-        JNE P1_ResetCritical
+        JNE P2_ResetCritical
         AND AL, 11101111b ;Reset P1_Crit
         JMP bGetChance_Final
-        P1_ResetCritical:
+        P2_ResetCritical:
             CMP CurrentTurn, 1
-            JNE P2_ResetCritical
+            JNE P3_ResetCritical
             AND AL, 11011111b;Reset P2_Crit
             JMP bGetChance_Final
-        P2_ResetCritical:
+        P3_ResetCritical:
             CMP CurrentTurn, 2
-            JNE P3_ResetCritical
+            JNE P4_ResetCritical
             AND AL, 10111111b ;Reset P3_Crit
             JMP bGetChance_Final
-        P3_ResetCritical:
+        P4_ResetCritical:
             AND CurrentTurn, 01111111b    ;  Reset P4_Crit
             JMP bGetChance_Final    
         ;Critical Hit
         GoodLuck:
             MOV DX, OFFSET CriticalHitText
-            CALL PrintLine
-            MOV AH, CurrentTurn 
+            CALL PrintLine            
             MOV AL, CurrentTurnStats
             CMP CurrentTurn, 0
             JNE P1_SetCritical
@@ -3334,7 +3334,8 @@ code SEGMENT
                     ADD [SI+2], 10
                     ADD [SI+3], 10
                     ADD [SI+3], 10
-        UpdateSynergy_Final:
+        UpdateSynergy_Final:    
+        	CALL PrintNewLine
             CMP CurrentTurn, 2
             JC ShiftSynergyLeft
             RET
