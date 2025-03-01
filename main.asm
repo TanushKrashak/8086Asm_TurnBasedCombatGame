@@ -442,7 +442,8 @@ code SEGMENT
 		MOV DX, OFFSET FightText
 		CALL PrintLine 
 		CALL PrintNewLine    
-		MOV BH, CurrentTurn   ; Store Current Turn
+		MOV BH, CurrentTurn   ; Store Current Turn  
+		MOV TempCurrentTurn, BH
 		; Print P1 Combat Stats
 		MOV CurrentTurn, 0
 		CALL PrintPlayerCombatStatus 
@@ -455,7 +456,8 @@ code SEGMENT
 		; Print P2 Combat Stats
 		MOV CurrentTurn, 3
 		CALL PrintPlayerCombatStatus
-		MOV CurrentTurn, BH    ; Revert Current Turn   
+		MOV BH, TempCurrentTurn    ; Revert Current Turn   
+		MOV CurrentTurn, BH
 		CALL PrintNewLine
 		RET	 
 		
@@ -691,7 +693,8 @@ code SEGMENT
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack  
     ; USES Registers DI, AX, BL, DX, CL
-    EvaluateAttack:       	        
+    EvaluateAttack:       
+        INT 20H	        
         MOV DL, CurrentTurn
         MOV TempCurrentTurn, DL
     	; Is P1                	
@@ -1453,8 +1456,8 @@ code SEGMENT
             	    MOV DX, OFFSET PoisonInflictionText
             	    CALL PrintLine
         	    P3StoreHeavyAtkDmgForP2_Final:        	
-            	    MOV CurrentTurn, 0 ; Attacking P2 
-            	    MOV EnemyIdentifier, 0 ; Store enemy ID      	     
+            	    MOV CurrentTurn, 1 ; Attacking P2 
+            	    MOV EnemyIdentifier, 1 ; Store enemy ID      	     
             	    JMP FinishAttack     	         	               
         P3Ultimate:           
             MOV AL, Team2Classes        ; Temp store Team2Classes
@@ -1597,7 +1600,7 @@ code SEGMENT
         	JNE P4StoreLightAtkDmgForP1_Final
         	CALL GetChance
     	    CMP DL, 20                  
-    	    JG P3StoreLightAtkDmgForP1_Final        ; Burn attempt failed 
+    	    JG P4StoreLightAtkDmgForP1_Final        ; Burn attempt failed 
     	    ; Apply burn to P1
     	    OR Player1Status, 10000000B
     	    TEST TeamSynergies, 00000100B
@@ -1617,7 +1620,7 @@ code SEGMENT
         	     JMP FinishAttack   
         	P4StoreLightAtkDmgForP2:
             	CMP CL, 00000010B                   ; Check if P4 is a pyromancer
-        	    JNE P3StoreLightAtkDmgForP2_Final
+        	    JNE P4StoreLightAtkDmgForP2_Final
         	    ; P4 is pyromancer
         	    CALL GetChance
         	    CMP DL, 20                  
@@ -1658,7 +1661,7 @@ code SEGMENT
         	JNE P4AssassinHeavyCheck_ForP1  ; Not pyromancer, check for assassin insteaad
         	CALL GetChance
     	    CMP DL, 20                  
-    	    JG P3StoreHeavyAtkDmgForP1_Final        ; Burn attempt failed 
+    	    JG P4StoreHeavyAtkDmgForP1_Final        ; Burn attempt failed 
     	    ; Apply burn to P1
     	    OR Player1Status, 10000000B
     	    TEST TeamSynergies, 00000100B
@@ -1879,15 +1882,21 @@ code SEGMENT
 		EndAttackCycle:
 	        MOV CurrentlyTargeting, 0B         ; reset targetting 
 	        MOV VanguardCounterFlags, 00000000B ; Resetting Vanguard Counter Flags
-    		AND AliveAndHealStatus, 11110000B  ; reset healing
-    		MOV CurrentTurn, 0	
+    		AND AliveAndHealStatus, 11110000B  ; reset healing 
+    		TEST MatchTurn, 00000001B
+    		JNZ EAC_Odd
+    		MOV CurrentTurn, 0	     
+    		RET
+    		EAC_Odd:
+    		    MOV CurrentTurn, 3
         RET
     
     ; Func to deal damage, needs Damage to be moved to DamageToBeDealt    
     ; Enemy Stats should be Loaded on DI      
     ; Enemy Number should be Loaded on BH  
     ; USES Registers SI, DI, AX, BX, DX
-    DoDamage:    
+    DoDamage:                 
+        INT 20H
     	; Check For Vanguard Counter      	
     	CMP BH, 0    ; p1
     	JNE DoDmg_P2VanguardCheck     
@@ -2164,7 +2173,7 @@ code SEGMENT
 	   		MOV DamageToBeDealt, AX ;
 	   		; If damage is Above 100, Make it 8 bit (here 120 for eg)
 	   		; Do not update DamageToBeDealt in this cuz its used for printing
-	   		CMP AX, 100
+	   		CMP AX, 120
 	   		JL DoDamage_DamageDontCapTo8Bit
 	   		MOV AX, 120                
 	   		; 8 Bit check ends
@@ -3267,14 +3276,12 @@ code SEGMENT
             CALL PrintLine
             GreatWall_FirstHealer:
                 ADD [SI+4], 10
-                ADD [DI+1], 30
-                ADD [DI+2], 30
+                ADD [DI+4], 10
                 OR TeamSynergies, 00000010B
                 JMP UpdateSynergy_Final
             GreatWall_FirstVanguard:
                 ADD [DI+4], 10
-                ADD [SI+1], 30
-                ADD [SI+2], 30
+                ADD [SI+4], 10
                 OR TeamSynergies, 00000010B 
                 JMP UpdateSynergy_Final 
         CheckScorchedEarth:         ; Both Pyromancers (00100010)
@@ -3365,10 +3372,8 @@ main:
         CALL PrintNewLine
         MOV DX, OFFSET MenuChoiceText
         CALL PrintLine
-        CALL TakeCharInput
+        CALL TakeCharInput    
         CMP AL, '1'    
-        CALL PrintNewLine   
- 		CALL PrintNewLine
         JE ArenaSelectionStart
         CMP AL, '2'
         JE GameplayGuide
@@ -3376,7 +3381,9 @@ main:
         CALL PrintLine
         JMP MainMenu
     
-    GameplayGuide:
+    GameplayGuide:  
+       CALL PrintNewLine   
+ 	   CALL PrintNewLine
        MOV DX, OFFSET GuideOptionText
        CALL PrintLine
        CALL TakeCharInput
@@ -3405,7 +3412,9 @@ main:
           JMP GameplayGuide    
 
     ArenaSelectionStart:
-        ; Grasslands, no change in classes
+        ; Grasslands, no change in classes 
+        CALL PrintNewLine   
+ 	    CALL PrintNewLine
         CALL GetChance
         CMP DL, 20
         JG TestArenaChurch
@@ -3733,7 +3742,7 @@ main:
     	MOV [DI+6], 4
     	
     	; Restore Vanguard stats
-    	MOV DI, OFFSET HealerStats
+    	MOV DI, OFFSET VanguardStats
     	MOV [DI], 100
     	MOV [DI+1], 100
     	MOV [DI+2], 10
