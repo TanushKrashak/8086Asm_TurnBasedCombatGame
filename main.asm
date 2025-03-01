@@ -2523,27 +2523,28 @@ code SEGMENT
             RET
         DecrementCurrentTurn:
             DEC CurrentTurn
-            CMP CurrentTurn, 0
-            JL WrappedIs4
-            RET
+            JS WrappedIs0  ; IS NEG
+            RET                 
+            WrappedIs0:
+                MOV CurrentTurn, 3
+                RET
             
 	
 	; Progress player turns
 	; Uses Registers DX, AH
-	 AlternateTurn:
-	 	; REVISE THIS DH LOGIC!
-;        ; Each recursive call increments DH by 1. At DH = 4 (0->1->2->3-->4), we know that 4 recursions were already made. In this case, all players are dead
-;        INC DH
-;        CMP DH, 4
-;        JE AllDead  ; Jump to AllDead to prevent infinite recursion        
+	 AlternateTurn:   
         CALL UpdateCurrentTurn   ; Increment AL, wrap if necessary
-        MOV DL, AliveAndHealStatus    ; Load AliveAndHealStatus byte into DL to check if the current player is dead or not
+        MOV DL, AliveAndHealStatus    ; Load AliveAndHealStatus byte into DL to check if the current player is dead or not       
+        ; Check If All Dead
+	 	AND DL, 11110000B
+	 	CMP DL, 0 
+	 	JE AllDead
         ; AH holds current turn
-        CMP AH, 0
+        CMP CurrentTurn, 0
         JE P1_Turn
-        CMP AH, 1
+        CMP CurrentTurn, 1
         JE P2_Turn        
-        CMP AH, 2
+        CMP CurrentTurn, 2
         JE P3_Turn   
         ; JZ ensures that if the CurrentTurn's player is dead (nth bit = 0), we alternate turn again                
         P4_Turn:
@@ -2563,7 +2564,6 @@ code SEGMENT
 	        JZ AlternateTurn
 	        JMP Final
         Final:
-	        MOV DH, 0
 	        RET
         ; Exception Case: All players are dead
         AllDead:
@@ -3615,10 +3615,10 @@ main:
             JNZ P1Paralysed   	 
         	CALL GivePlayerMainChoice  
         	CALL PrintNewLine
-        	TEST MatchTurn, 1
+            CALL AlternateTurn
+            TEST MatchTurn, 1
         	JZ LoopFinalBlock 
         	; Give Player 2 Choice	 
-        	CALL AlternateTurn
         	JMP P2GameChoice
     	P1Paralysed:             
     	    MOV DX, OFFSET PlayerText
@@ -3690,7 +3690,7 @@ main:
         	    AND Player4Status, 11011111B
         	    CALL AlternateTurn    		         
         ; Apply DOT, update AliveAndHealStatus if any player is dead        
-        LoopFinalBlock:
+        LoopFinalBlock:  
 	        CALL EvaluateAttack
 	        CALL ApplyDOT 
 	        ; Check if either team is dead
