@@ -693,7 +693,8 @@ code SEGMENT
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack  
     ; USES Registers DI, AX, BL, DX, CL
-    EvaluateAttack:                  
+    EvaluateAttack:       
+    	INT 20h           
         MOV DL, CurrentTurn
         MOV TempCurrentTurn, DL
     	; Is P1                	
@@ -1881,7 +1882,8 @@ code SEGMENT
 		EndAttackCycle:
 	        MOV CurrentlyTargeting, 0B         ; reset targetting 
 	        MOV VanguardCounterFlags, 00000000B ; Resetting Vanguard Counter Flags
-    		AND AliveAndHealStatus, 11110000B  ; reset healing 
+    		AND AliveAndHealStatus, 11110000B  ; reset healing
+    		MOV CurrentTurnStats, 0B 
     		TEST MatchTurn, 00000001B
     		JNZ EAC_Odd
     		MOV CurrentTurn, 0	     
@@ -1894,7 +1896,8 @@ code SEGMENT
     ; Enemy Stats should be Loaded on DI      
     ; Enemy Number should be Loaded on BH  
     ; USES Registers SI, DI, AX, BX, DX
-    DoDamage:                         
+    DoDamage:             
+    	INT 20h            
     	; Check For Vanguard Counter      	
     	CMP BH, 0    ; p1
     	JNE DoDmg_P2VanguardCheck     
@@ -1969,6 +1972,7 @@ code SEGMENT
 		    JNZ DoDamage_PlayerHasCrit
 		    JMP	DoDamage_PlayerDidNotCrit	
     	DoDamage_PlayerHasCrit:  
+    	    ; Load Enemy Stats Back into SI (it got lost somehwere bruh)
     		MOV AH, EnemyIdentifier
     		MOV CurrentTurn, AH
     		CALL LoadPlayerStatsInDI
@@ -2185,7 +2189,7 @@ code SEGMENT
 		    		HeavyVampHealLogic_NH_Clamp:		    			        							    			        			        		    		    
 		    			MOV [SI], BH
 	   	DoDamage_NotVampireOrHeavy:	
-	   		MOV DamageToBeDealt, AX ;
+	   		MOV AX, DamageToBeDealt ;
 	   		; If damage is Above 100, Make it 8 bit (here 120 for eg)
 	   		; Do not update DamageToBeDealt in this cuz its used for printing
 	   		CMP AX, 120
