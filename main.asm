@@ -172,7 +172,7 @@ data SEGMENT
 	PassedAwayText				DB 'Has Passed Away! RIP!', 0Dh, 0Ah, '$'                                            
 
 	; Ultimate Texts   
-	UltimateNotReadyText        DB 'Your ultimate ability is not yet ready!', '$'
+	UltimateNotReadyText        DB 'Your Ultimate Ability is Not yet Ready!', 0Dh, 0Ah,'$'
 	BurnUltimateText            DB ' has been engulfed in flames, and will burn for the next 4 turns!', 0Dh, 0Ah, '$'   
 	KnightUltimateText 			DB "The Knight's Valor Shone Bright, Shielding All From Fatigue, Granting ", '$'
 	KnightUltimateRemText		DB ' Unyielding Endurance For 2 Turns.',0Dh,0Ah, '$'           
@@ -693,8 +693,7 @@ code SEGMENT
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack  
     ; USES Registers DI, AX, BL, DX, CL
-    EvaluateAttack:       
-        INT 20H	        
+    EvaluateAttack:                  
         MOV DL, CurrentTurn
         MOV TempCurrentTurn, DL
     	; Is P1                	
@@ -1895,8 +1894,7 @@ code SEGMENT
     ; Enemy Stats should be Loaded on DI      
     ; Enemy Number should be Loaded on BH  
     ; USES Registers SI, DI, AX, BX, DX
-    DoDamage:                 
-        INT 20H
+    DoDamage:                         
     	; Check For Vanguard Counter      	
     	CMP BH, 0    ; p1
     	JNE DoDmg_P2VanguardCheck     
@@ -1970,7 +1968,14 @@ code SEGMENT
 			TEST CurrentTurnStats, 10000000B  ; check crit
 		    JNZ DoDamage_PlayerHasCrit
 		    JMP	DoDamage_PlayerDidNotCrit	
-    	DoDamage_PlayerHasCrit:
+    	DoDamage_PlayerHasCrit:  
+    		MOV AH, EnemyIdentifier
+    		MOV CurrentTurn, AH
+    		CALL LoadPlayerStatsInDI
+    		MOV SI, DI                 		
+    		MOV AH, TempCurrentTurn 	; Revert Current Turn
+    		MOV CurrentTurn, AH
+    		CALL LoadPlayerStatsInDI
     		; Double Damage
     		MOV AX, DamageToBeDealt
     		MOV BL, 2 ; For Doubling Damage
@@ -1985,26 +1990,30 @@ code SEGMENT
     	JNE DoDamage_CheckIfEnemyP4
     	TEST CurrentTurnStats, 00000100B   ; Check If P3 Blocking
 	    	JZ DoDamage_EnemyIsNotBlocking
-    		MUL BL ; Double Defense cuz Blocking 
+    		MUL BL ; Double Defense cuz Blocking   
+    		JMP DoDamage_EnemyIsNotBlocking
     	; Check if Enemy P4
     	DoDamage_CheckIfEnemyP4:
     		CMP BH, 3  
     		JNE DoDamage_CheckIfEnemyP1  
     		TEST CurrentTurnStats, 00001000B   ; Check If P4 Blocking    
     		JZ DoDamage_EnemyIsNotBlocking
-    		MUL BL     
+    		MUL BL             
+    		JMP DoDamage_EnemyIsNotBlocking
     	; Check if Enemy P1
     	DoDamage_CheckIfEnemyP1:
     		CMP BH, 0  
 			JNE DoDamage_CheckIfEnemyP2  
     		TEST CurrentTurnStats, 00000001B   ; Check If P1 Blocking    
     		JZ DoDamage_EnemyIsNotBlocking
-    		MUL BL
-    	; Check if Enemy P1  
+    		MUL BL  
+    		JMP DoDamage_EnemyIsNotBlocking
+    	; Check if Enemy P2  
     	DoDamage_CheckIfEnemyP2:
     		TEST CurrentTurnStats, 00000010B   ; Check If P2 Blocking  
     		JZ DoDamage_EnemyIsNotBlocking
 			MUL BL   
+			JMP DoDamage_EnemyIsNotBlocking			
     	DoDamage_EnemyIsNotBlocking: 
 			MOV AH, 0 ; Store Final Def in DH	    	     
 	    	SUB DamageToBeDealt, AX  ; Damage Shred cuz of Def  
@@ -2165,10 +2174,16 @@ code SEGMENT
 							JMP HeavyVampHealLogic_NormalHeal
 				; Team 2 Synergy Logic Ends
 	    		HeavyVampHealLogic_NormalHeal:	
-	    		; Heal
-	    		MOV SI, DI ; Put the stats into SI so that it can be clamped
-	    		ADD [SI], AL	        		
-				CALL ClampStatInSI    			        			        		    		    	  
+		    		; Heal
+		    		MOV SI, DI ; Put the stats into SI so that it can be clamped
+		    		ADD [SI], AL 
+		    		; Manual Clamp Logic Till MAX HP
+		    		MOV BH, [SI+1]
+		    		CMP BH, [SI]
+		    		JG HeavyVampHealLogic_NH_Clamp
+		    		JMP DoDamage_NotVampireOrHeavy
+		    		HeavyVampHealLogic_NH_Clamp:		    			        							    			        			        		    		    
+		    			MOV [SI], BH
 	   	DoDamage_NotVampireOrHeavy:	
 	   		MOV DamageToBeDealt, AX ;
 	   		; If damage is Above 100, Make it 8 bit (here 120 for eg)
@@ -2779,7 +2794,7 @@ code SEGMENT
     	CMP AL, '3'
     	JE Defend
     	CMP AL, '4'
-    	JE Heal
+    	JE Heal                                                                    
     	CMP AL, '5'
     	JE UltimateAttack
     	JMP GivePlayerMainChoice_InvalidInput    	
