@@ -555,7 +555,7 @@ code SEGMENT
             JNZ P1RecoveryFinal
             ADD [SI], AH
             P1RecoveryFinal:
-                CALL ClampStatInSI
+                CALL ClampHPInSI
         Player2RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -564,7 +564,7 @@ code SEGMENT
             JNZ P2RecoveryFinal
             ADD [SI], AH
             P2RecoveryFinal:
-                CALL ClampStatInSI
+                CALL ClampHPInSI
         Player3RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -573,7 +573,7 @@ code SEGMENT
             JNZ P3RecoveryFinal
             ADD [SI], AH
             P3RecoveryFinal:
-                CALL ClampStatInSI
+                CALL ClampHPInSI
         Player4RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -582,7 +582,7 @@ code SEGMENT
             JNZ P4RecoveryFinal
             ADD [SI], AH
             P4RecoveryFinal:
-                CALL ClampStatInSI
+                CALL ClampHPInSI
         RET
                               
     ; Update vitality cooldown of both teams after each turn  
@@ -2126,7 +2126,7 @@ code SEGMENT
 					CALL LoadPlayerStatsInDI   
 					MOV SI, DI ; Put the stats into SI so that it can be clamped
 		    		ADD [SI], AL	        		
-					CALL ClampStatInSI 
+					CALL ClampHPInSI 
 					MOV CurrentTurn, 0         ; revert Current Turn
 					CALL LoadPlayerStatsInDI ; Load Current Player Stats
 					JMP HeavyVampHealLogic_NormalHeal					    
@@ -2135,7 +2135,7 @@ code SEGMENT
                         CALL LoadPlayerStatsInDI   
 						MOV SI, DI ; Put the stats into SI so that it can be clamped
 			    		ADD [SI], AL	        		
-						CALL ClampStatInSI 
+						CALL ClampHPInSI 
 						MOV CurrentTurn, 1         ; revert Current Turn
 						CALL LoadPlayerStatsInDI ; Load Current Player Stats
 						JMP HeavyVampHealLogic_NormalHeal
@@ -2163,7 +2163,7 @@ code SEGMENT
 						CALL LoadPlayerStatsInDI   
 						MOV SI, DI ; Put the stats into SI so that it can be clamped
 			    		ADD [SI], AL	        		
-						CALL ClampStatInSI 
+						CALL ClampHPInSI 
 						MOV CurrentTurn, 2         ; revert Current Turn
 						CALL LoadPlayerStatsInDI ; Load Current Player Stats
 						JMP HeavyVampHealLogic_NormalHeal					    
@@ -2172,7 +2172,7 @@ code SEGMENT
 	                        CALL LoadPlayerStatsInDI   
 							MOV SI, DI ; Put the stats into SI so that it can be clamped
 				    		ADD [SI], AL	        		
-							CALL ClampStatInSI 
+							CALL ClampHPInSI 
 							MOV CurrentTurn, 3         ; revert Current Turn
 							CALL LoadPlayerStatsInDI ; Load Current Player Stats
 							JMP HeavyVampHealLogic_NormalHeal
@@ -2304,11 +2304,12 @@ code SEGMENT
         JZ TestOverMaxHP
         MOV [SI], 0
         RET
-        TestOverMaxHP:  
-            CMP [SI], [SI+1]
-            JLE ClampStatInSI_End
-            MOV [SI], [SI+1]                          
-        ClampStatInSI_End:
+        TestOverMaxHP:     
+            MOV AH, [SI+1]
+            CMP [SI], AH
+            JLE ClampHPInSI_End
+            MOV [SI], AH                        
+        ClampHPInSI_End:
             RET
 
     ; Apply Burn and Poison effects after every turn, update burn and poison counters accordingly
@@ -2351,7 +2352,7 @@ code SEGMENT
                 MOV DX, OFFSET PoisonDamageText
                 CALL PrintLine      
         ApplyDOTP2:       
-            CALL ClampStatInSI                            ; Clamp P1's health if needed                                 
+            CALL ClampHPInSI                            ; Clamp P1's health if needed                                 
             TEST AliveAndHealStatus, 00100000B          ; Test whether P2 is alive
             JZ ApplyDOTP3
             MOV SI, OFFSET Player2Stats                 ; Load P2 health into SI
@@ -2387,7 +2388,7 @@ code SEGMENT
                     MOV DX, OFFSET PoisonDamageText
                     CALL PrintLine                    
         ApplyDOTP3:
-            CALL ClampStatInSI                          ; Clamp P2's health if needed
+            CALL ClampHPInSI                          ; Clamp P2's health if needed
             TEST AliveAndHealStatus, 01000000B        ; Test whether P3 is alive
             JZ ApplyDOTP4
             MOV SI, OFFSET Player3Stats               ; Load P3 health into SI
@@ -2423,7 +2424,7 @@ code SEGMENT
                 MOV DX, OFFSET PoisonDamageText
                 CALL PrintLine
         ApplyDOTP4:   
-            CALL ClampStatInSI                          ; Clamp P3's health if needed
+            CALL ClampHPInSI                          ; Clamp P3's health if needed 
             TEST AliveAndHealStatus, 10000000B        ; Test whether P4 is alive
             JZ ApplyDOT_Final
             MOV SI, OFFSET Player4Stats               ; Load P4 health into SI
@@ -2459,7 +2460,7 @@ code SEGMENT
                     MOV DX, OFFSET PoisonDamageText
                     CALL PrintLine
         ApplyDOT_Final:
-            CALL ClampStatInSI                            ; Clamp P4's health if needed
+            CALL ClampHPInSI                            ; Clamp P4's health if needed
             RET    
         
     ; Loads current player's stats into DI
@@ -2973,7 +2974,7 @@ code SEGMENT
         		MOV CurrentTurn, BH  ; Revert Current Turn
         		MOV SI, DI ; Put the stats into SI so that it can be clamped
         		ADD [SI], 15 	        		
-    			CALL ClampStatInSI          			        			
+    			CALL ClampHPInSI          			        			
         		RET	
         			         			        			
         ; Defend	    	    
