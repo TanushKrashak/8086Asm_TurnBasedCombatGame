@@ -2293,6 +2293,22 @@ code SEGMENT
             JLE ClampStatInSI_End
             MOV [SI], 100                          
         ClampStatInSI_End:
+            RET            
+            
+    ; Generic function to clamp HP of a player between 0 and player's MaxHP, expects target value in SI
+    ; Must always be called immediately after subtraction to prevent against the SF being overwritten later 
+    ; USES Registers AH, SI
+    ClampHPInSI:
+        LAHF
+        TEST AH, 10000000B          ; Test whether sign flag is set
+        JZ TestOverMaxHP
+        MOV [SI], 0
+        RET
+        TestOverMaxHP:  
+            CMP [SI], [SI+1]
+            JLE ClampStatInSI_End
+            MOV [SI], [SI+1]                          
+        ClampStatInSI_End:
             RET
 
     ; Apply Burn and Poison effects after every turn, update burn and poison counters accordingly
@@ -3627,9 +3643,11 @@ main:
     	; CHOICES For Round 1 (Should be moved to a function)    (Not moving this to a function yet, you might have had some more things planned for it which I don't know)                      	
     	; Give Player 1 Choice        	
     	CALL PrintMatchTurn 
-    	P1Choice:
+    	P1GameChoice:
         	CMP CurrentTurn, 0
         	JNE P2GameChoice
+        	TEST AliveAndHealStatus, 00010000B
+        	JZ GL_P1Dead
         	TEST Player1Status, 00100000B
             JNZ P1Paralysed   	 
         	CALL GivePlayerMainChoice  
@@ -3639,6 +3657,11 @@ main:
         	JZ LoopFinalBlock 
         	; Give Player 2 Choice	 
         	JMP P2GameChoice
+        	GL_P1Dead:     
+        	    CALL AlternateTurn
+        	    TEST MatchTurn, 00000001B
+        	    JZ LoopFinalBlock
+        	    JMP P2GameChoice
     	P1Paralysed:             
     	    MOV DX, OFFSET PlayerText
     	    CALL PrintLine
@@ -3651,12 +3674,19 @@ main:
     	P2GameChoice:
     	    CMP CurrentTurn, 1
     	    JNE P3GameChoice   
+    	    TEST AliveAndHealStatus, 00100000B
+    	    JZ GL_P2Dead
     	    TEST Player2Status, 00100000B
     	    JNZ P2Paralysed
         	CALL GivePlayerMainChoice
         	CALL PrintNewLine  	
     		CALL AlternateTurn
             JMP P3GameChoice
+            GL_P2Dead:
+        	    CALL AlternateTurn
+        	    TEST MatchTurn, 00000001B
+        	    JZ P1GameChoice
+        	    JMP P3GameChoice
             P2Paralysed:             
         	    MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -3669,13 +3699,20 @@ main:
     	; Give Player 3 Choice	
     	P3GameChoice:   
     	    CMP CurrentTurn, 2
-    	    JNE P4GameChoice
+    	    JNE P4GameChoice     
+    	    TEST AliveAndHealStatus, 01000000B
+    	    JZ GL_P3Dead
     	    TEST Player3Status, 00100000B
     	    JNZ P3Paralysed
         	CALL GivePlayerMainChoice 
         	CALL PrintNewLine  
         	CALL AlternateTurn
-            JMP P4GameChoice
+            JMP P4GameChoice 
+            GL_P3Dead:
+                CALL AlternateTurn
+        	    TEST MatchTurn, 00000001B
+        	    JZ P2GameChoice
+        	    JMP P4GameChoice
         	P3Paralysed:
                 MOV DX, OFFSET PlayerText
         	    CALL PrintLine
@@ -3690,15 +3727,22 @@ main:
     	    CMP CurrentTurn, 3   
     	    JE P4GameChoice_True
     	    TEST MatchTurn, 1
-    	    JZ P1Choice
-    	    P4GameChoice_True:    	   
+    	    JZ P1GameChoice
+    	    P4GameChoice_True:    
+    	    TEST AliveAndHealStatus, 10000000B
+    	    JZ GL_P4Dead	   
     	    TEST Player4Status, 00100000B
     	    JNZ P4Paralysed
         	CALL GivePlayerMainChoice
         	CALL AlternateTurn 
         	TEST MatchTurn, 1
-    	    JZ P1Choice
-        	JMP LoopFinalBlock
+    	    JZ P1GameChoice
+        	JMP LoopFinalBlock  
+        	GL_P4Dead:
+        	    CALL AlternateTurn
+        	    TEST MatchTurn, 00000001B
+        	    JZ P3GameChoice
+        	    JMP LoopFinalBlock
         	P4Paralysed:
                 MOV DX, OFFSET PlayerText
         	    CALL PrintLine
