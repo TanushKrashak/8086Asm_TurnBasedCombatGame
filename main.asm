@@ -1825,7 +1825,7 @@ code SEGMENT
             JMP EvalAttack_CheckNextAttacker      
         ; Vanguard Ultimate
         P4VanguardCheck:            	
-        	CMP AL, 00001000B  ; Check if Vanguard
+        	CMP AL, 00000100B  ; Check if Vanguard
             JNE P4HealerCheck
  			; Print Text
 			CALL PrintPlayerName                                     
