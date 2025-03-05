@@ -630,21 +630,23 @@ code SEGMENT
         JNC Team2Selection
         TEST AliveAndHealStatus, 10000000B
         JZ P3Select                 ; P4 dead, skip to P3
-        TEST AliveAndHealStatus, 01000000B
-        JZ Team1Selection_Final
+        TEST AliveAndHealStatus, 01000000B      ; P4 Alive, check for P3
+        JZ P4Selected                           ; P3 dead, target P4 directly
+        ; JZ Team1Selection_Final
         MOV DX, OFFSET SelectTeam1TargetText
         CALL PrintLine
         CALL TakeCharInput
         CMP AL, '1'
         JE P3Selected    
         ; P4 Selected
-        CMP CurrentTurn, 0
-        JNE SetP2TargetP4 
-        OR CurrentlyTargeting, 11000000B        ; P1 selected P4    
-        JMP Team1Selection_Final
-        SetP2TargetP4:
-            OR CurrentlyTargeting, 00110000B    ; P2 selected P4
-        RET
+        P4Selected:
+            CMP CurrentTurn, 0
+            JNE SetP2TargetP4 
+            OR CurrentlyTargeting, 11000000B        ; P1 selected P4    
+            JMP Team1Selection_Final
+            SetP2TargetP4:
+                OR CurrentlyTargeting, 00110000B    ; P2 selected P4
+            RET
         ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
         P3Select:
             TEST AliveAndHealStatus, 01000000B
@@ -653,7 +655,7 @@ code SEGMENT
                 CMP CurrentTurn, 0
                 JNE SetP2TargetP3 
                 OR CurrentlyTargeting, 10000000B        ; P1 selected P3 
-                JMP Team1Selection_Final
+                RET
                 SetP2TargetP3:
                     OR CurrentlyTargeting, 00100000B    ; P2 selected P3
                 Team1Selection_Final:
@@ -661,32 +663,35 @@ code SEGMENT
         Team2Selection:
             TEST AliveAndHealStatus, 00010000B
             JZ P2Select                 ; P1 dead, skip to P2
-            TEST AliveAndHealStatus, 00100000B
+            TEST AliveAndHealStatus, 00100000B  ; P1 Alive, check for P2
+            JZ P1Selected                       ; P1 Alive, P2 dead. Skip directly to P1 targetting logic
             JZ Team2Selection_Final
             MOV DX, OFFSET SelectTeam2TargetText
             CALL PrintLine
             CALL TakeCharInput
-            CMP AL, '1'
-            JE P1Selected    
+            CMP AL, '2'
+            JE P2Selected    
             ; P1 Selected
-            CMP CurrentTurn, 2
-            JE SetP3TargetP1
-            OR CurrentlyTargeting, 00000001B        ; P4 selected P2 
-            JMP Team2Selection_Final
-            SetP3TargetP1:
-                OR CurrentlyTargeting, 00000100B    ; P3 selected P2
-            RET
+            P1Selected:
+                CMP CurrentTurn, 2
+                JE SetP3TargetP1
+                OR CurrentlyTargeting, 00000001B        ; P4 selected P2 
+                RET
+                SetP3TargetP1:
+                    OR CurrentlyTargeting, 00000100B    ; P3 selected P2
+                RET
             ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
             P2Select:
-                TEST AliveAndHealStatus, 01000000B
+                TEST AliveAndHealStatus, 00100000B
                 JZ Team2Selection_Final
-                P1Selected:
+                P2Selected:
                     CMP CurrentTurn, 2
                     JE SetP3TargetP2
-                    AND CurrentlyTargeting, 11111100B        ; P4 selected P1  
-                    JMP Team2Selection_Final
+                    OR CurrentlyTargeting, 00000001B        ; P4 selected P2  
+                    RET
                     SetP3TargetP2:
-                        AND CurrentlyTargeting, 11111100B    ; P3 selected P1
+                        OR CurrentlyTargeting, 00000001B    ; P3 selected P2
+                        RET
                     Team2Selection_Final:
                         RET 
                         
