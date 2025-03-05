@@ -555,7 +555,7 @@ code SEGMENT
             JNZ P1RecoveryFinal
             ADD [SI], AH
             P1RecoveryFinal:
-                CALL ClampHPInSI
+                CALL ClampStatInSI
         Player2RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -564,7 +564,7 @@ code SEGMENT
             JNZ P2RecoveryFinal
             ADD [SI], AH
             P2RecoveryFinal:
-                CALL ClampHPInSI
+                CALL ClampStatInSI
         Player3RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -573,7 +573,7 @@ code SEGMENT
             JNZ P3RecoveryFinal
             ADD [SI], AH
             P3RecoveryFinal:
-                CALL ClampHPInSI
+                CALL ClampStatInSI
         Player4RecoverST:
             INC SI
             MOV AH, [SI]                 
@@ -582,7 +582,7 @@ code SEGMENT
             JNZ P4RecoveryFinal
             ADD [SI], AH
             P4RecoveryFinal:
-                CALL ClampHPInSI
+                CALL ClampStatInSI
         RET
                               
     ; Update vitality cooldown of both teams after each turn  
