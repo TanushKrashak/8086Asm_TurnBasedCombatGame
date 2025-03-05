@@ -3025,7 +3025,7 @@ code SEGMENT
         	    CheckKnight_P2:
         	        TEST Team1Classes, 00001111B
         	        JNZ HealFinal                   ; P2 not a Knight, won't benefit from Holy Empire
-        	        ADD [SI], 5                     ; Heal P2 for an additional 5 HP
+        	        ADD [SI], 5                     ; Heal P2 for an additional 5 HP 
                     MOV DX, OFFSET HolyEmpireHealText
                     CALL PrintLine
         	        JMP HealFinal
@@ -3060,21 +3060,14 @@ code SEGMENT
                     CALL PrintLine
                     JMP HealFinal
         	    JMP HealFinal             
-        ClampHP:      
-            MOV [SI], 100
-            RET
     	HealFinal: 
     	    MOV AL, HPGainPerTurn
     	    ADD [SI], AL
-    	    CMP [SI], 100
-    	    JGE ClampSection
+    	    CALL ClampHPInSI
     	    PrintHealText:  
         	    MOV DX, OFFSET SelfHealText
         	    CALL PrintLine
         	    RET      
-    	    ClampSection:
-    	        CALL ClampHP 
-    	        JMP PrintHealText 
         UltimateAttack:      
             MOV DH, UltimateAttackStaminaCost
             CMP CurrentTurn, 0
