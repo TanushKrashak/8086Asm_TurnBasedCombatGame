@@ -627,37 +627,37 @@ code SEGMENT
     ; Uses registers DX, AL 
     TargetEnemy:
         CMP CurrentTurn, 2
-        JNC Team2Selection:
-            TEST AliveAndHealStatus, 10000000B
-            JZ P3Select                 ; P4 dead, skip to P3
+        JNC Team2Selection
+        TEST AliveAndHealStatus, 10000000B
+        JZ P3Select                 ; P4 dead, skip to P3
+        TEST AliveAndHealStatus, 01000000B
+        JZ Team1Selection_Final
+        MOV DX, OFFSET SelectTeam1TargetText
+        CALL PrintLine
+        CALL TakeCharInput
+        CMP AL, '1'
+        JE P3Selected    
+        ; P4 Selected
+        CMP CurrentTurn, 0
+        JNE SetP2TargetP4 
+        OR CurrentlyTargeting, 11000000B        ; P1 selected P4    
+        JMP Team1Selection_Final
+        SetP2TargetP4:
+            OR CurrentlyTargeting, 00110000B    ; P2 selected P4
+        RET
+        ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
+        P3Select:
             TEST AliveAndHealStatus, 01000000B
             JZ Team1Selection_Final
-            MOV DX, OFFSET SelectTeam1TargetText
-            CALL PrintLine
-            CALL TakeCharInput
-            CMP AL, '1'
-            JE P3Selected    
-            ; P4 Selected
-            CMP CurrentTurn, 0
-            JNE SetP2TargetP4 
-            OR CurrentlyTargeting, 11000000B        ; P1 selected P4    
-            JMP Team1Selection_Final
-            SetP2TargetP4:
-                OR CurrentlyTargeting, 00110000B    ; P2 selected P4
-            RET
-            ; P3 Select deals with any choice by P1 or P2 where P3 was chosen as target
-            P3Select:
-                TEST AliveAndHealStatus, 01000000B
-                JZ Team1Selection_Final
-                P3Selected:
-                    CMP CurrentTurn, 0
-                    JNE SetP2TargetP3 
-                    OR CurrentlyTargeting, 10000000B        ; P1 selected P3 
-                    JMP Team1Selection_Final
-                    SetP2TargetP3:
-                        OR CurrentlyTargeting, 00100000B    ; P2 selected P3
-                    Team1Selection_Final:
-                        RET  
+            P3Selected:
+                CMP CurrentTurn, 0
+                JNE SetP2TargetP3 
+                OR CurrentlyTargeting, 10000000B        ; P1 selected P3 
+                JMP Team1Selection_Final
+                SetP2TargetP3:
+                    OR CurrentlyTargeting, 00100000B    ; P2 selected P3
+                Team1Selection_Final:
+                    RET  
         Team2Selection:
             TEST AliveAndHealStatus, 00010000B
             JZ P2Select                 ; P1 dead, skip to P2
@@ -683,18 +683,17 @@ code SEGMENT
                 P1Selected:
                     CMP CurrentTurn, 2
                     JE SetP3TargetP2
-                    OR CurrentlyTargeting, 00000000B        ; P4 selected P1  
+                    AND CurrentlyTargeting, 11111100B        ; P4 selected P1  
                     JMP Team2Selection_Final
                     SetP3TargetP2:
-                        OR CurrentlyTargeting, 00000000B    ; P3 selected P1
+                        AND CurrentlyTargeting, 11111100B    ; P3 selected P1
                     Team2Selection_Final:
                         RET 
                         
     ; Attacks the selected enemy
     ; Priority: Ultimate attack, attack  
     ; USES Registers DI, AX, BL, DX, CL
-    EvaluateAttack:       
-    	INT 20h           
+    EvaluateAttack:              
         MOV DL, CurrentTurn
         MOV TempCurrentTurn, DL
     	; Is P1                	
@@ -1896,8 +1895,7 @@ code SEGMENT
     ; Enemy Stats should be Loaded on DI      
     ; Enemy Number should be Loaded on BH  
     ; USES Registers SI, DI, AX, BX, DX
-    DoDamage:             
-    	INT 20h            
+    DoDamage:                    
     	; Check For Vanguard Counter      	
     	CMP BH, 0    ; p1
     	JNE DoDmg_P2VanguardCheck     
@@ -2298,7 +2296,8 @@ code SEGMENT
     ; Generic function to clamp HP of a player between 0 and player's MaxHP, expects target value in SI
     ; Must always be called immediately after subtraction to prevent against the SF being overwritten later 
     ; USES Registers AH, SI
-    ClampHPInSI:
+    ClampHPInSI:      
+        INT 20H
         LAHF
         TEST AH, 10000000B          ; Test whether sign flag is set
         JZ TestOverMaxHP
