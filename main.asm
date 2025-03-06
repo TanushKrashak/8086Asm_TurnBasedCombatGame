@@ -81,7 +81,7 @@ data SEGMENT
 ; STRINGS
 ;================================================================================== 
     ; Title Text
-    Newlinebuffer DB 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH
+    Newlinebuffer DB 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, 0DH, 0AH, '$'
     TitleText0 DB '                                            _     _           _', 0AH, 0DH, '$'
     TitleText1 DB '               /\                          | |   | |         ( )', 0AH, 0DH, '$'
     TitleText2 DB '              /  \   ___ ___  ___ _ __ ___ | |__ | | ___ _ __|/ ___', 0AH, 0DH, '$'
@@ -105,7 +105,7 @@ data SEGMENT
 
     ; Main menu texts    
     MenuChoiceText  DB '                               [1] Play', 0DH, 0AH, '                               [2] Gameplay Guide ',0DH, 0AH, '$'
-    ClassInfoText   DB '===========================Classes===========================', 0DH, 0Ah, 'Knight: Balanced, with sligtly amped up defense', 0DH, 0Ah, 'Ultimate: Bless your team with vitality for the next 2 turns', 0DH, 0Ah, 'Passive: Recover an additional 10 stamina points per turn', 0DH, 0Ah, 'Assassin: Very weak, but able to deal immense damage', 0DH, 0Ah, 'Ultimate: Assassinate a random enemy [OwO]', 0DH, 0Ah, 'Passive: Have a 33% chance of poisoning the target on heavy attacks', 0DH, 0Ah, 'Pyromancer: Lower stats overall, but be able to burn enemies', 0DH, 0Ah, 'Ultimate: Burn enemy team for 4 turns', 0DH, 0Ah, 'Passive: Have a 20% chance of burning the target on all normal attacks', 0DH, 0Ah, 'Healer: It`s a healer, what else', 0DH, 0Ah, 'Ultimate: Revive fallen ally to max stats', 0DH, 0Ah, 'Passive: Be able to heal your ally on heavy attacks', 0DH, 0Ah, 'Vanguard: Very high HP and defense, but very low damage', 0DH, 0Ah, 'Ultimate: Reflect all attacks for 1 turn', 0DH, 0Ah
+    ClassInfoText   DB '===========================Classes===========================', 0DH, 0Ah, 'Knight: Balanced, with sligtly amped up defense', 0DH, 0Ah, 'Ultimate: Bless your team with vitality for the next 2 turns', 0DH, 0Ah, 'Passive: Recover an additional 10 stamina points per turn', 0DH, 0Ah, 'Assassin: Very weak, but able to deal immense damage', 0DH, 0Ah, 'Ultimate: Assassinate a random enemy [OwO]', 0DH, 0Ah, 'Passive: Have a 33% chance of poisoning the target on heavy attacks', 0DH, 0Ah, 'Pyromancer: Lower stats overall, but be able to burn enemies', 0DH, 0Ah, 'Ultimate: Burn enemy team for 4 turns', 0DH, 0Ah, 'Passive: Have a 20% chance of burning the target on all normal attacks', 0DH, 0Ah, 'Healer: It`s a healer, what else', 0DH, 0Ah, 'Ultimate: Revive fallen ally to max stats', 0DH, 0Ah, 'Passive: Be able to heal your ally on heavy attacks', 0DH, 0Ah, 'Vanguard: Very high HP and defense, but very low damage', 0DH, 0Ah, 'Ultimate: Reflect all attacks for 1 turn', 0DH, 0Ah, '$'
                     DB 'Passive: Increase allys defense by 5', 0DH, 0Ah, 'Vampire: Sucky sucky', 0DH, 0Ah, 'Ultimate: Paralyse enemy team for the next turn', 0DH, 0Ah, 'Passive: Have a 50% chance of recovering the amount of damage dealt by an attack', 0DH, 0Ah, '$'
 	SynergyInfoText DB '===========================Synergies===========================', 0DH, 0Ah, '1) Noblesse Oblige (Both Knights): Increase light and heavy attack damage by 10', 0DH, 0Ah, '2) Great Wall (Healer and Vanguard): Increase defense of healer by 10 and HP of Vanguard by 30', 0DH, 0Ah, '3) Assassin’s creed (Both Assassin): HP cap reduced by 10, ultimate cooldown reduced by 1', 0DH, 0Ah, '4) Scorched Earth (Both Pyromancers): Increase burn duration by 1', 0DH, 0Ah, '5) Count’s generosity (Vampire, Vanguard): Split HP gained by Vampire with Vanguard', 0DH, 0Ah, '6) Holy Empire (Knight, Healer): Add additional 5 HP to any healing actions to knight ', 0Dh, 0AH, '$'
 	ArenaInfoText   DB ' ===========================Arenas=============================', 0DH, 0Ah, '1) Grasslands:  A war-trodden expanse where the echoes of past battles linger in the wind. No special buffs or debuffs; only skill and valour determine victory.  ', 0DH, 0Ah, '2) Bastion Of Light: A radiant citadel where divine hymns empower the faithful. Vanguards and Holy Knights gain increased damage and defense.  ', 0DH, 0Ah, '3) Pyre Of The Forsaken: A smoldering ruin where cursed flames never die. Pyromancers are granted a devastating boost to their fire magic.  ', 0DH, 0Ah, '4) Count`s Cathedral: A once-holy sanctuary now steeped in eternal darkness. Vampiric attacks will always leech the life force of their victims.  ', 0DH, 0Ah, '5) Withering Grounds: A land long abandoned, where decay saps the strength of all who enter. All attacks are wakened, but warriors gain increased health and defenses.', 0DH, 0Ah, '$' 
@@ -160,7 +160,7 @@ data SEGMENT
     BurnInflictionText          DB ' has been engulfed in flames!', 0Dh, 0Ah, '$'
     PoisonDamageText            DB ' is poisoned and lost 5 health!', 0Dh, 0Ah, '$'
     PoisonInflictionText        DB ' has been poisoned!', 0Dh, 0Ah, '$' 
-    ParalysisWarning            DB ' has been inflicted with vampiric cum, and will be paralyzed for the next turn!', 0Dh, 0Ah, '$'   
+    ParalysisWarning            DB ' has been inflicted with vampiric fluids, and will be paralyzed for the next turn!', 0Dh, 0Ah, '$'   
     ParalysisText               DB ' is paralyzed and couldn`t move!', 0Dh, 0Ah, '$'  
     Team1Won                    DB 0Dh,0Ah,'Player 1 and 2 WIN!', '$'
     Team2Won                    DB 0Dh,0Ah,'Player 3 AND 4 WIN!', '$' 
@@ -548,9 +548,8 @@ code SEGMENT
         MOV AL, STGainPerTurn
         MOV AH, KnightExtraSTGain
         MOV SI, OFFSET PlayersStamina
-        Player1RecoverST:
-            MOV AH, [SI]                 
-            ADD AH, AL
+        Player1RecoverST:        
+            ADD [SI], AL
             TEST Team1Classes, 11110000B
             JNZ P1RecoveryFinal
             ADD [SI], AH
@@ -558,8 +557,7 @@ code SEGMENT
                 CALL ClampStatInSI
         Player2RecoverST:
             INC SI
-            MOV AH, [SI]                 
-            ADD AH, AL
+            ADD [SI], AL
             TEST Team1Classes, 00001111B
             JNZ P2RecoveryFinal
             ADD [SI], AH
@@ -567,8 +565,7 @@ code SEGMENT
                 CALL ClampStatInSI
         Player3RecoverST:
             INC SI
-            MOV AH, [SI]                 
-            ADD AH, AL
+            ADD [SI], AL
             TEST Team2Classes, 11110000B
             JNZ P3RecoveryFinal
             ADD [SI], AH
@@ -576,8 +573,7 @@ code SEGMENT
                 CALL ClampStatInSI
         Player4RecoverST:
             INC SI
-            MOV AH, [SI]                 
-            ADD AH, AL
+            ADD [SI], AL
             TEST Team2Classes, 00001111B
             JNZ P4RecoveryFinal
             ADD [SI], AH
@@ -857,7 +853,7 @@ code SEGMENT
     	        MOV DX, OFFSET PlayerText
     	        CALL PrintLine
     	        MOV DX, '3'
-    	        CALL PrintLine
+    	        CALL PrintChar
     	        MOV DX, OFFSET PoisonInflictionText
     	        CALL PrintLine
     	    P1StoreHeavyAtkDmgForP3_Final:
@@ -896,7 +892,7 @@ code SEGMENT
     	        MOV DX, OFFSET PlayerText
     	        CALL PrintLine
     	        MOV DX, '4'
-    	        CALL PrintLine
+    	        CALL PrintChar
     	        MOV DX, OFFSET PoisonInflictionText
     	        CALL PrintLine
         	    P1StoreHeavyAtkDmgForP4_Final: 
@@ -1176,7 +1172,7 @@ code SEGMENT
         	        MOV DX, OFFSET PlayerText
         	        CALL PrintLine
         	        MOV DX, '4'
-        	        CALL PrintLine
+        	        CALL PrintChar
         	        MOV DX, OFFSET PoisonInflictionText
         	        CALL PrintLine
         	    P2StoreHeavyAtkDmgForP4_Final:  
@@ -2302,7 +2298,6 @@ code SEGMENT
     ; Must always be called immediately after subtraction to prevent against the SF being overwritten later 
     ; USES Registers AH, SI
     ClampHPInSI:      
-        INT 20H
         LAHF
         TEST AH, 10000000B          ; Test whether sign flag is set
         JZ TestOverMaxHP
@@ -3753,7 +3748,9 @@ main:
         ; Apply DOT, update AliveAndHealStatus if any player is dead        
         LoopFinalBlock:  
 	        CALL EvaluateAttack
-	        CALL ApplyDOT 
+	        CALL ApplyDOT
+	        CALL RecoverStamina
+	        CALL UpdateVitality 
 	        ; Check if either team is dead
 	        TEST AliveAndHealStatus, 11000000B
 	        JZ Team1Victory
