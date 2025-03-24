@@ -503,7 +503,7 @@ code SEGMENT
 	 		CALL PrintInt 	
 	 		; Print Max Health	
 	 		MOV DX, '/'
-	 		CALL PrintChar	  		 	
+			CALL PrintChar	  		 	
 	 		MOV AL, [DI+1]       
 	 		CALL PrintInt   
 	 		; Print Player Stamina
@@ -1132,7 +1132,7 @@ code SEGMENT
     	        MOV DX, OFFSET PlayerText
     	        CALL PrintLine
     	        MOV DX, '3'
-    	        CALL PrintLine
+    	        CALL PrintChar
     	        MOV DX, OFFSET PoisonInflictionText
     	        CALL PrintLine
     	    P2StoreHeavyAtkDmgForP3_Final:            	   	         
@@ -1158,8 +1158,8 @@ code SEGMENT
             	    MOV DX, '4'
             	    CALL PrintChar
             	    MOV DX, OFFSET BurnInflictionText
-            	    CALL PrintLine
-            	    JMP P2StoreHeavyAtkDmgForP4_Final
+            		CALL PrintLine
+            		JMP P2StoreHeavyAtkDmgForP4_Final
         	    P2AssassinHeavyCheck_ForP4:
         	        CMP CL, 00000001B                   ; Check if P2 is an assassin
         	        JNE P2StoreHeavyAtkDmgForP4_Final   ; Not assassin
@@ -1352,7 +1352,7 @@ code SEGMENT
         	    OR Player2Status, 10000000B  
         	    TEST TeamSynergies, 00000100B
         	    JZ P3LBurnsP2Step
-        	    ADD P3BurnCounter, 1
+        	    ADD P2BurnCounter, 1
         	    P3LBurnsP2Step:
             	    ADD P2BurnCounter, 2
             	    MOV DX, OFFSET PlayerText
@@ -1794,7 +1794,7 @@ code SEGMENT
         	TEST AliveAndHealStatus, 00100000B  
         	JZ P4AssassinatesP1                 ; P2 dead, target P1
         	; Both alive, randomly select any one
-        	CALL GetChance
+			CALL GetChance
         	CMP DL, 50
         	JLE P4AssassinatesP1
     	    P4AssassinatesP2:
@@ -2033,7 +2033,7 @@ code SEGMENT
 			CMP CurrentTurn, 0   
 			JNE CheckIfP2IsVamp						
     	    MOV BH, Team1Classes     
-    	    AND BH, 01000000B 
+    	    AND BH, 11110000B 
     	    CMP BH, 01000000B
     	    JNE DoDamage_NotVampireOrHeavy 
     	    MOV BH, AL       		; Store AL
@@ -2049,7 +2049,7 @@ code SEGMENT
 				CMP CurrentTurn, 1   
 				JNE CheckIfP3IsVamp						
 	    	    MOV BH, Team1Classes     
-	    	    AND BH, 00000100B 
+	    	    AND BH, 00001111B 
 	    	    CMP BH, 00000100B
 	    	    JNE DoDamage_NotVampireOrHeavy 
 	    	    MOV BH, AL       		; Store AL
@@ -2065,7 +2065,7 @@ code SEGMENT
 				CMP CurrentTurn, 2   
 				JNE CheckIfP4IsVamp						
 	    	    MOV BH, Team2Classes     
-	    	    AND BH, 01000000B 
+	    	    AND BH, 11110000B 
 	    	    CMP BH, 01000000B
 	    	    JNE DoDamage_NotVampireOrHeavy 
 	    	    MOV BH, AL       		; Store AL
@@ -2081,7 +2081,7 @@ code SEGMENT
 				CMP CurrentTurn, 3   
 				JNE DoDamage_NotVampireOrHeavy						
 	    	    MOV BH, Team2Classes     
-	    	    AND BH, 00000100B 
+	    	    AND BH, 00001111B 
 	    	    CMP BH, 00000100B
 	    	    JNE DoDamage_NotVampireOrHeavy  
 	    	    MOV BH, AL       		; Store AL
@@ -2483,8 +2483,8 @@ code SEGMENT
 			MOV DI, OFFSET Player3Stats			
 			JMP LEndPrintPlayerName
 		LCheckForThreeTurn:
-			; Turn 3 (Player 4)	
-			MOV DI, OFFSET Player4Stats		  
+			; Turn 3 (Player 4)
+       		MOV DI, OFFSET Player4Stats		  
 			JMP LEndPrintPlayerName
 		LEndPrintPlayerName:    		  			
 			RET                        
@@ -3751,6 +3751,7 @@ main:
 	        CALL ApplyDOT
 	        CALL RecoverStamina
 	        CALL UpdateVitality 
+	        CALL UpdateUltimateCooldown
 	        ; Check if either team is dead
 	        TEST AliveAndHealStatus, 11000000B
 	        JZ Team1Victory
@@ -3788,66 +3789,89 @@ main:
         MOV Team2Classes, 00000000B  
         MOV MatchTurn, 0
         MOV TeamSynergies, 00000000B
-        	
-    	; Restore Vampire stats
-    	MOV DI, OFFSET VampireStats
-    	MOV [DI], 70
-    	MOV [DI+1], 70
-    	MOV [DI+2], 15
-    	MOV [DI+3], 25
-    	MOV [DI+4], 15
-    	MOV [DI+5], 40
-    	MOV [DI+6], 4
-    	
-    	; Restore Vanguard stats
-    	MOV DI, OFFSET VanguardStats
-    	MOV [DI], 100
-    	MOV [DI+1], 100
-    	MOV [DI+2], 10
-    	MOV [DI+3], 35
-    	MOV [DI+4], 50
-    	MOV [DI+5], 0
-    	MOV [DI+6], 4        	
-    	
-    	; Restore Healer stats
-    	MOV DI, OFFSET HealerStats
-    	MOV [DI], 70
-    	MOV [DI+1], 70
-    	MOV [DI+2], 15
-    	MOV [DI+3], 30
-    	MOV [DI+4], 15
-    	MOV [DI+5], 30
-    	MOV [DI+6], 4
-    	
-    	; Restore Knight stats 
-    	MOV DI, OFFSET KnightStats
-    	MOV [DI], 85
-    	MOV [DI+1], 85
-    	MOV [DI+2], 20
-    	MOV [DI+3], 35
-    	MOV [DI+4], 30
-    	MOV [DI+5], 30
-    	MOV [DI+6], 4
-    	
-    	; Restore Assassin stats 
-    	MOV DI, OFFSET AssassinStats
-    	MOV [DI], 30
-    	MOV [DI+1], 60
-    	MOV [DI+2], 30
-    	MOV [DI+3], 40
-    	MOV [DI+4], 10
-    	MOV [DI+5], 50
-    	MOV [DI+6], 4
-    	
-    	; Restore Pyromancer stats 
-    	MOV DI, OFFSET PyromancerStats
-    	MOV [DI], 50
-    	MOV [DI+1], 50
-    	MOV [DI+2], 20
-    	MOV [DI+3], 30
-    	MOV [DI+4], 20
-    	MOV [DI+5], 30
-    	MOV [DI+6], 4
+        MOV P1BurnCounter, 0
+        MOV P2BurnCounter, 0
+        MOV P3BurnCounter, 0
+        MOV P4BurnCounter, 0
+        MOV P1PoisonCounter, 0
+        MOV P2PoisonCounter, 0
+        MOV P3PoisonCounter, 0
+        MOV P4PoisonCounter, 0
+        
+        MOV Team1Vitality, 0
+        MOV Team2Vitality, 0
+        
+        ; Reset Arena Flags
+        MOV Arena, 0
+        
+        ; Restore Vampire stats
+        MOV DI, OFFSET VampireStats
+        MOV [DI], 70
+        MOV [DI+1], 70
+        MOV [DI+2], 15
+        MOV [DI+3], 25
+        MOV [DI+4], 15
+        MOV [DI+5], 99
+        MOV [DI+6], 4
+        
+        ; Restore Vanguard stats
+        MOV DI, OFFSET VanguardStats
+        MOV [DI], 100
+        MOV [DI+1], 100
+        MOV [DI+2], 10
+        MOV [DI+3], 35
+        MOV [DI+4], 50
+        MOV [DI+5], 0
+        MOV [DI+6], 4        	
+        
+        ; Restore Healer stats
+        MOV DI, OFFSET HealerStats
+        MOV [DI], 70
+        MOV [DI+1], 70
+        MOV [DI+2], 15
+        MOV [DI+3], 30
+        MOV [DI+4], 15
+        MOV [DI+5], 30
+        MOV [DI+6], 4
+        
+        ; Restore Knight stats 
+        MOV DI, OFFSET KnightStats
+        MOV [DI], 85
+        MOV [DI+1], 85
+        MOV [DI+2], 20
+        MOV [DI+3], 35
+        MOV [DI+4], 30
+        MOV [DI+5], 30
+        MOV [DI+6], 1
+        
+        ; Restore Assassin stats 
+        MOV DI, OFFSET AssassinStats
+        MOV [DI], 30
+        MOV [DI+1], 60
+        MOV [DI+2], 30
+        MOV [DI+3], 40
+        MOV [DI+4], 10
+        MOV [DI+5], 50
+        MOV [DI+6], 4
+        
+        ; Restore Pyromancer stats 
+        MOV DI, OFFSET PyromancerStats
+        MOV [DI], 50
+        MOV [DI+1], 50
+        MOV [DI+2], 20
+        MOV [DI+3], 30
+        MOV [DI+4], 20
+        MOV [DI+5], 30
+        MOV [DI+6], 4
+        
+        MOV P1BurnCounter, 0
+        MOV P2BurnCounter, 0
+        MOV P3BurnCounter, 0
+        MOV P4BurnCounter, 0
+        MOV P1PoisonCounter, 0
+        MOV P2PoisonCounter, 0
+        MOV P3PoisonCounter, 0
+        MOV P4PoisonCounter, 0
      
         JMP main   
                 
