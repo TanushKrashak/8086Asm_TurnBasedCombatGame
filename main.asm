@@ -107,7 +107,7 @@ data SEGMENT
     MenuChoiceText  DB '                               [1] Play', 0DH, 0AH, '                               [2] Gameplay Guide ',0DH, 0AH, '$'
     ClassInfoText   DB '===========================Classes===========================', 0DH, 0Ah, 'Knight: Balanced, with sligtly amped up defense', 0DH, 0Ah, 'Ultimate: Bless your team with vitality for the next 2 turns', 0DH, 0Ah, 'Passive: Recover an additional 10 stamina points per turn', 0DH, 0Ah, 'Assassin: Very weak, but able to deal immense damage', 0DH, 0Ah, 'Ultimate: Assassinate a random enemy [OwO]', 0DH, 0Ah, 'Passive: Have a 33% chance of poisoning the target on heavy attacks', 0DH, 0Ah, 'Pyromancer: Lower stats overall, but be able to burn enemies', 0DH, 0Ah, 'Ultimate: Burn enemy team for 4 turns', 0DH, 0Ah, 'Passive: Have a 20% chance of burning the target on all normal attacks', 0DH, 0Ah, 'Healer: It`s a healer, what else', 0DH, 0Ah, 'Ultimate: Revive fallen ally to max stats', 0DH, 0Ah, 'Passive: Be able to heal your ally on heavy attacks', 0DH, 0Ah, 'Vanguard: Very high HP and defense, but very low damage', 0DH, 0Ah, 'Ultimate: Reflect all attacks for 1 turn', 0DH, 0Ah, '$'
                     DB 'Passive: Increase allys defense by 5', 0DH, 0Ah, 'Vampire: Sucky sucky', 0DH, 0Ah, 'Ultimate: Paralyse enemy team for the next turn', 0DH, 0Ah, 'Passive: Have a 50% chance of recovering the amount of damage dealt by an attack', 0DH, 0Ah, '$'
-	SynergyInfoText DB '===========================Synergies===========================', 0DH, 0Ah, '1) Noblesse Oblige (Both Knights): Increase light and heavy attack damage by 10', 0DH, 0Ah, '2) Great Wall (Healer and Vanguard): Increase defense of healer by 10 and HP of Vanguard by 30', 0DH, 0Ah, '3) Assassin’s creed (Both Assassin): HP cap reduced by 10, ultimate cooldown reduced by 1', 0DH, 0Ah, '4) Scorched Earth (Both Pyromancers): Increase burn duration by 1', 0DH, 0Ah, '5) Count’s generosity (Vampire, Vanguard): Split HP gained by Vampire with Vanguard', 0DH, 0Ah, '6) Holy Empire (Knight, Healer): Add additional 5 HP to any healing actions to knight ', 0Dh, 0AH, '$'
+	SynergyInfoText DB '===========================Synergies===========================', 0DH, 0Ah, '1) Noblesse Oblige (Both Knights): Increase light and heavy attack damage by 10', 0DH, 0Ah, '2) Great Wall (Healer and Vanguard): Increase defense of healer by 10 and HP of Vanguard by 30', 0DH, 0Ah, '3) Assassinâ€™s creed (Both Assassin): HP cap reduced by 10, ultimate cooldown reduced by 1', 0DH, 0Ah, '4) Scorched Earth (Both Pyromancers): Increase burn duration by 1', 0DH, 0Ah, '5) Countâ€™s generosity (Vampire, Vanguard): Split HP gained by Vampire with Vanguard', 0DH, 0Ah, '6) Holy Empire (Knight, Healer): Add additional 5 HP to any healing actions to knight ', 0Dh, 0AH, '$'
 	ArenaInfoText   DB ' ===========================Arenas=============================', 0DH, 0Ah, '1) Grasslands:  A war-trodden expanse where the echoes of past battles linger in the wind. No special buffs or debuffs; only skill and valour determine victory.  ', 0DH, 0Ah, '2) Bastion Of Light: A radiant citadel where divine hymns empower the faithful. Vanguards and Holy Knights gain increased damage and defense.  ', 0DH, 0Ah, '3) Pyre Of The Forsaken: A smoldering ruin where cursed flames never die. Pyromancers are granted a devastating boost to their fire magic.  ', 0DH, 0Ah, '4) Count`s Cathedral: A once-holy sanctuary now steeped in eternal darkness. Vampiric attacks will always leech the life force of their victims.  ', 0DH, 0Ah, '5) Withering Grounds: A land long abandoned, where decay saps the strength of all who enter. All attacks are wakened, but warriors gain increased health and defenses.', 0DH, 0Ah, '$' 
 	GuideOptionText DB 0DH, 0AH, '[1] Classes [2] Synergies [3] Arenas [4] Exit', 0DH, 0AH, '$'
 	
@@ -179,7 +179,7 @@ data SEGMENT
 	VanguardUltimateText		DB "Stands Resolute, Deflecting Every Blow, Countering All Damage For 1 Turn",0Dh,0Ah,'$'
 	VanguardUltReflectText		DB "The Attack To Vanguard Was Reflected, Dealing ", '$'  
 	VanguardUltReflectRemText	DB " Damage Back!", 0Dh, 0Ah, '$'  
-	HealerUltReviveText 		DB "From the Brink of Oblivion, a Beacon of Life Ignited Once More—Banishing Death's Embrace and Restoring Strength Anew, Revives Teamate To Full HP!", 0Dh, 0Ah, '$'
+	HealerUltReviveText 		DB "From the Brink of Oblivion, a Beacon of Life Ignited Once Moreâ€”Banishing Death's Embrace and Restoring Strength Anew, Revives Teamate To Full HP!", 0Dh, 0Ah, '$'
 	HealerUltHealBothText		DB "A Luminous Wave of Vitality Swept Through the Air, Cradling the Injured in Divine Warmth, Restoring Self to Full HP!", 0Dh, 0Ah, '$'
    
     ; Synergy texts
@@ -210,65 +210,6 @@ code SEGMENT
 		MOV AH, 09h        ; DOS print string function
 	    INT 21h            ; Print Msg
 	 	RET  			   
-	
-	; Generic Function to Print Lines in Colors   
-	; Uses AX, CX, DL, DI
-	PrintColoredLine:    
-	    PCL_NextChar: 
-	    	; Get cursor position (DL = Col, DH = Row)
-		    MOV AH, 03h
-		    INT 10h  
-		    MOV AL, [DI]  ; Load character		         
-		    CMP AL, '$'
-		    JNE PCL_Continue       ; If not null terminator
-		    RET                    ; null terminator, stop
-		    PCL_Continue:
-			    ; Print character
-			    MOV CX, 1
-			    MOV AH, 09h
-			    INT 10h	  
-			    INC DL         ; Move cursor right
-			    INC DI         ; Move to next character    
-			   	; Set cursor position to next column
-		        MOV AH, 02h
-		        INT 10h
-			    JMP PCL_NextChar
-			      
-	; Print A Gray Line
-	PrintGrayLine:
-		MOV BL, 8   ; Gray
-		CALL PrintColoredLine 
-		RET
-		
-	; Print A Green Line
-	PrintGreenLine:
-		MOV BL, 10   ; Green
-		CALL PrintColoredLine 
-		RET	    
-		
-	; Print A Cyan Line	
-	PrintCyanLine:
-		MOV BL, 11   ; Cyan
-		CALL PrintColoredLine 
-		RET	
-			
-	; Print A Red Line	
-	PrintRedLine:
-		MOV BL, 12   ; Red
-		CALL PrintColoredLine 
-		RET	   
-		
-	; Print A Purple Line	
-	PrintPurpleLine:
-		MOV BL, 13   ; Purple
-		CALL PrintColoredLine 
-		RET	
-			
-	; Print A Yellow Line	
-	PrintYellowLine:
-		MOV BL, 14   ; Yellow
-		CALL PrintColoredLine 
-		RET	
 	    
 	; Function For Printing A Character
 	PrintChar:
@@ -3879,4 +3820,5 @@ main:
 		MOV AH, 4Ch        ; DOS function to terminate program
 		INT 21h            ; Exit program
 code ENDS
+
 END main
